@@ -205,3 +205,7 @@ custom-gcl.hash
 !internal/fourslash/_scripts/manualTests.txt
 !internal/fourslash/_scripts/crashingTests.txt
 !internal/fourslash/_scripts/unparsedTests.txt
+
+# ts2bin frontend conformance fixtures, not generated coverage output.
+!internal/tsfrontend/testdata/frontend/cases/coverage/
+!internal/tsfrontend/testdata/frontend/cases/coverage/**

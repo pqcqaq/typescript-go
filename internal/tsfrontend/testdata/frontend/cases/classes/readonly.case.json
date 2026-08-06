@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/readonly",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "classes"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "classes"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/readonly.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

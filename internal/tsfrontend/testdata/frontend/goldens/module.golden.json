@@ -1,0 +1,39 @@
+{
+  "case": "modules/cycle-a",
+  "modules": [
+    {
+      "path": "cases/modules/cycle-a.ts",
+      "format": "esm",
+      "scc": 0
+    },
+    {
+      "path": "cases/modules/cycle-b.ts",
+      "format": "esm",
+      "scc": 0
+    }
+  ],
+  "edges": [
+    {
+      "importer": "cases/modules/cycle-a.ts",
+      "imported": "cases/modules/cycle-b.ts",
+      "specifier": "./cycle-b",
+      "kind": "import",
+      "typeOnly": false,
+      "value": true
+    },
+    {
+      "importer": "cases/modules/cycle-b.ts",
+      "imported": "cases/modules/cycle-a.ts",
+      "specifier": "./cycle-a",
+      "kind": "import",
+      "typeOnly": false,
+      "value": true
+    }
+  ],
+  "sccs": [
+    [
+      "cases/modules/cycle-a.ts",
+      "cases/modules/cycle-b.ts"
+    ]
+  ]
+}

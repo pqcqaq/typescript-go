@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "id": "coverage/namespace-export",
+  "category": "coverage",
+  "mode": "accept",
+  "features": [
+    "coverage"
+  ],
+  "handbook": [
+    "12-declarations-and-jsx",
+    "14-modern-syntax",
+    "17-syntax-reference"
+  ],
+  "astGroups": [
+    "coverage"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/coverage/namespace-export.d.ts",
+  "compilerOptions": {
+    "lib": [
+      "ES2020"
+    ]
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

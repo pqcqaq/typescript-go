@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/private-field",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "classes",
+    "private-field"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "classes",
+    "private-field"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/private-field.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

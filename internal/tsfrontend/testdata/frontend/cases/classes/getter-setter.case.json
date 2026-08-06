@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/getter-setter",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "accessor",
+    "classes"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "accessor",
+    "classes"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/getter-setter.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

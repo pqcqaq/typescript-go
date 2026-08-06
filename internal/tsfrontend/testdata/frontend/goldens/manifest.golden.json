@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 2,
+  "caseCount": 100,
+  "typescriptCount": 97,
+  "categories": [
+    {
+      "name": "classes",
+      "count": 13
+    },
+    {
+      "name": "coverage",
+      "count": 12
+    },
+    {
+      "name": "functions",
+      "count": 11
+    },
+    {
+      "name": "generics",
+      "count": 16
+    },
+    {
+      "name": "literals",
+      "count": 12
+    },
+    {
+      "name": "modules",
+      "count": 13
+    },
+    {
+      "name": "narrowing",
+      "count": 10
+    },
+    {
+      "name": "rejections",
+      "count": 8
+    },
+    {
+      "name": "safety",
+      "count": 5
+    }
+  ],
+  "modes": [
+    {
+      "name": "accept",
+      "count": 73
+    },
+    {
+      "name": "reject",
+      "count": 27
+    }
+  ],
+  "features": [
+    "abstract",
+    "accessor",
+    "any",
+    "as-any-as",
+    "async",
+    "classes",
+    "conditional-type",
+    "constraint",
+    "constructor",
+    "coverage",
+    "default-export",
+    "default-import",
+    "default-parameter",
+    "default-type",
+    "discriminated-union",
+    "eh",
+    "export",
+    "functions",
+    "generics",
+    "higher-order",
+    "implements",
+    "import",
+    "import-cycle",
+    "inheritance",
+    "interface",
+    "jsx",
+    "keyof",
+    "literals",
+    "mapped-type",
+    "module",
+    "narrowing",
+    "non-null",
+    "null",
+    "number",
+    "private-field",
+    "recursion",
+    "reexport",
+    "static",
+    "switch",
+    "tuple",
+    "type-error",
+    "type-export",
+    "type-parameter",
+    "type-predicate",
+    "unknown",
+    "using"
+  ]
+}

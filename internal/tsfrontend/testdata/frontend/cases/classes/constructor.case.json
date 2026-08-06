@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/constructor",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "classes",
+    "constructor"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "classes",
+    "constructor"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/constructor.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

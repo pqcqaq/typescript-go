@@ -1,0 +1,58 @@
+[
+  {
+    "id": "validate-snapshot-source-type-plan",
+    "contentHash": "a4d9288e5bae5df2841bc5acd9b340453bab7800147f106c6f3579a4aad19a8f"
+  },
+  {
+    "id": "typed-hir",
+    "contentHash": "265d1bc3e224c1ffd6de102094a4047da8fd7640f79d9c02734fe6c39211dee2"
+  },
+  {
+    "id": "evaluation-order-and-semantic-sugar",
+    "contentHash": "e3063a508d7ce7fdfbdc5ea1b19e83a398a92847c3cd9372fb039f56f82e5d0a"
+  },
+  {
+    "id": "specialization-fixed-point",
+    "contentHash": "941b4731c9e7a98212054b8d6bd63e4541b203aafd71482171a2009250e48af6"
+  },
+  {
+    "id": "variance-aliasing-and-conversions",
+    "contentHash": "3e7d89b42dba2674c329f726e946fc2b8ab14fddd720d68091b72a59c7e40f4f"
+  },
+  {
+    "id": "resolve-target-context",
+    "contentHash": "f03151c436b941cd308b32684e02bb057c7c5da03f487479328f83b1b9dce935"
+  },
+  {
+    "id": "target-representation-plan",
+    "contentHash": "da97163537d869087634a4ada77b7e9c6c489fe5eecb499c1f3f2a6185e11a6a"
+  },
+  {
+    "id": "mir-cfg-ssa",
+    "contentHash": "27ea9bdd1aba67f7491f9184324c6904b7e8e92fd8ed3097fb288414867cdd11"
+  },
+  {
+    "id": "cleanup-exception-async-state",
+    "contentHash": "42f8eaadc62f26c7f9dae9583d00520b14024940ca6895cabc8ac76e398563b3"
+  },
+  {
+    "id": "structural-mir-verifier",
+    "contentHash": "8dcff12259ccd0aebbad14868e40d4757096390a1d3f50418537933ab57530de"
+  },
+  {
+    "id": "capability-binding-effect-freeze",
+    "contentHash": "30658d77b97a33e30cda0d0a10757833835fb942705840a1ae3ae17105135247"
+  },
+  {
+    "id": "optimize-proven-mir",
+    "contentHash": "b317cc3e0adc01dec9171139772c9310e28ba3243ec7e7198fdb15a457bca259"
+  },
+  {
+    "id": "place-gc-roots-freeze-cleanup",
+    "contentHash": "31136c58318e9a0057bcefc178e2e4e26919c981f7db571d82563633efd52e55"
+  },
+  {
+    "id": "final-verifier",
+    "contentHash": "91c665973fb9f8e7e7d0e82328278d9351fa18996bf90975b65380ee6fe90a98"
+  }
+]

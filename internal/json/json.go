@@ -74,6 +74,12 @@ func Deterministic(v bool) json.Options {
 	return json.Deterministic(v)
 }
 
+// RejectUnknownMembers controls whether object members without a matching Go
+// struct field are rejected during unmarshaling.
+func RejectUnknownMembers(v bool) json.Options {
+	return json.RejectUnknownMembers(v)
+}
+
 func WithIndent(indent string) json.Options {
 	return jsontext.WithIndent(indent)
 }

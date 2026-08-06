@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/unknown",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "unknown"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "unknown"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/unknown.ts",
+  "expect": {
+    "checkCodes": [
+      "TS18046"
+    ],
+    "buildCodes": [
+      "TS18046"
+    ],
+    "snapshot": false
+  }
+}

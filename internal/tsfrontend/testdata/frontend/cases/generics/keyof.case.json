@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "generics/keyof",
+  "category": "generics",
+  "mode": "reject",
+  "features": [
+    "generics",
+    "keyof"
+  ],
+  "handbook": [
+    "06-generics",
+    "07-type-operators"
+  ],
+  "astGroups": [
+    "generics",
+    "keyof"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/generics/keyof.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1401_UNRESOLVED_GENERIC"
+    ],
+    "snapshot": true
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "generics/conditional-type",
+  "category": "generics",
+  "mode": "accept",
+  "features": [
+    "conditional-type",
+    "generics"
+  ],
+  "handbook": [
+    "06-generics",
+    "07-type-operators"
+  ],
+  "astGroups": [
+    "conditional-type",
+    "generics"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/generics/conditional-type.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

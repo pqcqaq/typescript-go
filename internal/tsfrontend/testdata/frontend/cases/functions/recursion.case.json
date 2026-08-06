@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "functions/recursion",
+  "category": "functions",
+  "mode": "accept",
+  "features": [
+    "functions",
+    "recursion"
+  ],
+  "handbook": [
+    "04-functions"
+  ],
+  "astGroups": [
+    "functions",
+    "recursion"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/functions/recursion.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

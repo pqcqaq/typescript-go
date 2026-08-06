@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/using",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "using"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "using"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/using.ts",
+  "compilerOptions": {
+    "lib": [
+      "ES5",
+      "ESNext.Disposable"
+    ]
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/inheritance",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "classes",
+    "inheritance"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "classes",
+    "inheritance"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/inheritance.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

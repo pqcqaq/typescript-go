@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/type-import",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/type-import.ts",
+  "files": [
+    "cases/modules/type-import.ts",
+    "cases/modules/import-target.ts"
+  ],
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

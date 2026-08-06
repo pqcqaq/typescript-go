@@ -1,0 +1,1 @@
+{"schemaVersion":1,"bingoOptions":{"profile":"static","runtime":"core-es2020","llvmMajor":20,"targetTriple":"","cpu":"generic","features":[],"gc":"tracing","exceptions":"none","overflow":"js-number","boundsCheck":"on","emit":["hir","mir","llvm","obj"]},"typescript":{"noImplicitAny":true,"strict":true,"strictFunctionTypes":true,"strictNullChecks":true}}

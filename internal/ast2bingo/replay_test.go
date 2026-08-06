@@ -1,0 +1,554 @@
+package ast2bingo
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"reflect"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/bundled"
+	"github.com/microsoft/typescript-go/internal/frontendwire"
+	jsonx "github.com/microsoft/typescript-go/internal/json"
+	"github.com/microsoft/typescript-go/internal/tsfrontend"
+	"github.com/microsoft/typescript-go/internal/vfs/vfstest"
+)
+
+func TestReplaySerializedAddProducesVerifiedHIR(t *testing.T) {
+	snapshot := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	serialized, err := snapshot.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatalf("serialized replay is not deterministic:\nfirst:  %#v\nsecond: %#v", first, second)
+	}
+	if err := bingo.VerifyHIR(first.HIR); err != nil {
+		t.Fatalf("verify replayed HIR: %v", err)
+	}
+	if !isDigest(first.HIR.ContentHash) || !isDigest(first.ContentHash) {
+		t.Fatalf("replay hashes are incomplete: HIR=%q replay=%q", first.HIR.ContentHash, first.ContentHash)
+	}
+	requirementsDigest, err := bingo.LogicalCapabilityRequirementsDigest([]bingo.RuntimeCapabilityID{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.FrontendSnapshotHash != snapshot.ContentHash || first.HIR.Provenance != primitiveHIRProvenance(*snapshot, identity, requirementsDigest) {
+		t.Fatalf("replay frontend provenance = %#v / %q", first.HIR.Provenance, first.FrontendSnapshotHash)
+	}
+	_, wantHIRHash, err := bingo.CanonicalHIR(first.HIR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.HIR.ContentHash != wantHIRHash {
+		t.Fatalf("HIR content hash = %q, want %q", first.HIR.ContentHash, wantHIRHash)
+	}
+
+	if len(first.HIR.Functions) != 1 {
+		t.Fatalf("HIR functions = %#v", first.HIR.Functions)
+	}
+	function := first.HIR.Functions[0]
+	if function.Name != "add" || function.ReturnType != bingo.TypeNumber {
+		t.Fatalf("HIR function = %#v", function)
+	}
+	if len(function.Parameters) != 2 {
+		t.Fatalf("HIR parameters = %#v", function.Parameters)
+	}
+	for index, parameter := range function.Parameters {
+		wantName := []string{"left", "right"}[index]
+		if parameter.Name != wantName || parameter.Type != bingo.TypeNumber || parameter.Value != bingo.ValueID(index+1) {
+			t.Fatalf("HIR parameter %d = %#v", index, parameter)
+		}
+	}
+	if len(function.Blocks) != 1 || len(function.Blocks[0].Operations) != 1 {
+		t.Fatalf("HIR blocks = %#v", function.Blocks)
+	}
+	operation := function.Blocks[0].Operations[0]
+	if operation.Kind != "binary" || operation.Operator != "+" || operation.Type != bingo.TypeNumber || operation.Effect != bingo.EffectPure ||
+		!slices.Equal(operation.Operands, []bingo.ValueID{1, 2}) {
+		t.Fatalf("HIR add operation = %#v", operation)
+	}
+	if terminator := function.Blocks[0].Terminator; terminator.Kind != "return" || terminator.Value != operation.ID {
+		t.Fatalf("HIR return terminator = %#v", terminator)
+	}
+	if !slices.ContainsFunc(first.Events, func(event LoweringEvent) bool {
+		return event.Kind == "binary.add" && event.Operator == "+" && len(event.Inputs) == 2
+	}) {
+		t.Fatalf("lowering events have no add operation: %#v", first.Events)
+	}
+	wantEventKinds := []string{"function.begin", "parameter", "parameter", "binary.add", "return", "function.end"}
+	gotEventKinds := make([]string, len(first.Events))
+	for index, event := range first.Events {
+		gotEventKinds[index] = event.Kind
+	}
+	if !slices.Equal(gotEventKinds, wantEventKinds) {
+		t.Fatalf("lowering events are not in evaluation order: got %v, want %v", gotEventKinds, wantEventKinds)
+	}
+}
+
+func TestReplaySerializedAddUsesResolvedSymbolFallback(t *testing.T) {
+	snapshot := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	copy := *snapshot
+	copy.Nodes = slices.Clone(snapshot.Nodes)
+
+	binaryIndex := slices.IndexFunc(copy.Nodes, func(node NodeSnapshot) bool {
+		return node.Kind == snapshotKindBinaryExpression
+	})
+	if binaryIndex < 0 {
+		t.Fatal("add snapshot has no binary expression")
+	}
+	operandID := childByRole(copy.Nodes[binaryIndex], "left")
+	operandIndex := slices.IndexFunc(copy.Nodes, func(node NodeSnapshot) bool { return node.ID == operandID })
+	if operandIndex < 0 {
+		t.Fatalf("left operand %q is missing", operandID)
+	}
+	if copy.Nodes[operandIndex].ResolvedSymbol == "" {
+		t.Fatalf("left operand has no resolved symbol: %#v", copy.Nodes[operandIndex])
+	}
+	copy.Nodes[operandIndex].Symbol = ""
+	if err := finalizeTestSnapshot(&copy); err != nil {
+		t.Fatal(err)
+	}
+	serialized, err := copy.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bingo.VerifyHIR(result.HIR); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.HIR.Functions) != 1 || len(result.HIR.Functions[0].Blocks) != 1 || len(result.HIR.Functions[0].Blocks[0].Operations) != 1 {
+		t.Fatalf("resolved-symbol HIR = %#v", result.HIR)
+	}
+	if got := result.HIR.Functions[0].Blocks[0].Operations[0].Operands; !slices.Equal(got, []bingo.ValueID{1, 2}) {
+		t.Fatalf("resolved-symbol operands = %v", got)
+	}
+}
+
+func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
+	snapshot := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	copy := *snapshot
+	copy.Nodes = slices.Clone(snapshot.Nodes)
+
+	index := slices.IndexFunc(copy.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindPlusToken })
+	if index < 0 {
+		t.Fatal("add snapshot has no plus token")
+	}
+	copy.Nodes[index].Kind = "KindVariableStatement"
+	copy.Nodes[index].KindValue = 244
+	copy.Nodes[index].SyntaxPayload.Tag = "KindVariableStatement"
+	if err := finalizeTestSnapshot(&copy); err != nil {
+		t.Fatal(err)
+	}
+	serialized, err := copy.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReplaySerializedSnapshot(serialized, identity)
+	if err == nil || !strings.Contains(err.Error(), `lowerer for Kind "KindVariableStatement" is not bound`) {
+		t.Fatalf("unbound lowerer result/error = %#v / %v", result, err)
+	}
+	if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
+		t.Fatalf("unbound Kind emitted partial HIR: %#v", result)
+	}
+}
+
+func TestReplaySnapshotRejectsMultipleReturns(t *testing.T) {
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true,"allowUnreachableCode":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function add(left: number, right: number): number { return left + right; return left + right; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
+	}
+	identity := testCompilerIdentity(t, *snapshot)
+	serialized, err := snapshot.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplaySerializedSnapshot(serialized, identity); err == nil || !strings.Contains(err.Error(), "exactly one") {
+		t.Fatalf("multiple return replay error = %v", err)
+	}
+}
+
+func TestReplaySnapshotRejectsMultipleFunctionsInsteadOfInventingExecutionOrder(t *testing.T) {
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts": `
+export function add(left: number, right: number): number { return left + right; }
+export function sum(left: number, right: number): number { return left + right; }
+`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
+	}
+	identity := testCompilerIdentity(t, *snapshot)
+	serialized, err := snapshot.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplaySerializedSnapshot(serialized, identity); err == nil || !strings.Contains(err.Error(), "primitive source file requires one function") {
+		t.Fatalf("multiple function replay error = %v", err)
+	}
+}
+
+func TestSnapshotLowererReadinessRegistryIsSortedAndBound(t *testing.T) {
+	if err := validateSnapshotLowererReadinessRegistry(snapshotLowererReadinessRegistry); err != nil {
+		t.Fatal(err)
+	}
+	for _, definition := range snapshotLowererReadinessRegistry {
+		got, ok := lookupSnapshotLowererReadiness(definition.Kind)
+		if !ok || got.Kind != definition.Kind || got.Handle == nil {
+			t.Fatalf("lowerer lookup for %q = %#v / %v", definition.Kind, got, ok)
+		}
+	}
+	unbound := slices.Clone(snapshotLowererReadinessRegistry)
+	unbound[0].Handle = nil
+	if err := validateSnapshotLowererReadinessRegistry(unbound); err == nil || !strings.Contains(err.Error(), "unbound") {
+		t.Fatalf("unbound registry error = %v", err)
+	}
+}
+
+func TestPrimitiveReadinessRequiresRegisteredSemanticFacts(t *testing.T) {
+	t.Parallel()
+	snapshot := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+
+	t.Run("binary type", func(t *testing.T) {
+		broken := cloneReplaySnapshot(snapshot)
+		index := slices.IndexFunc(broken.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })
+		broken.Nodes[index].DeclaredType = 0
+		broken.Nodes[index].NarrowedType = 0
+		broken.Nodes[index].ContextualType = 0
+		broken.Nodes[index].Flow = tsfrontend.FlowFactSnapshot{}
+		if err := finalizeTestSnapshot(&broken); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReplaySnapshot(broken, identity); err == nil || !strings.Contains(err.Error(), `required fact "type"`) {
+			t.Fatalf("binary semantic readiness error = %v", err)
+		}
+	})
+
+	t.Run("implementation signature", func(t *testing.T) {
+		broken := cloneReplaySnapshot(snapshot)
+		function := replayFunctionNode(t, &broken, "add")
+		index := replaySignatureIndex(t, &broken, function.ID)
+		broken.Signatures[index].Declaration = ""
+		if err := finalizeTestSnapshot(&broken); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReplaySnapshot(broken, identity); err == nil || !strings.Contains(err.Error(), "exactly one implementation signature") {
+			t.Fatalf("function signature readiness error = %v", err)
+		}
+	})
+
+	t.Run("incomplete effect", func(t *testing.T) {
+		broken := cloneReplaySnapshot(snapshot)
+		function := replayFunctionNode(t, &broken, "add")
+		index := replaySignatureIndex(t, &broken, function.ID)
+		broken.Signatures[index].EffectProof.Complete = false
+		broken.Signatures[index].Effects = []string{"unknown"}
+		if err := finalizeTestSnapshot(&broken); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ReplaySnapshot(broken, identity); err == nil || !strings.Contains(err.Error(), "effect proof completeness mismatch") {
+			t.Fatalf("effect readiness error = %v", err)
+		}
+	})
+
+	unbound := slices.Clone(snapshotLowererReadinessRegistry)
+	unbound[0].RequiredFacts = []string{"missing-fact"}
+	if err := validateSnapshotLowererReadinessRegistry(unbound); err == nil || !strings.Contains(err.Error(), "unbound semantic fact") {
+		t.Fatalf("unbound semantic fact registry error = %v", err)
+	}
+}
+
+func TestReplayRejectsRehashedPrimitiveFactCorruption(t *testing.T) {
+	base := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *base)
+	tests := []struct {
+		name   string
+		mutate func(*ProgramSnapshot)
+	}{
+		{name: "bogus plus", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })
+			snapshot.Nodes[index].SyntaxPayload.Operator = "KindPlusLikeToken"
+		}},
+		{name: "object scalar containing number", mutate: func(snapshot *ProgramSnapshot) {
+			binary := snapshot.Nodes[slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })]
+			typeID := nodeTypeID(binary)
+			index := slices.IndexFunc(snapshot.Types, func(value TypeSnapshot) bool { return value.ID == typeID })
+			snapshot.Types[index].Kind = "object"
+			snapshot.Types[index].Flags = 1 << 20
+			snapshot.Types[index].ObjectFlags = 16
+			snapshot.Types[index].TypePayload.Tag = "object"
+			snapshot.Types[index].TypePayload.Scalar = "object|1048576|16|||intrinsic:number"
+		}},
+		{name: "missing operand symbol", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool {
+				return node.Kind == snapshotKindIdentifier && node.Parent != "" && node.Symbol != ""
+			})
+			snapshot.Nodes[index].Symbol = "symbol_missing"
+			snapshot.Nodes[index].ResolvedSymbol = "symbol_missing"
+		}},
+		{name: "missing operand type", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })
+			snapshot.Nodes[index].DeclaredType = TypeID(999999)
+			snapshot.Nodes[index].NarrowedType = TypeID(999999)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneReplaySnapshot(base)
+			test.mutate(&broken)
+			if err := finalizeTestSnapshot(&broken); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ReplaySnapshot(broken, identity); err == nil {
+				t.Fatal("rehashed primitive fact corruption was accepted")
+			}
+		})
+	}
+}
+
+func TestReplayRejectsRehashedSubsetGateTamperingAcrossAllWrappers(t *testing.T) {
+	base := buildReplayAddSnapshot(t)
+	identity := testCompilerIdentity(t, *base)
+	tests := []struct {
+		name   string
+		mutate func(*ProgramSnapshot)
+	}{
+		{name: "using node flag", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindPlusToken })
+			snapshot.Nodes[index].NodeFlags |= 1 << 2
+		}},
+		{name: "async modifier", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindPlusToken })
+			snapshot.Nodes[index].ModifierBits |= 1 << 10
+		}},
+		{name: "decorator modifier", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindPlusToken })
+			snapshot.Nodes[index].ModifierBits |= 1 << 15
+		}},
+		{name: "latent any contextual type", mutate: func(snapshot *ProgramSnapshot) {
+			attachPrimitiveContextType(snapshot, "any", 1, strings.Repeat("9", 64))
+		}},
+		{name: "latent unknown contextual type", mutate: func(snapshot *ProgramSnapshot) {
+			attachPrimitiveContextType(snapshot, "unknown", 2, strings.Repeat("a", 64))
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneReplaySnapshot(base)
+			test.mutate(&broken)
+			if err := finalizeTestSnapshot(&broken); err != nil {
+				t.Fatal(err)
+			}
+			if err := frontendwire.ValidateProgramSnapshot(broken); err != nil {
+				t.Fatalf("wire validator unexpectedly rejected the rehashed tamper: %v", err)
+			}
+			if diagnostics := tsfrontend.RunSubsetGate(broken); !tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+				t.Fatalf("source subset gate accepted rehashed tamper: %#v", diagnostics)
+			}
+
+			serialized, err := broken.CanonicalBytes()
+			if err != nil {
+				t.Fatal(err)
+			}
+			frontend, err := tsfrontend.NewFrontendSnapshot(broken)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wrapped, err := frontend.CanonicalBytes()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			paths := []struct {
+				name string
+				run  func() (SnapshotReplayResult, error)
+			}{
+				{name: "in-memory", run: func() (SnapshotReplayResult, error) { return ReplaySnapshot(broken, identity) }},
+				{name: "serialized", run: func() (SnapshotReplayResult, error) { return ReplaySerializedSnapshot(serialized, identity) }},
+				{name: "frontend-wrapper", run: func() (SnapshotReplayResult, error) { return ReplayFrontendSnapshot(wrapped, identity) }},
+			}
+			for _, path := range paths {
+				t.Run(path.name, func(t *testing.T) {
+					result, err := path.run()
+					if err == nil {
+						t.Fatal("rehashed subset-gate tamper was accepted")
+					}
+					if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
+						t.Fatalf("rejected tamper emitted partial HIR: %#v", result)
+					}
+				})
+			}
+		})
+	}
+}
+
+func attachPrimitiveContextType(snapshot *ProgramSnapshot, kind string, flags uint32, canonicalHash string) {
+	var id TypeID
+	for _, record := range snapshot.Types {
+		if record.ID > id {
+			id = record.ID
+		}
+	}
+	id++
+	snapshot.Types = append(snapshot.Types, TypeSnapshot{
+		ID:            id,
+		CanonicalHash: canonicalHash,
+		Kind:          kind,
+		Flags:         flags,
+		TypePayload: frontendwire.TypePayload{
+			Tag:    kind,
+			Scalar: kind,
+		},
+	})
+	index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })
+	snapshot.Nodes[index].ContextualType = id
+	snapshot.Nodes[index].Flow.ContextualTypeHash = canonicalHash
+}
+
+func TestReplayRejectsNonNumberAddFixture(t *testing.T) {
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function add(left: string, right: string): string { return left + right; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
+	}
+	identity := testCompilerIdentity(t, *snapshot)
+	if _, err := ReplaySnapshot(*snapshot, identity); err == nil {
+		t.Fatal("string add fixture was accepted as primitive number add")
+	}
+}
+
+func buildReplayAddSnapshot(t *testing.T) *ProgramSnapshot {
+	t.Helper()
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function add(left: number, right: number): number { return left + right; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil {
+		t.Fatalf("snapshot is nil: %#v", diagnostics)
+	}
+	if tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("build diagnostics: %#v", diagnostics)
+	}
+	nodes := make(map[NodeID]NodeSnapshot, len(snapshot.Nodes))
+	for _, node := range snapshot.Nodes {
+		nodes[node.ID] = node
+	}
+	symbols := make(map[SymbolID]SymbolSnapshot, len(snapshot.Symbols))
+	for _, symbol := range snapshot.Symbols {
+		symbols[symbol.ID] = symbol
+	}
+	types := make(map[TypeID]TypeSnapshot, len(snapshot.Types))
+	for _, typ := range snapshot.Types {
+		types[typ.ID] = typ
+	}
+	signatures := make(map[SignatureID]SignatureSnapshot, len(snapshot.Signatures))
+	for _, signature := range snapshot.Signatures {
+		signatures[signature.ID] = signature
+	}
+	functionIndex := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindFunctionDeclaration })
+	if functionIndex < 0 {
+		t.Fatal("add snapshot has no function declaration")
+	}
+	returnType, resolved := resolveFunctionReturnType(snapshot.Nodes[functionIndex], nodes, symbols, types, signatures)
+	if !resolved {
+		t.Fatal("function return type did not resolve through its signature")
+	}
+	if got, err := bingoType(returnType, types); err != nil || got != bingo.TypeNumber {
+		t.Fatalf("resolved return type = %q / %v", got, err)
+	}
+	return snapshot
+}
+
+func replayTestRequest(files map[string]string) (tsfrontend.BuildRequest, *tsfrontend.Frontend) {
+	fs := vfstest.FromMap(files, true)
+	frontend := tsfrontend.NewFrontend(bundled.WrapFS(fs), bundled.LibPath(), tsfrontend.TypeScriptGoCommit, tsfrontend.StandardLibraryHash)
+	return tsfrontend.BuildRequest{
+		ConfigPath:       "/project/tsconfig.json",
+		CurrentDirectory: "/project",
+		FileSystem:       fs,
+	}, frontend
+}
+
+func cloneReplaySnapshot(snapshot *ProgramSnapshot) ProgramSnapshot {
+	clone := *snapshot
+	clone.Nodes = slices.Clone(snapshot.Nodes)
+	clone.Types = slices.Clone(snapshot.Types)
+	clone.Symbols = slices.Clone(snapshot.Symbols)
+	clone.Signatures = slices.Clone(snapshot.Signatures)
+	return clone
+}
+
+func replayFunctionNode(t *testing.T, snapshot *ProgramSnapshot, name string) NodeSnapshot {
+	t.Helper()
+	nodes := make(map[NodeID]NodeSnapshot, len(snapshot.Nodes))
+	for _, node := range snapshot.Nodes {
+		nodes[node.ID] = node
+	}
+	for _, node := range snapshot.Nodes {
+		if node.Kind == snapshotKindFunctionDeclaration && childText(node, "name", nodes) == name {
+			return node
+		}
+	}
+	t.Fatalf("function %q is missing", name)
+	return NodeSnapshot{}
+}
+
+func replaySignatureIndex(t *testing.T, snapshot *ProgramSnapshot, declaration NodeID) int {
+	t.Helper()
+	for index, signature := range snapshot.Signatures {
+		if signature.Declaration == declaration && signature.EffectProof.Implementation == declaration {
+			return index
+		}
+	}
+	t.Fatalf("implementation signature for %q is missing", declaration)
+	return -1
+}
+
+func finalizeTestSnapshot(snapshot *ProgramSnapshot) error {
+	snapshot.ContentHash = ""
+	encoded, err := jsonx.Marshal(snapshot, jsonx.Deterministic(true))
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(encoded)
+	snapshot.ContentHash = hex.EncodeToString(digest[:])
+	return nil
+}
+
+func isDigest(value string) bool {
+	if len(value) != sha256.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}

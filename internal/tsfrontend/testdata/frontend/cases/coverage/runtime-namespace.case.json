@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "id": "coverage/runtime-namespace",
+  "category": "coverage",
+  "mode": "reject",
+  "features": [
+    "coverage"
+  ],
+  "handbook": [
+    "12-declarations-and-jsx",
+    "14-modern-syntax",
+    "17-syntax-reference"
+  ],
+  "astGroups": [
+    "coverage"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/coverage/runtime-namespace.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

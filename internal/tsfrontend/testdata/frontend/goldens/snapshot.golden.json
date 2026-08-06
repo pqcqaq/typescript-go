@@ -1,0 +1,31 @@
+{
+  "case": "literals/number-integer",
+  "schemaVersion": 2,
+  "fileCount": 1,
+  "moduleCount": 1,
+  "nodeCount": 9,
+  "typeCount": 4,
+  "symbolCount": 3,
+  "signatureCount": 0,
+  "canonicalPaths": [
+    "cases/literals/number-integer.ts"
+  ],
+  "nodeKinds": [
+    "KindEndOfFile",
+    "KindExportKeyword",
+    "KindIdentifier",
+    "KindNumberKeyword",
+    "KindNumericLiteral",
+    "KindSourceFile",
+    "KindVariableDeclaration",
+    "KindVariableDeclarationList",
+    "KindVariableStatement"
+  ],
+  "typeKinds": [
+    "error",
+    "intrinsic",
+    "literal",
+    "object"
+  ],
+  "hasContentHash": true
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "generics/constrained-function",
+  "category": "generics",
+  "mode": "reject",
+  "features": [
+    "constraint",
+    "generics"
+  ],
+  "handbook": [
+    "06-generics",
+    "07-type-operators"
+  ],
+  "astGroups": [
+    "constraint",
+    "generics"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/generics/constrained-function.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1401_UNRESOLVED_GENERIC"
+    ],
+    "snapshot": true
+  }
+}

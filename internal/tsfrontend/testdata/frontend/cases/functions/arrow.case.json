@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "functions/arrow",
+  "category": "functions",
+  "mode": "accept",
+  "features": [
+    "functions"
+  ],
+  "handbook": [
+    "04-functions"
+  ],
+  "astGroups": [
+    "functions"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/functions/arrow.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

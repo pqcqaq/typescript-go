@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/import-value",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "import",
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "import",
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/import-value.ts",
+  "files": [
+    "cases/modules/import-value.ts",
+    "cases/modules/export-value.ts"
+  ],
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

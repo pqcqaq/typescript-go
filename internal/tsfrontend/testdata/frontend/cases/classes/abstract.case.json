@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/abstract",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "abstract",
+    "classes"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "abstract",
+    "classes"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/abstract.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "coverage/accepted-syntax",
+  "category": "coverage",
+  "mode": "accept",
+  "features": [
+    "coverage"
+  ],
+  "handbook": [
+    "12-declarations-and-jsx",
+    "14-modern-syntax",
+    "17-syntax-reference"
+  ],
+  "astGroups": [
+    "coverage"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/coverage/accepted-syntax.ts",
+  "files": [
+    "cases/coverage/accepted-syntax.ts",
+    "cases/coverage/coverage-dep.ts"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "ES2020"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

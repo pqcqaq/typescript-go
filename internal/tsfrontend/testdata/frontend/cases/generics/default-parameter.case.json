@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "generics/default-parameter",
+  "category": "generics",
+  "mode": "accept",
+  "features": [
+    "default-type",
+    "generics"
+  ],
+  "handbook": [
+    "06-generics",
+    "07-type-operators"
+  ],
+  "astGroups": [
+    "default-type",
+    "generics"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/generics/default-parameter.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

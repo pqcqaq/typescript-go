@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/export-value",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "export",
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "export",
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/export-value.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

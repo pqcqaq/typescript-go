@@ -1,0 +1,1605 @@
+{
+  "schemaVersion": 2,
+  "evidence": [
+    {
+      "kind": "KindArrayBindingPattern",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindArrayLiteralExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindArrayType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindArrowFunction",
+      "caseId": "functions/arrow",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindAsExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindAwaitExpression",
+      "caseId": "coverage/unsupported-runtime",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindBigIntLiteral",
+      "caseId": "literals/bigint",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindBinaryExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindBindingElement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindBlock",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindBreakStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindCallExpression",
+      "caseId": "coverage/jsdoc",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindCallSignature",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindCaseBlock",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindCaseClause",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindCatchClause",
+      "caseId": "rejections/eh",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindClassDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindClassExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindClassStaticBlockDeclaration",
+      "caseId": "coverage/decorators",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindComputedPropertyName",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindConditionalExpression",
+      "caseId": "functions/optional",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindConditionalType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindConstructSignature",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindConstructor",
+      "caseId": "classes/constructor",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindConstructorType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindContinueStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindDebuggerStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindDecorator",
+      "caseId": "coverage/decorators",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindDefaultClause",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindDeleteExpression",
+      "caseId": "coverage/unsupported-runtime",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindDoStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindElementAccessExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindEmptyStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindEnumDeclaration",
+      "caseId": "literals/enum",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindEnumMember",
+      "caseId": "coverage/ambient-module",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExportAssignment",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExportDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExportSpecifier",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExpressionStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExpressionWithTypeArguments",
+      "caseId": "coverage/jsdoc",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindExternalModuleReference",
+      "caseId": "coverage/cjs",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindFalseKeyword",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindForInStatement",
+      "caseId": "coverage/unsupported-runtime",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindForOfStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindForStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindFunctionDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindFunctionExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindFunctionType",
+      "caseId": "functions/higher-order",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindGetAccessor",
+      "caseId": "classes/get-set",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindHeritageClause",
+      "caseId": "coverage/jsdoc",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindIdentifier",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindIfStatement",
+      "caseId": "narrowing/null-guard",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindImportAttribute",
+      "caseId": "coverage/import-attributes",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindImportAttributes",
+      "caseId": "coverage/import-attributes",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindImportClause",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindImportDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindImportEqualsDeclaration",
+      "caseId": "coverage/cjs",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindImportSpecifier",
+      "caseId": "coverage/js-reparse",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindImportType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindIndexSignature",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindIndexedAccessType",
+      "caseId": "generics/mapped",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindInferType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindInterfaceDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindIntersectionType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDoc",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocAllType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocAugmentsTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocCallbackTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocDeprecatedTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocImplementsTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocImportTag",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocLink",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocLinkCode",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocLinkPlain",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocNameReference",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocNonNullableType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocNullableType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocOptionalType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocOverloadTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocOverrideTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocParameterTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocPrivateTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocPropertyTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocProtectedTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocPublicTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocReadonlyTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocReturnTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocSatisfiesTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocSeeTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocSignature",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocTemplateTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocText",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocThisTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocThrowsTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocTypeExpression",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocTypeLiteral",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocTypeTag",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocTypedefTag",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocUnknownTag",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSDocVariadicType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSImportDeclaration",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJSTypeAliasDeclaration",
+      "caseId": "coverage/js-reparse",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindJsxAttribute",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxAttributes",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxClosingElement",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxClosingFragment",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxElement",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxExpression",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxFragment",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxNamespacedName",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxOpeningElement",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxOpeningFragment",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxSelfClosingElement",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxSpreadAttribute",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxText",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindJsxTextAllWhiteSpaces",
+      "caseId": "coverage/jsx-all",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindLabeledStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindLiteralType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindMappedType",
+      "caseId": "generics/mapped",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindMetaProperty",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindMethodDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindMethodSignature",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindModuleBlock",
+      "caseId": "coverage/ambient-module",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindModuleDeclaration",
+      "caseId": "coverage/runtime-namespace",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindNamedExports",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNamedImports",
+      "caseId": "coverage/js-reparse",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNamedTupleMember",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNamespaceExport",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNamespaceExportDeclaration",
+      "caseId": "coverage/namespace-export",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNamespaceImport",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNewExpression",
+      "caseId": "classes/static",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNoSubstitutionTemplateLiteral",
+      "caseId": "literals/template",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNonNullExpression",
+      "caseId": "rejections/non-null",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindNullKeyword",
+      "caseId": "coverage/jsdoc",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindNumericLiteral",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindObjectBindingPattern",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindObjectLiteralExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindOmittedExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindOptionalType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindParameter",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindParenthesizedExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindParenthesizedType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindPostfixUnaryExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPrefixUnaryExpression",
+      "caseId": "classes/basic",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPrivateIdentifier",
+      "caseId": "classes/private",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPropertyAccessExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPropertyAssignment",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPropertyDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindPropertySignature",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindQualifiedName",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindRegularExpressionLiteral",
+      "caseId": "coverage/regexp",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindRestType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindReturnStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSatisfiesExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSemicolonClassElement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSetAccessor",
+      "caseId": "classes/get-set",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindShorthandPropertyAssignment",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSourceFile",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSpreadAssignment",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSpreadElement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindStringLiteral",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSuperKeyword",
+      "caseId": "classes/inheritance",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindSwitchStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTaggedTemplateExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTemplateExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTemplateHead",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTemplateLiteralType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTemplateLiteralTypeSpan",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTemplateMiddle",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTemplateSpan",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTemplateTail",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindThisKeyword",
+      "caseId": "classes/basic",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindThisType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindThrowStatement",
+      "caseId": "rejections/eh",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindTrueKeyword",
+      "caseId": "generics/conditional-type",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTryStatement",
+      "caseId": "rejections/eh",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindTupleType",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypeAliasDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypeAssertionExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTypeLiteral",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTypeOfExpression",
+      "caseId": "narrowing/typeof",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindTypeOperator",
+      "caseId": "generics/mapped",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypeParameter",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypePredicate",
+      "caseId": "narrowing/user-predicate",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypeQuery",
+      "caseId": "modules/type-import",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindTypeReference",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindUnionType",
+      "caseId": "coverage/jsdoc",
+      "expect": "compile-only"
+    },
+    {
+      "kind": "KindVariableDeclaration",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindVariableDeclarationList",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindVariableStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindVoidExpression",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindWhileStatement",
+      "caseId": "coverage/accepted-syntax",
+      "expect": "accept"
+    },
+    {
+      "kind": "KindWithStatement",
+      "caseId": "coverage/unsupported-runtime",
+      "expect": "reject"
+    },
+    {
+      "kind": "KindYieldExpression",
+      "caseId": "coverage/unsupported-runtime",
+      "expect": "reject"
+    }
+  ],
+  "exemptions": [
+    {
+      "kind": "KindAbstractKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAccessorKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAmpersandAmpersandEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAmpersandAmpersandToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAmpersandEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAmpersandToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAnyKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAssertKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAssertsKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsteriskAsteriskEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsteriskAsteriskToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsteriskEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsteriskToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAsyncKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAtToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindAwaitKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBacktickToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBarBarEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBarBarToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBarEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBarToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBigIntKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBooleanKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindBreakKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCaretEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCaretToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCaseKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCatchKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindClassKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCloseBraceToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCloseBracketToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCloseParenToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindColonToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindCommaToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindConflictMarkerTrivia",
+      "reason": "parser-owned"
+    },
+    {
+      "kind": "KindConstKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindConstructorKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindContinueKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDebuggerKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDeclareKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDefaultKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDeferKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDeleteKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDoKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDotDotDotToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindDotToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindElseKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindEndOfFile",
+      "reason": "parser-owned"
+    },
+    {
+      "kind": "KindEnumKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindEqualsEqualsEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindEqualsEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindEqualsGreaterThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindExclamationEqualsEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindExclamationEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindExclamationToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindExportKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindExtendsKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindFinallyKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindForKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindFromKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindFunctionKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGetKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGlobalKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanGreaterThanEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanGreaterThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindGreaterThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindHashToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindIfKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindImmediateKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindImplementsKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindImportKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindInKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindInferKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindInstanceOfKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindInterfaceKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindIntrinsicKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindIsKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindJSDocCommentTextToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindKeyOfKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLessThanEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLessThanLessThanEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLessThanLessThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLessThanSlashToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLessThanToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindLetKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindMinusEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindMinusMinusToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindMinusToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindMissingDeclaration",
+      "reason": "parser-owned"
+    },
+    {
+      "kind": "KindModuleKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindMultiLineCommentTrivia",
+      "reason": "trivia"
+    },
+    {
+      "kind": "KindNamespaceKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindNeverKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindNewKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindNewLineTrivia",
+      "reason": "trivia"
+    },
+    {
+      "kind": "KindNonTextFileMarkerTrivia",
+      "reason": "parser-owned"
+    },
+    {
+      "kind": "KindNotEmittedStatement",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindNotEmittedTypeElement",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindNumberKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindObjectKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOfKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOpenBraceToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOpenBracketToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOpenParenToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOutKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindOverrideKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPackageKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPartiallyEmittedExpression",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindPercentEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPercentToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPlusEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPlusPlusToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPlusToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPrivateKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindProtectedKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindPublicKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindQuestionDotToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindQuestionQuestionEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindQuestionQuestionToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindQuestionToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindReadonlyKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindRequireKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindReturnKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSatisfiesKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSemicolonToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSetKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSingleLineCommentTrivia",
+      "reason": "trivia"
+    },
+    {
+      "kind": "KindSlashEqualsToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSlashToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindStaticKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindStringKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSwitchKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSymbolKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindSyntaxList",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindSyntheticExpression",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindSyntheticReferenceExpression",
+      "reason": "synthetic"
+    },
+    {
+      "kind": "KindThrowKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindTildeToken",
+      "reason": "token"
+    },
+    {
+      "kind": "KindTryKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindTypeKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindTypeOfKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindUndefinedKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindUniqueKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindUnknown",
+      "reason": "parser-owned"
+    },
+    {
+      "kind": "KindUnknownKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindUsingKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindVarKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindVoidKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindWhileKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindWhitespaceTrivia",
+      "reason": "trivia"
+    },
+    {
+      "kind": "KindWithKeyword",
+      "reason": "token"
+    },
+    {
+      "kind": "KindYieldKeyword",
+      "reason": "token"
+    }
+  ]
+}

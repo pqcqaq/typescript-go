@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "safety/non-null",
+  "category": "safety",
+  "mode": "reject",
+  "features": [
+    "non-null"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "non-null"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/safety/non-null.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1302_UNPROVEN_NON_NULL_ASSERTION"
+    ],
+    "snapshot": true
+  }
+}

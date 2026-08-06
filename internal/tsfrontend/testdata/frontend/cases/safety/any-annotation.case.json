@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "safety/any-annotation",
+  "category": "safety",
+  "mode": "reject",
+  "features": [
+    "any"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "any"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/safety/any-annotation.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

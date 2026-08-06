@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/eh",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "eh"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "eh"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/eh.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

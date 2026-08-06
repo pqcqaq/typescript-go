@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/default-export",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "default-export",
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "default-export",
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/default-export.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "classes/static-member",
+  "category": "classes",
+  "mode": "accept",
+  "features": [
+    "classes",
+    "static"
+  ],
+  "handbook": [
+    "08-classes"
+  ],
+  "astGroups": [
+    "classes",
+    "static"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/classes/static-member.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

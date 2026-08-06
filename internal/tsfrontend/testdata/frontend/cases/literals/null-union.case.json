@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "literals/null-union",
+  "category": "literals",
+  "mode": "accept",
+  "features": [
+    "literals",
+    "null"
+  ],
+  "handbook": [
+    "02-basic-types"
+  ],
+  "astGroups": [
+    "literals",
+    "null"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/literals/null-union.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

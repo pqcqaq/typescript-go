@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "id": "features/async-function",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "async"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "async"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/async-function.ts",
+  "compilerOptions": {
+    "lib": [
+      "ES2020"
+    ]
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

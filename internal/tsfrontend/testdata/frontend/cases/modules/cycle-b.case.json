@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/cycle-b",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "import-cycle",
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "import-cycle",
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/cycle-b.ts",
+  "files": [
+    "cases/modules/cycle-a.ts",
+    "cases/modules/cycle-b.ts"
+  ],
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

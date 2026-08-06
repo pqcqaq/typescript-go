@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/cjs-import",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/cjs-import.ts",
+  "files": [
+    "cases/modules/cjs-import.ts",
+    "cases/modules/import-target.ts"
+  ],
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "Node16"
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

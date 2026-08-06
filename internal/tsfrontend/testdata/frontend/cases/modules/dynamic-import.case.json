@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/dynamic-import",
+  "category": "modules",
+  "mode": "reject",
+  "features": [
+    "module"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "module"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/dynamic-import.ts",
+  "files": [
+    "cases/modules/dynamic-import.ts",
+    "cases/modules/import-target.ts"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "ES5",
+      "ES2015.Promise"
+    ]
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

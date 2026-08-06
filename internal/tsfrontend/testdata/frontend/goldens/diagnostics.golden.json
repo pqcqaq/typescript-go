@@ -1,0 +1,1590 @@
+{
+  "cases": [
+    {
+      "case": "coverage/cjs",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/cjs.ts",
+            "start": 0,
+            "end": 42
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "cjs-interop"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindImportEqualsDeclaration",
+          "entityId": "node_255d3f3459f2415c626778e15c56022e",
+          "profile": "static",
+          "requiredCapability": "cjs-interop",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/cjs.ts",
+            "start": 15,
+            "end": 41
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "cjs-interop"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindExternalModuleReference",
+          "entityId": "node_74e17c4710d43732b09f68ac09c984a2",
+          "profile": "static",
+          "requiredCapability": "cjs-interop",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/decorators",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/decorators.ts",
+            "start": 54,
+            "end": 61
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "decorators"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindDecorator",
+          "entityId": "node_903125e3f67abf539245755a50bece23",
+          "profile": "static",
+          "requiredCapability": "decorator",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/decorators.ts",
+            "start": 54,
+            "end": 137
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "decorators"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindClassDeclaration",
+          "entityId": "node_e5b1952c01f7ada70a6c34086ed3ae48",
+          "profile": "static",
+          "requiredCapability": "decorator",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/decorators.ts",
+            "start": 106,
+            "end": 135
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "class-static-block"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindClassStaticBlockDeclaration",
+          "entityId": "node_58ff28817e92a6af32a2b1f19069c0fa",
+          "profile": "static",
+          "requiredCapability": "class-static-block",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/import-attributes",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/import-attributes.ts",
+            "start": 38,
+            "end": 66
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "import-attributes"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindImportAttributes",
+          "entityId": "node_fc04ec52befa72a9c7140ce0d8d29655",
+          "profile": "static",
+          "requiredCapability": "import-attributes",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/import-attributes.ts",
+            "start": 45,
+            "end": 64
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "import-attributes"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindImportAttribute",
+          "entityId": "node_ac297ec50489a283daf4a2b4b44839f6",
+          "profile": "static",
+          "requiredCapability": "import-attributes",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/jsx-all",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 189,
+            "end": 317
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "variable-declaration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindVariableDeclaration",
+          "entityId": "node_5a6381d6614081a373fcd227f4575dc7",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 199,
+            "end": 317
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "parenthesized-expression"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindParenthesizedExpression",
+          "entityId": "node_af72a1d810f8864e8c147ef3b028efec",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 201,
+            "end": 206
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxOpeningFragment",
+          "entityId": "node_0578f78fce3ca8c6de688b0b1cc42440",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 201,
+            "end": 315
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxFragment",
+          "entityId": "node_2ad3c835048a444b7bcdd5f361c6fe42",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 206,
+            "end": 211
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxTextAllWhiteSpaces",
+          "entityId": "node_0da40692acbe5eda3badccd545937561",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 211,
+            "end": 244
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxOpeningElement",
+          "entityId": "node_7b1b2684e40d10c53006a863de190494",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 211,
+            "end": 292
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxElement",
+          "entityId": "node_1929ecbb11228cf82cc160b964f382b6",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 215,
+            "end": 232
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxAttribute",
+          "entityId": "node_1b4d1985a0e2122f6a94097eeba9e05d",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 215,
+            "end": 243
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxAttributes",
+          "entityId": "node_ecb21d9148b14a6c6df5b5c439a76071",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 232,
+            "end": 243
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxSpreadAttribute",
+          "entityId": "node_48f7a12c1fd279b6cb9b04a36a3a051c",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 244,
+            "end": 264
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxText",
+          "entityId": "node_c13909b980cf5c0f9cb31ce91be311b9",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 264,
+            "end": 281
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxExpression",
+          "entityId": "node_a236b8b2624080ce7fb8766da4795121",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 281,
+            "end": 286
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxTextAllWhiteSpaces",
+          "entityId": "node_deeadd405931856dc1a6b348cea262c5",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 286,
+            "end": 292
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxClosingElement",
+          "entityId": "node_999f229c6a9e3cc85888a54c949d4d66",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 292,
+            "end": 297
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxTextAllWhiteSpaces",
+          "entityId": "node_6af43b6b7bb52a393ec773946fa3bc03",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 297,
+            "end": 309
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxSelfClosingElement",
+          "entityId": "node_d4514e901b122e3c273904ef36fbdb56",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 298,
+            "end": 306
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxNamespacedName",
+          "entityId": "node_248bac0eb6f3f6671899a2cee40bf9ea",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 306,
+            "end": 306
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxAttributes",
+          "entityId": "node_44684127790d8024844f1cbc9f92e1bf",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 309,
+            "end": 312
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxTextAllWhiteSpaces",
+          "entityId": "node_3ed87732752c5ae233824f815b1f9fec",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/jsx-all.tsx",
+            "start": 312,
+            "end": 315
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxClosingFragment",
+          "entityId": "node_0de9c307553e56f0df3413c3e88c1f88",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/regexp",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/regexp.ts",
+            "start": 15,
+            "end": 29
+          },
+          "messageKey": "subset.lowerer_unavailable",
+          "arguments": [
+            "regexp"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindRegularExpressionLiteral",
+          "entityId": "node_ec704afb456fc0bf2ec6ba8c38c46198",
+          "profile": "static",
+          "requiredCapability": "runtime:regexp",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/runtime-namespace",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/runtime-namespace.ts",
+            "start": 0,
+            "end": 56
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "namespace-runtime"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindModuleDeclaration",
+          "entityId": "node_56dd8c5d3a5b85e85ea0370d49d754e9",
+          "profile": "static",
+          "requiredCapability": "namespace-runtime",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "coverage/unsupported-runtime",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 51,
+            "end": 74
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "delete"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindDeleteExpression",
+          "entityId": "node_f9832677be9dcab7301c7b0ceaa08ad1",
+          "profile": "static",
+          "requiredCapability": "dynamic-object",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 75,
+            "end": 119
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "dynamic-enumeration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindForInStatement",
+          "entityId": "node_4b932d04c7df5d51e5672461ed8411ec",
+          "profile": "static",
+          "requiredCapability": "dynamic-object",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 119,
+            "end": 126
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "async"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsyncKeyword",
+          "entityId": "node_086f3882f396f1e684984b4184f1dbb2",
+          "profile": "static",
+          "requiredCapability": "async",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 119,
+            "end": 203
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "async"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_6241063ddc682614c24a59824c78c9f1",
+          "profile": "static",
+          "requiredCapability": "async",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 161,
+            "end": 188
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "async"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAwaitExpression",
+          "entityId": "node_ef7ef82c168b8954ea987d67c96cc3ab",
+          "profile": "static",
+          "requiredCapability": "async",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 203,
+            "end": 257
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "function-declaration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_bde6764e20b4bd961691b5a29a59fb94",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 244,
+            "end": 254
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "generator"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindYieldExpression",
+          "entityId": "node_8500bfdf2d31724e768baf271d25f72b",
+          "profile": "static",
+          "requiredCapability": "generator",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/coverage/unsupported-runtime.ts",
+            "start": 286,
+            "end": 378
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "with"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindWithStatement",
+          "entityId": "node_d75e9cb37039f9bf13278db3ed99bfcb",
+          "profile": "static",
+          "requiredCapability": "dynamic-object",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "features/async-function",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/async-function.ts",
+            "start": 0,
+            "end": 64
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "async"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_9884ca2ac20d86d2bf5605b5ecf6b180",
+          "profile": "static",
+          "requiredCapability": "async",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/async-function.ts",
+            "start": 6,
+            "end": 12
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "async"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsyncKeyword",
+          "entityId": "node_420db73935f46ae9a800ae62b328cade",
+          "profile": "static",
+          "requiredCapability": "async",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "generics/constrained-function",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1401_UNRESOLVED_GENERIC",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "representation",
+          "primarySpan": {
+            "file": "cases/generics/constrained-function.ts",
+            "start": 0,
+            "end": 87
+          },
+          "messageKey": "type.not_lowerable",
+          "arguments": [
+            "unresolved-type-parameter"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_01c7b18a925c996e02b4e870523ca30c",
+          "sourceType": "\u003cT extends { id: number; }\u003e(value: T) =\u003e number",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "generics/identity",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1401_UNRESOLVED_GENERIC",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "representation",
+          "primarySpan": {
+            "file": "cases/generics/identity.ts",
+            "start": 0,
+            "end": 58
+          },
+          "messageKey": "type.not_lowerable",
+          "arguments": [
+            "unresolved-type-parameter"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_3d7180f16a969f701a369b71c0df6dc6",
+          "sourceType": "\u003cT\u003e(value: T) =\u003e T",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "generics/keyof",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1401_UNRESOLVED_GENERIC",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "representation",
+          "primarySpan": {
+            "file": "cases/generics/keyof.ts",
+            "start": 0,
+            "end": 89
+          },
+          "messageKey": "type.not_lowerable",
+          "arguments": [
+            "unresolved-type-parameter"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_a055d47abcbd38e101f6d7e58f70bbf1",
+          "sourceType": "\u003cT, K extends keyof T\u003e(value: T, key: K) =\u003e T[K]",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "generics/tuple",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1401_UNRESOLVED_GENERIC",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "representation",
+          "primarySpan": {
+            "file": "cases/generics/tuple.ts",
+            "start": 0,
+            "end": 100
+          },
+          "messageKey": "type.not_lowerable",
+          "arguments": [
+            "unresolved-type-parameter"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_2004f9e91e88279cbe6f9bb880fc3d75",
+          "sourceType": "\u003cLeft, Right\u003e(left: Left, right: Right) =\u003e [Left, Right]",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "literals/bigint",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/literals/bigint.ts",
+            "start": 28,
+            "end": 33
+          },
+          "messageKey": "subset.lowerer_unavailable",
+          "arguments": [
+            "bigint"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindBigIntLiteral",
+          "entityId": "node_495794a463262b1b97b9ef5364a3c426",
+          "profile": "static",
+          "requiredCapability": "runtime:bigint",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "literals/enum",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/literals/enum.ts",
+            "start": 0,
+            "end": 31
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "enum-runtime"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindEnumDeclaration",
+          "entityId": "node_2fb8c5ff9a49491aeca6bb88dba3e4ab",
+          "profile": "static",
+          "requiredCapability": "enum-runtime",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "modules/dynamic-import",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "file_187e7a31ff54aa338ce12fe80bd50fbf",
+            "start": 33,
+            "end": 50
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "dynamic-import"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindCallExpression",
+          "entityId": "module-edge:module_3cda046183af869ffd697bcc828440de:dynamic-import:./import-target",
+          "profile": "static",
+          "requiredCapability": "dynamic-module-loader",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/any",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/any.ts",
+            "start": 12,
+            "end": 31
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "variable-declaration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindVariableDeclaration",
+          "entityId": "node_5455473c20a94d6c0f971d1b8a026101",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/any.ts",
+            "start": 29,
+            "end": 31
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "numeric-literal"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindNumericLiteral",
+          "entityId": "node_409631f26c793012766f9d7eae754ead",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/any.ts",
+            "start": 45,
+            "end": 68
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "variable-declaration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindVariableDeclaration",
+          "entityId": "node_60f93bf91ea8c03cc29887bfaa598a1d",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/any.ts",
+            "start": 54,
+            "end": 68
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "binary-expression"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindBinaryExpression",
+          "entityId": "node_b69645b1f376b20efcb1b527ca1a5267",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/as-any-as",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1301_UNSAFE_ASSERTION_CHAIN",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/as-any-as.ts",
+            "start": 51,
+            "end": 65
+          },
+          "messageKey": "assertion.unsafe_chain",
+          "arguments": [
+            "unsafe-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsExpression",
+          "entityId": "node_05faf8e6f711946620b2b60935161a7a",
+          "sourceType": "unknown",
+          "targetType": "any",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1301_UNSAFE_ASSERTION_CHAIN",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/as-any-as.ts",
+            "start": 51,
+            "end": 75
+          },
+          "messageKey": "assertion.unsafe_chain",
+          "arguments": [
+            "unsafe-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsExpression",
+          "entityId": "node_b02a029dfe5e32914c7d9a50f3b47b40",
+          "sourceType": "unknown",
+          "targetType": "any",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/eh",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/eh.ts",
+            "start": 31,
+            "end": 101
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "exceptions"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindTryStatement",
+          "entityId": "node_fda40b7b533cc14c8a978a3aaf555f76",
+          "profile": "static",
+          "requiredCapability": "exceptions",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/eh.ts",
+            "start": 39,
+            "end": 71
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "exceptions"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindThrowStatement",
+          "entityId": "node_3ec02d331ddca15a649e619aed29c1c3",
+          "profile": "static",
+          "requiredCapability": "exceptions",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/eh.ts",
+            "start": 75,
+            "end": 101
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "exceptions"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindCatchClause",
+          "entityId": "node_0876e246c1e5772acb7aad0215364068",
+          "profile": "static",
+          "requiredCapability": "exceptions",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/jsx",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/jsx.tsx",
+            "start": 91,
+            "end": 99
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxSelfClosingElement",
+          "entityId": "node_ef76641f0f404d18a6f6acc9c564be59",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/jsx.tsx",
+            "start": 96,
+            "end": 96
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "jsx"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindJsxAttributes",
+          "entityId": "node_5215f3586ffcf308e3e5d0abe118dbb0",
+          "profile": "static",
+          "requiredCapability": "jsx",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/non-null",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1302_UNPROVEN_NON_NULL_ASSERTION",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/non-null.ts",
+            "start": 56,
+            "end": 63
+          },
+          "messageKey": "assertion.non_null_unproven",
+          "arguments": [
+            "non-null-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindNonNullExpression",
+          "entityId": "node_0410675686c38461c5709893a61f4bb2",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/unknown",
+      "check": [
+        {
+          "code": "TS18046",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/rejections/unknown.ts",
+            "start": 56,
+            "end": 61
+          },
+          "messageKey": "_0_is_of_type_unknown_18046",
+          "arguments": [
+            "value"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ],
+      "build": [
+        {
+          "code": "TS18046",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/rejections/unknown.ts",
+            "start": 56,
+            "end": 61
+          },
+          "messageKey": "_0_is_of_type_unknown_18046",
+          "arguments": [
+            "value"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "rejections/using",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/rejections/using.ts",
+            "start": 0,
+            "end": 21
+          },
+          "messageKey": "subset.feature_unavailable",
+          "arguments": [
+            "using"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindVariableDeclarationList",
+          "entityId": "node_4e7f0c6b921cbca44f7aeb231f8161d1",
+          "profile": "static",
+          "requiredCapability": "disposable",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "safety/any-annotation",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1001_UNSUPPORTED_SYNTAX",
+          "severity": "error",
+          "category": "BINGO",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/safety/any-annotation.ts",
+            "start": 0,
+            "end": 55
+          },
+          "messageKey": "subset.any_type",
+          "arguments": [
+            "function-declaration"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindFunctionDeclaration",
+          "entityId": "node_561dd84e101f9ef62b32e7ea482b965e",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "safety/as-any-as",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1301_UNSAFE_ASSERTION_CHAIN",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/safety/as-any-as.ts",
+            "start": 59,
+            "end": 73
+          },
+          "messageKey": "assertion.unsafe_chain",
+          "arguments": [
+            "unsafe-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsExpression",
+          "entityId": "node_6dd1dd768c8d9e0bc7786e55c6f4ac57",
+          "sourceType": "unknown",
+          "targetType": "any",
+          "profile": "static",
+          "proofPath": []
+        },
+        {
+          "code": "BINGO1301_UNSAFE_ASSERTION_CHAIN",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/safety/as-any-as.ts",
+            "start": 59,
+            "end": 83
+          },
+          "messageKey": "assertion.unsafe_chain",
+          "arguments": [
+            "unsafe-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindAsExpression",
+          "entityId": "node_b80ea4c56268cd3b301baaab656dad44",
+          "sourceType": "unknown",
+          "targetType": "any",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "safety/non-null",
+      "check": [],
+      "build": [
+        {
+          "code": "BINGO1302_UNPROVEN_NON_NULL_ASSERTION",
+          "severity": "error",
+          "category": "BINGO-UNSAFE",
+          "stage": "subset",
+          "primarySpan": {
+            "file": "cases/safety/non-null.ts",
+            "start": 61,
+            "end": 68
+          },
+          "messageKey": "assertion.non_null_unproven",
+          "arguments": [
+            "non-null-assertion"
+          ],
+          "relatedSpans": [],
+          "nodeKind": "KindNonNullExpression",
+          "entityId": "node_f77d21aec83b1d7a512a88ee0f7fd123",
+          "profile": "static",
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "safety/type-mismatch",
+      "check": [
+        {
+          "code": "TS2322",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/safety/type-mismatch.ts",
+            "start": 13,
+            "end": 18
+          },
+          "messageKey": "Type_0_is_not_assignable_to_type_1_2322",
+          "arguments": [
+            "number",
+            "string"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ],
+      "build": [
+        {
+          "code": "TS2322",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/safety/type-mismatch.ts",
+            "start": 13,
+            "end": 18
+          },
+          "messageKey": "Type_0_is_not_assignable_to_type_1_2322",
+          "arguments": [
+            "number",
+            "string"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ]
+    },
+    {
+      "case": "safety/unknown-unchecked",
+      "check": [
+        {
+          "code": "TS18046",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/safety/unknown-unchecked.ts",
+            "start": 56,
+            "end": 61
+          },
+          "messageKey": "_0_is_of_type_unknown_18046",
+          "arguments": [
+            "value"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ],
+      "build": [
+        {
+          "code": "TS18046",
+          "severity": "error",
+          "category": "TS",
+          "stage": "semantic",
+          "primarySpan": {
+            "file": "cases/safety/unknown-unchecked.ts",
+            "start": 56,
+            "end": 61
+          },
+          "messageKey": "_0_is_of_type_unknown_18046",
+          "arguments": [
+            "value"
+          ],
+          "relatedSpans": [],
+          "proofPath": []
+        }
+      ]
+    }
+  ]
+}

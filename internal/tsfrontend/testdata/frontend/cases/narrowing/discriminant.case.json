@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "id": "narrowing/discriminant",
+  "category": "narrowing",
+  "mode": "accept",
+  "features": [
+    "narrowing"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing"
+  ],
+  "astGroups": [
+    "narrowing"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/narrowing/discriminant.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

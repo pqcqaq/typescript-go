@@ -221,6 +221,20 @@ func (c *Checker) GetReturnTypeOfSignature(sig *Signature) *Type {
 	return c.getReturnTypeOfSignature(sig)
 }
 
+// GetInstantiatedTypeArgumentsOfSignature returns the concrete type arguments
+// applied to an instantiated signature. Declaration signatures and
+// non-generic signatures return nil.
+func (c *Checker) GetInstantiatedTypeArgumentsOfSignature(sig *Signature) []*Type {
+	if sig == nil || sig.target == nil || sig.mapper == nil || len(sig.target.typeParameters) == 0 {
+		return nil
+	}
+	result := make([]*Type, len(sig.target.typeParameters))
+	for index, parameter := range sig.target.typeParameters {
+		result[index] = c.instantiateType(parameter, sig.mapper)
+	}
+	return result
+}
+
 func (c *Checker) HasEffectiveRestParameter(signature *Signature) bool {
 	return c.hasEffectiveRestParameter(signature)
 }
@@ -328,6 +342,12 @@ func (c *Checker) GetWidenedLiteralType(t *Type) *Type {
 
 func (c *Checker) IsTypeAssignableTo(source *Type, target *Type) bool {
 	return c.isTypeAssignableTo(source, target)
+}
+
+// GetVariances returns the checker-computed type-parameter variance proof for
+// a generic class/interface/reference type.
+func (c *Checker) GetVariances(t *Type) []VarianceFlags {
+	return c.getVariances(t)
 }
 
 func (c *Checker) GetUnionTypeEx(types []*Type, unionReduction UnionReduction) *Type {

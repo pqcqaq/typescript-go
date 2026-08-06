@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "id": "safety/unknown-unchecked",
+  "category": "safety",
+  "mode": "reject",
+  "features": [
+    "unknown"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "unknown"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/safety/unknown-unchecked.ts",
+  "expect": {
+    "checkCodes": [
+      "TS18046"
+    ],
+    "buildCodes": [
+      "TS18046"
+    ],
+    "snapshot": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "id": "safety/as-any-as",
+  "category": "safety",
+  "mode": "reject",
+  "features": [
+    "any",
+    "as-any-as",
+    "unknown"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "any",
+    "as-any-as",
+    "unknown"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/safety/as-any-as.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1301_UNSAFE_ASSERTION_CHAIN"
+    ],
+    "snapshot": true
+  }
+}

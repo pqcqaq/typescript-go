@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "id": "generics/tuple",
+  "category": "generics",
+  "mode": "reject",
+  "features": [
+    "generics",
+    "tuple"
+  ],
+  "handbook": [
+    "06-generics",
+    "07-type-operators"
+  ],
+  "astGroups": [
+    "generics",
+    "tuple"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/generics/tuple.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1401_UNRESOLVED_GENERIC"
+    ],
+    "snapshot": true
+  }
+}

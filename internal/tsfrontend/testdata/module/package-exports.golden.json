@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "specifier": "fixture-package",
+  "edges": [
+    {
+      "resolutionMode": "CommonJS",
+      "resolved": "node_modules/fixture-package/cjs.d.cts",
+      "package": "fixture-package/cjs.d.cts@1.2.3",
+      "format": "cjs",
+      "external": true
+    },
+    {
+      "resolutionMode": "ESNext",
+      "resolved": "node_modules/fixture-package/esm.d.mts",
+      "package": "fixture-package/esm.d.mts@1.2.3",
+      "format": "esm",
+      "external": true
+    }
+  ]
+}

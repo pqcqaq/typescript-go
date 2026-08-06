@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "id": "narrowing/discriminated-union",
+  "category": "narrowing",
+  "mode": "accept",
+  "features": [
+    "discriminated-union",
+    "narrowing"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing"
+  ],
+  "astGroups": [
+    "discriminated-union",
+    "narrowing"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/narrowing/discriminated-union.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

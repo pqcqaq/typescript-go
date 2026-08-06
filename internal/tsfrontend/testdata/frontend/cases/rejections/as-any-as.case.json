@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/as-any-as",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "as-any-as"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "as-any-as"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/as-any-as.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1301_UNSAFE_ASSERTION_CHAIN"
+    ],
+    "snapshot": true
+  }
+}

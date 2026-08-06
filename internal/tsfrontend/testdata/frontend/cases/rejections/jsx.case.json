@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/jsx",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "jsx"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "jsx"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/jsx.tsx",
+  "compilerOptions": {
+    "jsx": "preserve"
+  },
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1001_UNSUPPORTED_SYNTAX"
+    ],
+    "snapshot": true
+  }
+}

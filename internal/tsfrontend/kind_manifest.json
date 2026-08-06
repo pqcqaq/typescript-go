@@ -1,0 +1,5225 @@
+{
+  "schemaVersion": 2,
+  "kinds": [
+    {
+      "kind": "KindUnknown",
+      "kindValue": 0,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "unknown",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindEndOfFile",
+      "kindValue": 1,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "end-of-file",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSingleLineCommentTrivia",
+      "kindValue": 2,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "single-line-comment-trivia",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMultiLineCommentTrivia",
+      "kindValue": 3,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "multi-line-comment-trivia",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNewLineTrivia",
+      "kindValue": 4,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "new-line-trivia",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindWhitespaceTrivia",
+      "kindValue": 5,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "whitespace-trivia",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConflictMarkerTrivia",
+      "kindValue": 6,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "conflict-marker-trivia",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindNonTextFileMarkerTrivia",
+      "kindValue": 7,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "non-text-file-marker-trivia",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindNumericLiteral",
+      "kindValue": 8,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "numeric-literal",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindBigIntLiteral",
+      "kindValue": 9,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S2"
+      ],
+      "decisionPolicy": "runtime-capability",
+      "defaultDecision": "accept-runtime",
+      "feature": "bigint",
+      "capability": "runtime:bigint",
+      "gateHandler": "gateCapability",
+      "loweringPlan": "lowerRuntime"
+    },
+    {
+      "kind": "KindStringLiteral",
+      "kindValue": 10,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "string-literal",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindJsxText",
+      "kindValue": 11,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxTextAllWhiteSpaces",
+      "kindValue": 12,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindRegularExpressionLiteral",
+      "kindValue": 13,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S2"
+      ],
+      "decisionPolicy": "runtime-capability",
+      "defaultDecision": "accept-runtime",
+      "feature": "regexp",
+      "capability": "runtime:regexp",
+      "gateHandler": "gateCapability",
+      "loweringPlan": "lowerRuntime"
+    },
+    {
+      "kind": "KindNoSubstitutionTemplateLiteral",
+      "kindValue": 14,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "no-substitution-template-literal",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTemplateHead",
+      "kindValue": 15,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "template-head",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTemplateMiddle",
+      "kindValue": 16,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "template-middle",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTemplateTail",
+      "kindValue": 17,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "template-tail",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindOpenBraceToken",
+      "kindValue": 18,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "open-brace-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCloseBraceToken",
+      "kindValue": 19,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "close-brace-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOpenParenToken",
+      "kindValue": 20,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "open-paren-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCloseParenToken",
+      "kindValue": 21,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "close-paren-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOpenBracketToken",
+      "kindValue": 22,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "open-bracket-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCloseBracketToken",
+      "kindValue": 23,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "close-bracket-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDotToken",
+      "kindValue": 24,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "dot-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDotDotDotToken",
+      "kindValue": 25,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "dot-dot-dot-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSemicolonToken",
+      "kindValue": 26,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "semicolon-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCommaToken",
+      "kindValue": 27,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "comma-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindQuestionDotToken",
+      "kindValue": 28,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "question-dot-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLessThanToken",
+      "kindValue": 29,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "less-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLessThanSlashToken",
+      "kindValue": 30,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "less-than-slash-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanToken",
+      "kindValue": 31,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLessThanEqualsToken",
+      "kindValue": 32,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "less-than-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanEqualsToken",
+      "kindValue": 33,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEqualsEqualsToken",
+      "kindValue": 34,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "equals-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindExclamationEqualsToken",
+      "kindValue": 35,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "exclamation-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEqualsEqualsEqualsToken",
+      "kindValue": 36,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "equals-equals-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindExclamationEqualsEqualsToken",
+      "kindValue": 37,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "exclamation-equals-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEqualsGreaterThanToken",
+      "kindValue": 38,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "equals-greater-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPlusToken",
+      "kindValue": 39,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "plus-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMinusToken",
+      "kindValue": 40,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "minus-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsteriskToken",
+      "kindValue": 41,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "asterisk-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsteriskAsteriskToken",
+      "kindValue": 42,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "asterisk-asterisk-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSlashToken",
+      "kindValue": 43,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "slash-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPercentToken",
+      "kindValue": 44,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "percent-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPlusPlusToken",
+      "kindValue": 45,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "plus-plus-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMinusMinusToken",
+      "kindValue": 46,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "minus-minus-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLessThanLessThanToken",
+      "kindValue": 47,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "less-than-less-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanToken",
+      "kindValue": 48,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-greater-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanGreaterThanToken",
+      "kindValue": 49,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-greater-than-greater-than-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAmpersandToken",
+      "kindValue": 50,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "ampersand-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBarToken",
+      "kindValue": 51,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "bar-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCaretToken",
+      "kindValue": 52,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "caret-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindExclamationToken",
+      "kindValue": 53,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "exclamation-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTildeToken",
+      "kindValue": 54,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "tilde-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAmpersandAmpersandToken",
+      "kindValue": 55,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "ampersand-ampersand-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBarBarToken",
+      "kindValue": 56,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "bar-bar-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindQuestionToken",
+      "kindValue": 57,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "question-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindColonToken",
+      "kindValue": 58,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "colon-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAtToken",
+      "kindValue": 59,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "at-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindQuestionQuestionToken",
+      "kindValue": 60,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "question-question-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBacktickToken",
+      "kindValue": 61,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "backtick-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindHashToken",
+      "kindValue": 62,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "hash-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEqualsToken",
+      "kindValue": 63,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPlusEqualsToken",
+      "kindValue": 64,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "plus-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMinusEqualsToken",
+      "kindValue": 65,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "minus-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsteriskEqualsToken",
+      "kindValue": 66,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "asterisk-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsteriskAsteriskEqualsToken",
+      "kindValue": 67,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "asterisk-asterisk-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSlashEqualsToken",
+      "kindValue": 68,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "slash-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPercentEqualsToken",
+      "kindValue": 69,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "percent-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLessThanLessThanEqualsToken",
+      "kindValue": 70,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "less-than-less-than-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanEqualsToken",
+      "kindValue": 71,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-greater-than-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGreaterThanGreaterThanGreaterThanEqualsToken",
+      "kindValue": 72,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "greater-than-greater-than-greater-than-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAmpersandEqualsToken",
+      "kindValue": 73,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "ampersand-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBarEqualsToken",
+      "kindValue": 74,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "bar-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBarBarEqualsToken",
+      "kindValue": 75,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "bar-bar-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAmpersandAmpersandEqualsToken",
+      "kindValue": 76,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "ampersand-ampersand-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindQuestionQuestionEqualsToken",
+      "kindValue": 77,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "question-question-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCaretEqualsToken",
+      "kindValue": 78,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "caret-equals-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIdentifier",
+      "kindValue": 79,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "identifier",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindPrivateIdentifier",
+      "kindValue": 80,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "private-identifier",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindJSDocCommentTextToken",
+      "kindValue": 81,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-comment-text-token",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBreakKeyword",
+      "kindValue": 82,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "break-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCaseKeyword",
+      "kindValue": 83,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "case-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindCatchKeyword",
+      "kindValue": 84,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "catch-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindClassKeyword",
+      "kindValue": 85,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "class-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConstKeyword",
+      "kindValue": 86,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "const-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindContinueKeyword",
+      "kindValue": 87,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "continue-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDebuggerKeyword",
+      "kindValue": 88,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "debugger-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDefaultKeyword",
+      "kindValue": 89,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "default-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDeleteKeyword",
+      "kindValue": 90,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "delete-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDoKeyword",
+      "kindValue": 91,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "do-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindElseKeyword",
+      "kindValue": 92,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "else-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEnumKeyword",
+      "kindValue": 93,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "enum-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindExportKeyword",
+      "kindValue": 94,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "export-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindExtendsKeyword",
+      "kindValue": 95,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "extends-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindFalseKeyword",
+      "kindValue": 96,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "false-keyword",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindFinallyKeyword",
+      "kindValue": 97,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "finally-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindForKeyword",
+      "kindValue": 98,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "for-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindFunctionKeyword",
+      "kindValue": 99,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "function-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIfKeyword",
+      "kindValue": 100,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "if-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindImportKeyword",
+      "kindValue": 101,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "import-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindInKeyword",
+      "kindValue": 102,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "in-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindInstanceOfKeyword",
+      "kindValue": 103,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "instance-of-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNewKeyword",
+      "kindValue": 104,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "new-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNullKeyword",
+      "kindValue": 105,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "null-keyword",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindReturnKeyword",
+      "kindValue": 106,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "return-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSuperKeyword",
+      "kindValue": 107,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "super-keyword",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindSwitchKeyword",
+      "kindValue": 108,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "switch-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindThisKeyword",
+      "kindValue": 109,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "this-keyword",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindThrowKeyword",
+      "kindValue": 110,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "throw-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTrueKeyword",
+      "kindValue": 111,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "true-keyword",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindTryKeyword",
+      "kindValue": 112,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "try-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeOfKeyword",
+      "kindValue": 113,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-of-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindVarKeyword",
+      "kindValue": 114,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "var-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindVoidKeyword",
+      "kindValue": 115,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "void-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindWhileKeyword",
+      "kindValue": 116,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "while-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindWithKeyword",
+      "kindValue": 117,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "with-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindImplementsKeyword",
+      "kindValue": 118,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "implements-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindInterfaceKeyword",
+      "kindValue": 119,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "interface-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLetKeyword",
+      "kindValue": 120,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "let-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPackageKeyword",
+      "kindValue": 121,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "package-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPrivateKeyword",
+      "kindValue": 122,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "private-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindProtectedKeyword",
+      "kindValue": 123,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "protected-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPublicKeyword",
+      "kindValue": 124,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "public-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindStaticKeyword",
+      "kindValue": 125,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "static-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindYieldKeyword",
+      "kindValue": 126,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "generator",
+      "capability": "generator",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindAbstractKeyword",
+      "kindValue": 127,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "abstract-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAccessorKeyword",
+      "kindValue": 128,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "accessor-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsKeyword",
+      "kindValue": 129,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "as-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAssertsKeyword",
+      "kindValue": 130,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "asserts-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAssertKeyword",
+      "kindValue": 131,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "assert-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAnyKeyword",
+      "kindValue": 132,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "any-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindAsyncKeyword",
+      "kindValue": 133,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "async",
+      "capability": "async",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindAwaitKeyword",
+      "kindValue": 134,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "async",
+      "capability": "async",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindBooleanKeyword",
+      "kindValue": 135,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "boolean-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConstructorKeyword",
+      "kindValue": 136,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "constructor-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDeclareKeyword",
+      "kindValue": 137,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "declare-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGetKeyword",
+      "kindValue": 138,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "get-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindImmediateKeyword",
+      "kindValue": 139,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "immediate-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindInferKeyword",
+      "kindValue": 140,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "infer-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIntrinsicKeyword",
+      "kindValue": 141,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "intrinsic-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIsKeyword",
+      "kindValue": 142,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "is-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindKeyOfKeyword",
+      "kindValue": 143,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "key-of-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindModuleKeyword",
+      "kindValue": 144,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "module-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNamespaceKeyword",
+      "kindValue": 145,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "namespace-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNeverKeyword",
+      "kindValue": 146,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "never-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOutKeyword",
+      "kindValue": 147,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "out-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindReadonlyKeyword",
+      "kindValue": 148,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "readonly-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindRequireKeyword",
+      "kindValue": 149,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "require-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNumberKeyword",
+      "kindValue": 150,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "number-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindObjectKeyword",
+      "kindValue": 151,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "object-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSatisfiesKeyword",
+      "kindValue": 152,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "satisfies-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSetKeyword",
+      "kindValue": 153,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "set-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindStringKeyword",
+      "kindValue": 154,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "string-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSymbolKeyword",
+      "kindValue": 155,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "symbol-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeKeyword",
+      "kindValue": 156,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindUndefinedKeyword",
+      "kindValue": 157,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "undefined-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindUniqueKeyword",
+      "kindValue": 158,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "unique-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindUnknownKeyword",
+      "kindValue": 159,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "unknown-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindUsingKeyword",
+      "kindValue": 160,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "using",
+      "capability": "disposable",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindFromKeyword",
+      "kindValue": 161,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "from-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindGlobalKeyword",
+      "kindValue": 162,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "global-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindBigIntKeyword",
+      "kindValue": 163,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "big-int-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOverrideKeyword",
+      "kindValue": 164,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "override-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOfKeyword",
+      "kindValue": 165,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "of-keyword",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindDeferKeyword",
+      "kindValue": 166,
+      "domain": "lexical",
+      "syntaxGroup": "token",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "import-defer",
+      "capability": "module-defer",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindQualifiedName",
+      "kindValue": 167,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "qualified-name",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindComputedPropertyName",
+      "kindValue": 168,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "computed-property-name",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTypeParameter",
+      "kindValue": 169,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-parameter",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindParameter",
+      "kindValue": 170,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "parameter",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindDecorator",
+      "kindValue": 171,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "decorators",
+      "capability": "decorator",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindPropertySignature",
+      "kindValue": 172,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "property-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindPropertyDeclaration",
+      "kindValue": 173,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "property-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindMethodSignature",
+      "kindValue": 174,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "method-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMethodDeclaration",
+      "kindValue": 175,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "method-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindClassStaticBlockDeclaration",
+      "kindValue": 176,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "class-static-block",
+      "capability": "class-static-block",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindConstructor",
+      "kindValue": 177,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "constructor",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindGetAccessor",
+      "kindValue": 178,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "get-accessor",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindSetAccessor",
+      "kindValue": 179,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "set-accessor",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindCallSignature",
+      "kindValue": 180,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "call-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConstructSignature",
+      "kindValue": 181,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "construct-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIndexSignature",
+      "kindValue": 182,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "index-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypePredicate",
+      "kindValue": 183,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-predicate",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeReference",
+      "kindValue": 184,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-reference",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindFunctionType",
+      "kindValue": 185,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "function-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConstructorType",
+      "kindValue": 186,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "constructor-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeQuery",
+      "kindValue": 187,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-query",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeLiteral",
+      "kindValue": 188,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "type-literal",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindArrayType",
+      "kindValue": 189,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "array-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTupleType",
+      "kindValue": 190,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "tuple-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindOptionalType",
+      "kindValue": 191,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "optional-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindRestType",
+      "kindValue": 192,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "rest-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindUnionType",
+      "kindValue": 193,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "union-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIntersectionType",
+      "kindValue": 194,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "intersection-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindConditionalType",
+      "kindValue": 195,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "conditional-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindInferType",
+      "kindValue": 196,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "infer-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindParenthesizedType",
+      "kindValue": 197,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "parenthesized-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindThisType",
+      "kindValue": 198,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "this-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeOperator",
+      "kindValue": 199,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-operator",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindIndexedAccessType",
+      "kindValue": 200,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "indexed-access-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindMappedType",
+      "kindValue": 201,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "mapped-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindLiteralType",
+      "kindValue": 202,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "literal-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNamedTupleMember",
+      "kindValue": 203,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "named-tuple-member",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTemplateLiteralType",
+      "kindValue": 204,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "template-literal-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTemplateLiteralTypeSpan",
+      "kindValue": 205,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "template-literal-type-span",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindImportType",
+      "kindValue": 206,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "import-type",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindObjectBindingPattern",
+      "kindValue": 207,
+      "domain": "runtime",
+      "syntaxGroup": "binding",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "object-binding-pattern",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindArrayBindingPattern",
+      "kindValue": 208,
+      "domain": "runtime",
+      "syntaxGroup": "binding",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "array-binding-pattern",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindBindingElement",
+      "kindValue": 209,
+      "domain": "runtime",
+      "syntaxGroup": "binding",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "binding-element",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindArrayLiteralExpression",
+      "kindValue": 210,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "array-literal-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindObjectLiteralExpression",
+      "kindValue": 211,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "object-literal-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindPropertyAccessExpression",
+      "kindValue": 212,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "property-access-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindElementAccessExpression",
+      "kindValue": 213,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "element-access-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindCallExpression",
+      "kindValue": 214,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "call-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNewExpression",
+      "kindValue": 215,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "new-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTaggedTemplateExpression",
+      "kindValue": 216,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "tagged-template-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTypeAssertionExpression",
+      "kindValue": 217,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "checked-boundary",
+      "defaultDecision": "accept-desugar",
+      "feature": "unsafe-assertion",
+      "capability": "checked-cast",
+      "gateHandler": "gateAssertion",
+      "loweringPlan": "lowerCheckedCast"
+    },
+    {
+      "kind": "KindParenthesizedExpression",
+      "kindValue": 218,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "parenthesized-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindFunctionExpression",
+      "kindValue": 219,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "function-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindArrowFunction",
+      "kindValue": 220,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "arrow-function",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindDeleteExpression",
+      "kindValue": 221,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "delete",
+      "capability": "dynamic-object",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindTypeOfExpression",
+      "kindValue": 222,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "type-of-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindVoidExpression",
+      "kindValue": 223,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "void-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindAwaitExpression",
+      "kindValue": 224,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "async",
+      "capability": "async",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindPrefixUnaryExpression",
+      "kindValue": 225,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "prefix-unary-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindPostfixUnaryExpression",
+      "kindValue": 226,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "postfix-unary-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindBinaryExpression",
+      "kindValue": 227,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "binary-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindConditionalExpression",
+      "kindValue": 228,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "conditional-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindTemplateExpression",
+      "kindValue": 229,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "template-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindYieldExpression",
+      "kindValue": 230,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "generator",
+      "capability": "generator",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindSpreadElement",
+      "kindValue": 231,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "spread-element",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindClassExpression",
+      "kindValue": 232,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "class-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindOmittedExpression",
+      "kindValue": 233,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "omitted-expression",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindExpressionWithTypeArguments",
+      "kindValue": 234,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "expression-with-type-arguments",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindAsExpression",
+      "kindValue": 235,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "checked-boundary",
+      "defaultDecision": "accept-desugar",
+      "feature": "unsafe-assertion",
+      "capability": "checked-cast",
+      "gateHandler": "gateAssertion",
+      "loweringPlan": "lowerCheckedCast"
+    },
+    {
+      "kind": "KindNonNullExpression",
+      "kindValue": 236,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "checked-boundary",
+      "defaultDecision": "accept-desugar",
+      "feature": "non-null-assertion",
+      "capability": "checked-cast",
+      "gateHandler": "gateAssertion",
+      "loweringPlan": "lowerCheckedCast"
+    },
+    {
+      "kind": "KindMetaProperty",
+      "kindValue": 237,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "meta-property",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindSyntheticExpression",
+      "kindValue": 238,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "synthetic-expression",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindSatisfiesExpression",
+      "kindValue": 239,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "checked-boundary",
+      "defaultDecision": "accept-desugar",
+      "feature": "unsafe-assertion",
+      "capability": "checked-cast",
+      "gateHandler": "gateAssertion",
+      "loweringPlan": "lowerCheckedCast"
+    },
+    {
+      "kind": "KindTemplateSpan",
+      "kindValue": 240,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "template-span",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindSemicolonClassElement",
+      "kindValue": 241,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "semicolon-class-element",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindBlock",
+      "kindValue": 242,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "block",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindEmptyStatement",
+      "kindValue": 243,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "empty-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindVariableStatement",
+      "kindValue": 244,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "variable-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindExpressionStatement",
+      "kindValue": 245,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "expression-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindIfStatement",
+      "kindValue": 246,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "if-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindDoStatement",
+      "kindValue": 247,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "do-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindWhileStatement",
+      "kindValue": 248,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "while-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindForStatement",
+      "kindValue": 249,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "for-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindForInStatement",
+      "kindValue": 250,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "dynamic-enumeration",
+      "capability": "dynamic-object",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindForOfStatement",
+      "kindValue": 251,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "for-of-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindContinueStatement",
+      "kindValue": 252,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "continue-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindBreakStatement",
+      "kindValue": 253,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "break-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindReturnStatement",
+      "kindValue": 254,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "return-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindWithStatement",
+      "kindValue": 255,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "with",
+      "capability": "dynamic-object",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindSwitchStatement",
+      "kindValue": 256,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "switch-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindLabeledStatement",
+      "kindValue": 257,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "labeled-statement",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindThrowStatement",
+      "kindValue": 258,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "exceptions",
+      "capability": "exceptions",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindTryStatement",
+      "kindValue": 259,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "exceptions",
+      "capability": "exceptions",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindDebuggerStatement",
+      "kindValue": 260,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "erase-debug",
+      "defaultDecision": "accept-desugar",
+      "feature": "debugger",
+      "capability": "debugger",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerErase"
+    },
+    {
+      "kind": "KindVariableDeclaration",
+      "kindValue": 261,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "variable-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindVariableDeclarationList",
+      "kindValue": 262,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "variable-declaration-list",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindFunctionDeclaration",
+      "kindValue": 263,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "function-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindClassDeclaration",
+      "kindValue": 264,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "class-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindInterfaceDeclaration",
+      "kindValue": 265,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "interface-declaration",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindTypeAliasDeclaration",
+      "kindValue": 266,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "type-alias-declaration",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindEnumDeclaration",
+      "kindValue": 267,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "enum-runtime",
+      "capability": "enum-runtime",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindModuleDeclaration",
+      "kindValue": 268,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "namespace-runtime",
+      "capability": "namespace-runtime",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindModuleBlock",
+      "kindValue": 269,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "module-block",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindCaseBlock",
+      "kindValue": 270,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "case-block",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNamespaceExportDeclaration",
+      "kindValue": 271,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "namespace-export-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindImportEqualsDeclaration",
+      "kindValue": 272,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "cjs-interop",
+      "capability": "cjs-interop",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindImportDeclaration",
+      "kindValue": 273,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "import-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindImportClause",
+      "kindValue": 274,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "import-clause",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNamespaceImport",
+      "kindValue": 275,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "namespace-import",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNamedImports",
+      "kindValue": 276,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "named-imports",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindImportSpecifier",
+      "kindValue": 277,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "import-specifier",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindExportAssignment",
+      "kindValue": 278,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "export-assignment",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindExportDeclaration",
+      "kindValue": 279,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "export-declaration",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNamedExports",
+      "kindValue": 280,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "named-exports",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindNamespaceExport",
+      "kindValue": 281,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "namespace-export",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindExportSpecifier",
+      "kindValue": 282,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "export-specifier",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindMissingDeclaration",
+      "kindValue": 283,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "missing-declaration",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindExternalModuleReference",
+      "kindValue": 284,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "cjs-interop",
+      "capability": "cjs-interop",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxElement",
+      "kindValue": 285,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxSelfClosingElement",
+      "kindValue": 286,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxOpeningElement",
+      "kindValue": 287,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxClosingElement",
+      "kindValue": 288,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxFragment",
+      "kindValue": 289,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxOpeningFragment",
+      "kindValue": 290,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxClosingFragment",
+      "kindValue": 291,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxAttribute",
+      "kindValue": 292,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxAttributes",
+      "kindValue": 293,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxSpreadAttribute",
+      "kindValue": 294,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxExpression",
+      "kindValue": 295,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindJsxNamespacedName",
+      "kindValue": 296,
+      "domain": "runtime",
+      "syntaxGroup": "jsx",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "jsx",
+      "capability": "jsx",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindCaseClause",
+      "kindValue": 297,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "case-clause",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindDefaultClause",
+      "kindValue": 298,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "default-clause",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindHeritageClause",
+      "kindValue": 299,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "heritage-clause",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindCatchClause",
+      "kindValue": 300,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "exceptions",
+      "capability": "exceptions",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindImportAttributes",
+      "kindValue": 301,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "import-attributes",
+      "capability": "import-attributes",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindImportAttribute",
+      "kindValue": 302,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "P"
+      ],
+      "decisionPolicy": "planned-feature",
+      "defaultDecision": "defer-feature",
+      "feature": "import-attributes",
+      "capability": "import-attributes",
+      "gateHandler": "gateFeature"
+    },
+    {
+      "kind": "KindPropertyAssignment",
+      "kindValue": 303,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "property-assignment",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindShorthandPropertyAssignment",
+      "kindValue": 304,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "shorthand-property-assignment",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindSpreadAssignment",
+      "kindValue": 305,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "spread-assignment",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindEnumMember",
+      "kindValue": 306,
+      "domain": "runtime",
+      "syntaxGroup": "declaration",
+      "plannedLevels": [
+        "S1"
+      ],
+      "decisionPolicy": "desugar",
+      "defaultDecision": "accept-desugar",
+      "feature": "enum-member",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDesugar"
+    },
+    {
+      "kind": "KindSourceFile",
+      "kindValue": 307,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "S0"
+      ],
+      "decisionPolicy": "direct",
+      "defaultDecision": "accept-direct",
+      "feature": "source-file",
+      "capability": "frontend",
+      "gateHandler": "gateSyntax",
+      "loweringPlan": "lowerDirect"
+    },
+    {
+      "kind": "KindJSDocTypeExpression",
+      "kindValue": 308,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-type-expression",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocNameReference",
+      "kindValue": 309,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-name-reference",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocAllType",
+      "kindValue": 310,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-all-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocNullableType",
+      "kindValue": 311,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-nullable-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocNonNullableType",
+      "kindValue": 312,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-non-nullable-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocOptionalType",
+      "kindValue": 313,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-optional-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocVariadicType",
+      "kindValue": 314,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-variadic-type",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDoc",
+      "kindValue": 315,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocText",
+      "kindValue": 316,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-text",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocTypeLiteral",
+      "kindValue": 317,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-type-literal",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocSignature",
+      "kindValue": 318,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-signature",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocLink",
+      "kindValue": 319,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-link",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocLinkCode",
+      "kindValue": 320,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-link-code",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocLinkPlain",
+      "kindValue": 321,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-link-plain",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocUnknownTag",
+      "kindValue": 322,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-unknown-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocAugmentsTag",
+      "kindValue": 323,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-augments-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocImplementsTag",
+      "kindValue": 324,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-implements-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocDeprecatedTag",
+      "kindValue": 325,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-deprecated-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocPublicTag",
+      "kindValue": 326,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-public-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocPrivateTag",
+      "kindValue": 327,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-private-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocProtectedTag",
+      "kindValue": 328,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-protected-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocReadonlyTag",
+      "kindValue": 329,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-readonly-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocOverrideTag",
+      "kindValue": 330,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-override-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocCallbackTag",
+      "kindValue": 331,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-callback-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocOverloadTag",
+      "kindValue": 332,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-overload-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocParameterTag",
+      "kindValue": 333,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-parameter-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocReturnTag",
+      "kindValue": 334,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-return-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocThisTag",
+      "kindValue": 335,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-this-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocTypeTag",
+      "kindValue": 336,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-type-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocTemplateTag",
+      "kindValue": 337,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-template-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocTypedefTag",
+      "kindValue": 338,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-typedef-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocSeeTag",
+      "kindValue": 339,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-see-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocPropertyTag",
+      "kindValue": 340,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-property-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocThrowsTag",
+      "kindValue": 341,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-throws-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocSatisfiesTag",
+      "kindValue": 342,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-satisfies-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSDocImportTag",
+      "kindValue": 343,
+      "domain": "type",
+      "syntaxGroup": "jsdoc",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-doc-import-tag",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindSyntaxList",
+      "kindValue": 344,
+      "domain": "syntax",
+      "syntaxGroup": "misc",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "syntax-list",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindJSTypeAliasDeclaration",
+      "kindValue": 345,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-type-alias-declaration",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindJSImportDeclaration",
+      "kindValue": 346,
+      "domain": "module",
+      "syntaxGroup": "module",
+      "plannedLevels": [
+        "C"
+      ],
+      "decisionPolicy": "erase-type",
+      "defaultDecision": "accept-erase",
+      "feature": "j-s-import-declaration",
+      "capability": "compile-time",
+      "gateHandler": "gateErase",
+      "loweringPlan": "eraseType"
+    },
+    {
+      "kind": "KindNotEmittedStatement",
+      "kindValue": 347,
+      "domain": "runtime",
+      "syntaxGroup": "statement",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "not-emitted-statement",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindPartiallyEmittedExpression",
+      "kindValue": 348,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "partially-emitted-expression",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindSyntheticReferenceExpression",
+      "kindValue": 349,
+      "domain": "runtime",
+      "syntaxGroup": "expression",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "synthetic-reference-expression",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    },
+    {
+      "kind": "KindNotEmittedTypeElement",
+      "kindValue": 350,
+      "domain": "type",
+      "syntaxGroup": "type",
+      "plannedLevels": [
+        "R"
+      ],
+      "decisionPolicy": "reject-static",
+      "defaultDecision": "reject",
+      "feature": "not-emitted-type-element",
+      "capability": "parser-recovery",
+      "gateHandler": "gateRecovery"
+    }
+  ]
+}

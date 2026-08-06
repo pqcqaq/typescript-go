@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "id": "modules/reexport",
+  "category": "modules",
+  "mode": "accept",
+  "features": [
+    "module",
+    "reexport"
+  ],
+  "handbook": [
+    "09-modules-and-namespaces"
+  ],
+  "astGroups": [
+    "module",
+    "reexport"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/modules/reexport.ts",
+  "files": [
+    "cases/modules/reexport.ts",
+    "cases/modules/export-value.ts"
+  ],
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [],
+    "snapshot": true
+  }
+}

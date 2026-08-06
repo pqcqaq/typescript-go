@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "rejections/non-null",
+  "category": "rejections",
+  "mode": "reject",
+  "features": [
+    "non-null"
+  ],
+  "handbook": [
+    "14-modern-syntax",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "non-null"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics",
+    "snapshot"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/rejections/non-null.ts",
+  "expect": {
+    "checkCodes": [],
+    "buildCodes": [
+      "BINGO1302_UNPROVEN_NON_NULL_ASSERTION"
+    ],
+    "snapshot": true
+  }
+}

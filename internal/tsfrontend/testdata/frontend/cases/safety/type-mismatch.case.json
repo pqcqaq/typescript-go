@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "id": "safety/type-mismatch",
+  "category": "safety",
+  "mode": "reject",
+  "features": [
+    "type-error"
+  ],
+  "handbook": [
+    "03-unions-and-narrowing",
+    "16-tsconfig"
+  ],
+  "astGroups": [
+    "type-error"
+  ],
+  "profile": "static",
+  "target": "frontend-only",
+  "runtime": "none",
+  "artifacts": [
+    "diagnostics"
+  ],
+  "oracle": "typescript-go",
+  "timeoutMs": 5000,
+  "requires": [
+    "frontend"
+  ],
+  "source": "cases/safety/type-mismatch.ts",
+  "expect": {
+    "checkCodes": [
+      "TS2322"
+    ],
+    "buildCodes": [
+      "TS2322"
+    ],
+    "snapshot": false
+  }
+}
