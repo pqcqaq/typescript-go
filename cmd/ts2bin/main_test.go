@@ -17,7 +17,7 @@ func TestVersionJSONContainsLockedProvenance(t *testing.T) {
 		t.Fatalf("exit = %d, stderr = %s", code, &stderr)
 	}
 	for _, value := range []string{
-		"12318e599d21f516defea3b20e5d44b9369da723",
+		"86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
 		"b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
 		`"llvmMajor": 20`,
 		`"llvmVersion": "20.1.8"`,
