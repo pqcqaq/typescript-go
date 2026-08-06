@@ -482,10 +482,10 @@ func validateCompilerIdentityForSnapshot(identity bingo.CompilerBuildIdentity, s
 	if err := bingo.ValidateCompilerBuildIdentity(identity); err != nil {
 		return fmt.Errorf("invalid compiler build identity: %w", err)
 	}
-	if identity.ForkCommit != snapshot.Provenance.TypeScriptGoCommit {
+	if identity.UpstreamCommit != snapshot.Provenance.TypeScriptGoCommit {
 		return fmt.Errorf(
-			"compiler fork commit %q does not match snapshot commit %q",
-			identity.ForkCommit,
+			"compiler upstream commit %q does not match snapshot commit %q",
+			identity.UpstreamCommit,
 			snapshot.Provenance.TypeScriptGoCommit,
 		)
 	}

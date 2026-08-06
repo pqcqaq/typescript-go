@@ -81,7 +81,7 @@
           "canonicalProjectRoot": "."
         },
         "provenance": {
-          "typescriptGoCommit": "12318e599d21f516defea3b20e5d44b9369da723",
+          "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
           "typescriptVersion": "7.1.0-dev",
           "goVersion": "go1.26.0",
           "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
@@ -1367,7 +1367,7 @@
             }
           }
         ],
-        "contentHash": "26ac64c67a0788bb6564db0257df23e161432896dfa3591d4592bd134d590955"
+        "contentHash": "341d49a4cf71981120ec5f98e822e4f37197050068f38f29a519afa690f3f9dd"
       }
     },
     {
@@ -1451,7 +1451,7 @@
           "canonicalProjectRoot": "."
         },
         "provenance": {
-          "typescriptGoCommit": "12318e599d21f516defea3b20e5d44b9369da723",
+          "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
           "typescriptVersion": "7.1.0-dev",
           "goVersion": "go1.26.0",
           "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
@@ -3561,7 +3561,7 @@
             }
           }
         ],
-        "contentHash": "4a7e58dcfdaefc086aa50ff2fa73bc06c665a32fb53ae6c2d00589a145df5b9c"
+        "contentHash": "9eb895f4e4d7f1432423da14316280abc5c3af13c77434913633d362dd8b8b3c"
       }
     },
     {
@@ -3645,7 +3645,7 @@
           "canonicalProjectRoot": "."
         },
         "provenance": {
-          "typescriptGoCommit": "12318e599d21f516defea3b20e5d44b9369da723",
+          "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
           "typescriptVersion": "7.1.0-dev",
           "goVersion": "go1.26.0",
           "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
@@ -5060,7 +5060,7 @@
           }
         ],
         "signatures": [],
-        "contentHash": "418dacd2a103ddcf6191032236dd182e5f7a15d5096e4e0393949ea7e7067eb4"
+        "contentHash": "edbd386163d8451f77d7725f7d9017a261137dab5a79725190273fffb105c387"
       }
     },
     {
@@ -5144,7 +5144,7 @@
           "canonicalProjectRoot": "."
         },
         "provenance": {
-          "typescriptGoCommit": "12318e599d21f516defea3b20e5d44b9369da723",
+          "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
           "typescriptVersion": "7.1.0-dev",
           "goVersion": "go1.26.0",
           "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
@@ -6541,7 +6541,7 @@
             }
           }
         ],
-        "contentHash": "a302f4e545d5e6232dcbe494387508af3a4b5246ea1cee483921c13bd20baaa7"
+        "contentHash": "b3a6ffd3427e245b35c1a6eb48856d9dde01a22d096734d14159125d2b7da987"
       }
     },
     {
@@ -6625,7 +6625,7 @@
           "canonicalProjectRoot": "."
         },
         "provenance": {
-          "typescriptGoCommit": "12318e599d21f516defea3b20e5d44b9369da723",
+          "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
           "typescriptVersion": "7.1.0-dev",
           "goVersion": "go1.26.0",
           "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
@@ -7741,7 +7741,7 @@
             "proofPath": []
           }
         ],
-        "contentHash": "e815fd35be52025f9eb63152f3a209ce4823f75596930f3cfce6a370f6fcfe08"
+        "contentHash": "e28bb77b0f57059c7828a5b3c2cdfc53ed603dfb36d2855f72f7801a1329ace8"
       }
     }
   ]

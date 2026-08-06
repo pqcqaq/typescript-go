@@ -19,9 +19,7 @@ func TestCanonicalBuildInfoJSONIsStableAndComplete(t *testing.T) {
 		t.Fatalf("build info changed between calls:\n%s\n%s", a, b)
 	}
 	info := CurrentBuildInfo()
-	if info.TypeScriptGoCommit != TypeScriptGoCommit ||
-		info.TypeScriptGoUpstreamCommit != TypeScriptGoUpstreamCommit ||
-		info.StandardLibraryHash != StandardLibraryHash {
+	if info.TypeScriptGoCommit != TypeScriptGoCommit || info.StandardLibraryHash != StandardLibraryHash {
 		t.Fatalf("incomplete build info: %#v", info)
 	}
 	if info.TypeScriptVersion == "" || info.GoVersion == "" || info.LLVMMajor != 20 ||

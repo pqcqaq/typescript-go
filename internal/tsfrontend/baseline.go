@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	// TypeScriptGoUpstreamCommit is the upstream baseline from which the fork
-	// was created. It changes only when upstream is merged into the fork.
-	TypeScriptGoUpstreamCommit = "12318e599d21f516defea3b20e5d44b9369da723"
+	// TypeScriptGoUpstreamCommit is the upstream baseline merged into the fork.
+	TypeScriptGoUpstreamCommit = "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee"
+	// TypeScriptGoCommit remains the snapshot wire name for the audited upstream
+	// baseline. The exact fork commit enters typed-HIR compiler identity instead.
+	TypeScriptGoCommit = TypeScriptGoUpstreamCommit
 	// StandardLibraryHash is the canonical hash of internal/bundled/libs. The
 	// stream format is sorted relative-path NUL file-content NUL, repeated.
 	StandardLibraryHash = "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967"
@@ -30,11 +32,6 @@ const (
 	DiagnosticSchemaVersion = 1
 )
 
-// TypeScriptGoCommit is the exact fork checkout used to build the frontend.
-// Repository builds inject the locked fork commit with -ldflags -X. Tests that
-// build packages directly use the audited upstream baseline as a stable value.
-var TypeScriptGoCommit = TypeScriptGoUpstreamCommit
-
 // BuildInfo is the deterministic toolchain and schema provenance printed by
 // ts2bin version. Runtime Go patch/build metadata is reported for inspection
 // but is not folded into snapshot identity beyond the locked version contract.
@@ -42,7 +39,6 @@ type BuildInfo struct {
 	Name                         string `json:"name"`
 	TypeScriptVersion            string `json:"typescriptVersion"`
 	TypeScriptGoCommit           string `json:"typescriptGoCommit"`
-	TypeScriptGoUpstreamCommit   string `json:"typescriptGoUpstreamCommit"`
 	GoVersion                    string `json:"goVersion"`
 	StandardLibraryHash          string `json:"standardLibraryHash"`
 	StandardLibraryHashAlgorithm string `json:"standardLibraryHashAlgorithm"`
@@ -62,7 +58,6 @@ func CurrentBuildInfo() BuildInfo {
 		Name:                         "ts2bin",
 		TypeScriptVersion:            core.Version(),
 		TypeScriptGoCommit:           TypeScriptGoCommit,
-		TypeScriptGoUpstreamCommit:   TypeScriptGoUpstreamCommit,
 		GoVersion:                    runtime.Version(),
 		StandardLibraryHash:          StandardLibraryHash,
 		StandardLibraryHashAlgorithm: StandardLibraryHashAlgorithm,

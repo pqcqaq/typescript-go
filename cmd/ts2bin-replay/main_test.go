@@ -26,7 +26,7 @@ func TestReplayCommandReadsFrontendSnapshotFromDiskInSeparateProcess(t *testing.
 	if err := os.WriteFile(filepath.Join(project, "main.ts"), []byte(`export function add(left: number, right: number): number { return left + right; }`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, diagnostics := tsfrontend.NewOSFrontend(injectedForkCommit).Build(context.Background(), tsfrontend.BuildRequest{ConfigPath: configPath})
+	snapshot, diagnostics := tsfrontend.NewOSFrontend(tsfrontend.TypeScriptGoCommit).Build(context.Background(), tsfrontend.BuildRequest{ConfigPath: configPath})
 	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
 		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
 	}
@@ -50,7 +50,6 @@ func TestReplayCommandReadsFrontendSnapshotFromDiskInSeparateProcess(t *testing.
 	ldflags := strings.Join([]string{
 		"-X github.com/microsoft/typescript-go/internal/ast2bingo.injectedUpstreamCommit=" + tsfrontend.TypeScriptGoCommit,
 		"-X github.com/microsoft/typescript-go/internal/ast2bingo.injectedForkCommit=" + injectedForkCommit,
-		"-X github.com/microsoft/typescript-go/internal/tsfrontend.TypeScriptGoCommit=" + injectedForkCommit,
 	}, " ")
 	build := exec.Command("go", "build", "-trimpath", "-buildvcs=false", "-ldflags", ldflags, "-o", binaryPath, ".")
 	if output, err := build.CombinedOutput(); err != nil {
