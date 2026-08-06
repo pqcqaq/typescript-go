@@ -33,7 +33,7 @@ const (
 )
 
 // BuildInfo is the deterministic toolchain and schema provenance printed by
-// ts2bin version. Runtime Go patch/build metadata is reported for inspection
+// ts2bin version. Runtime Go version/build metadata is reported for inspection
 // but is not folded into snapshot identity beyond the locked version contract.
 type BuildInfo struct {
 	Name                         string `json:"name"`
