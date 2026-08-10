@@ -111,6 +111,8 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 	specs := PassSpecs()
 	resolve := specs[slices.IndexFunc(specs, func(spec PassSpec) bool { return spec.ID == PassResolveTarget })]
 	representation := specs[slices.IndexFunc(specs, func(spec PassSpec) bool { return spec.ID == PassRepresentationPlan })]
+	mir := specs[slices.IndexFunc(specs, func(spec PassSpec) bool { return spec.ID == PassMIRCFGSSA })]
+	capability := specs[slices.IndexFunc(specs, func(spec PassSpec) bool { return spec.ID == PassCapabilityBinding })]
 
 	assertRequirements := func(t *testing.T, got []PassArtifactRequirement, want map[PassArtifactName]string) {
 		t.Helper()
@@ -135,6 +137,14 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 		PassArtifactToolchainManifest:          "toolchain-manifest-v1",
 		PassArtifactTargetContext:              "target-context-v1",
 		PassArtifactDataLayout:                 "data-layout-v1",
+		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
+	})
+	assertRequirements(t, mir.ReadsArtifacts, map[PassArtifactName]string{
+		PassArtifactTypedHIR:           "hir-v2",
+		PassArtifactRepresentationPlan: "rep-plan-v1",
+	})
+	assertRequirements(t, capability.ReadsArtifacts, map[PassArtifactName]string{
+		PassArtifactRepresentationPlan:         "rep-plan-v1",
 		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
 	})
 }

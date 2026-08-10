@@ -104,13 +104,57 @@ var canonicalPassSpecs = [...]PassSpec{
 		WritesArtifacts:          []PassArtifactWrite{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1", FromPrimary: true}},
 		PreservesEvaluationOrder: true,
 	},
-	{ID: PassMIRCFGSSA, InputSchema: "rep-plan-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"representation-plan", "evaluation-order"}, WritesFacts: []string{"mir-cfg", "ssa"}, PreservesEvaluationOrder: true},
-	{ID: PassCleanupState, InputSchema: "mir-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"effect-proof", "mir-cfg"}, WritesFacts: []string{"cleanup-state"}, MayIntroduceEffects: []PassEffect{PassEffectAllocate, PassEffectCall, PassEffectRetainRelease, PassEffectSafepoint, PassEffectSuspend, PassEffectThrow}, PreservesEvaluationOrder: true},
-	{ID: PassStructuralVerifier, InputSchema: "mir-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"mir-cfg", "ssa", "cleanup-state"}, WritesFacts: []string{"verified-structural-mir"}, PreservesEvaluationOrder: true},
-	{ID: PassCapabilityBinding, InputSchema: "mir-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"available-capability-catalog", "verified-structural-mir"}, WritesFacts: []string{"bound-capability-closure", "frozen-effects"}, MayIntroduceEffects: []PassEffect{PassEffectAllocate, PassEffectBlock, PassEffectCall, PassEffectDynamic, PassEffectFFI, PassEffectHost, PassEffectIO, PassEffectNondeterministic, PassEffectRead, PassEffectRetainRelease, PassEffectSafepoint, PassEffectSuspend, PassEffectThrow, PassEffectWrite}, PreservesEvaluationOrder: true},
-	{ID: PassOptimizeProvenMIR, InputSchema: "mir-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"frozen-effects", "verified-structural-mir"}, WritesFacts: []string{"optimized-mir"}, PreservesEvaluationOrder: true},
-	{ID: PassPlaceGCRoots, InputSchema: "mir-v1", OutputSchema: "mir-v1", ReadsFacts: []string{"optimized-mir", "frozen-effects"}, WritesFacts: []string{"root-map", "frozen-cleanup"}, MayIntroduceEffects: []PassEffect{PassEffectRootPublication}, PreservesEvaluationOrder: true},
-	{ID: PassFinalVerifier, InputSchema: "mir-v1", OutputSchema: "verified-mir-v1", ReadsFacts: []string{"bound-capability-closure", "root-map", "frozen-cleanup", "frozen-effects"}, WritesFacts: []string{"final-mir"}, PreservesEvaluationOrder: true},
+	{
+		ID: PassMIRCFGSSA, InputSchema: "rep-plan-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"representation-plan", "evaluation-order"}, WritesFacts: []string{"mir-cfg", "ssa"},
+		ReadsArtifacts: []PassArtifactRequirement{
+			{Name: PassArtifactTypedHIR, Schema: "hir-v2"},
+			{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"},
+		},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassCleanupState, InputSchema: "mir-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"effect-proof", "mir-cfg"}, WritesFacts: []string{"cleanup-state"},
+		ReadsArtifacts:           []PassArtifactRequirement{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"}},
+		MayIntroduceEffects:      []PassEffect{PassEffectAllocate, PassEffectCall, PassEffectRetainRelease, PassEffectSafepoint, PassEffectSuspend, PassEffectThrow},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassStructuralVerifier, InputSchema: "mir-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"mir-cfg", "ssa", "cleanup-state"}, WritesFacts: []string{"verified-structural-mir"},
+		ReadsArtifacts:           []PassArtifactRequirement{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"}},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassCapabilityBinding, InputSchema: "mir-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"available-capability-catalog", "verified-structural-mir"}, WritesFacts: []string{"bound-capability-closure", "frozen-effects"},
+		ReadsArtifacts: []PassArtifactRequirement{
+			{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"},
+			{Name: PassArtifactAvailableCapabilityCatalog, Schema: "available-capability-catalog-v1"},
+		},
+		MayIntroduceEffects:      []PassEffect{PassEffectAllocate, PassEffectBlock, PassEffectCall, PassEffectDynamic, PassEffectFFI, PassEffectHost, PassEffectIO, PassEffectNondeterministic, PassEffectRead, PassEffectRetainRelease, PassEffectSafepoint, PassEffectSuspend, PassEffectThrow, PassEffectWrite},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassOptimizeProvenMIR, InputSchema: "mir-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"frozen-effects", "verified-structural-mir"}, WritesFacts: []string{"optimized-mir"},
+		ReadsArtifacts:           []PassArtifactRequirement{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"}},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassPlaceGCRoots, InputSchema: "mir-v1", OutputSchema: "mir-v1",
+		ReadsFacts: []string{"optimized-mir", "frozen-effects"}, WritesFacts: []string{"root-map", "frozen-cleanup"},
+		ReadsArtifacts:           []PassArtifactRequirement{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"}},
+		MayIntroduceEffects:      []PassEffect{PassEffectRootPublication},
+		PreservesEvaluationOrder: true,
+	},
+	{
+		ID: PassFinalVerifier, InputSchema: "mir-v1", OutputSchema: "verified-mir-v1",
+		ReadsFacts: []string{"bound-capability-closure", "root-map", "frozen-cleanup", "frozen-effects"}, WritesFacts: []string{"final-mir"},
+		ReadsArtifacts:           []PassArtifactRequirement{{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v1"}},
+		PreservesEvaluationOrder: true,
+	},
 }
 
 // PassDAG is a detached copy retained for callers that need to serialize the

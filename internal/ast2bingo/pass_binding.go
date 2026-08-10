@@ -20,6 +20,11 @@ const (
 	primitiveTypedHIRSchemaVersion       uint32 = 2
 )
 
+// PrimitiveTypedHIRSchemaVersion is the wire version consumed by target-aware
+// replay. It is kept alongside the private pass implementation constants so a
+// downstream checker-free verifier cannot guess a schema number.
+const PrimitiveTypedHIRSchemaVersion = primitiveTypedHIRSchemaVersion
+
 var primitiveHIRPassPrefix = []bingo.PassID{
 	bingo.PassValidateSnapshot,
 	bingo.PassTypedHIR,
@@ -44,6 +49,10 @@ type primitiveTypedHIRArtifact struct {
 	Events                []LoweringEvent             `json:"events"`
 	HIR                   bingo.HIRModule             `json:"hir"`
 }
+
+// PrimitiveTypedHIRArtifact is the verified checker-free wire consumed by the
+// target-aware first-slice lowering pipeline.
+type PrimitiveTypedHIRArtifact = primitiveTypedHIRArtifact
 
 func executePrimitiveHIRPasses(ctx context.Context, snapshot ProgramSnapshot, identity bingo.CompilerBuildIdentity) (primitiveTypedHIRArtifact, bingo.PassExecution, error) {
 	if err := validateCompilerIdentityForSnapshot(identity, snapshot); err != nil {
@@ -107,6 +116,13 @@ func primitiveHIRPassHandlers(identity bingo.CompilerBuildIdentity) map[bingo.Pa
 			},
 		},
 	}
+}
+
+// PrimitiveHIRPassHandlers returns the production handlers for the verified
+// snapshot-to-HIR prefix. Callers may combine this exact prefix with later
+// checker-free target passes, but cannot omit either validation stage.
+func PrimitiveHIRPassHandlers(identity bingo.CompilerBuildIdentity) map[bingo.PassID]bingo.PassHandler {
+	return primitiveHIRPassHandlers(identity)
 }
 
 func preVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
@@ -555,6 +571,13 @@ func decodePrimitiveTypedHIRArtifact(raw json.RawMessage) (primitiveTypedHIRArti
 		return primitiveTypedHIRArtifact{}, fmt.Errorf("decode primitive typed HIR artifact: %w", err)
 	}
 	return artifact, nil
+}
+
+// DecodePrimitiveTypedHIRArtifact strictly decodes the typed-HIR pass wire.
+// Target-aware consumers must additionally verify its canonical HIR and bind
+// all provenance to the BuildPlan and TargetContext they consume.
+func DecodePrimitiveTypedHIRArtifact(raw json.RawMessage) (PrimitiveTypedHIRArtifact, error) {
+	return decodePrimitiveTypedHIRArtifact(raw)
 }
 
 func decodeStrictPassArtifact(raw json.RawMessage, destination any) error {
