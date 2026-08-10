@@ -265,8 +265,8 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 		module.Provenance.DataLayoutHash != m.manifest.DataLayout.ContentHash {
 		return FirstSliceEmission{}, fmt.Errorf("MIR target provenance does not match observed TargetMachine")
 	}
-	if len(module.Functions) != 1 || module.Functions[0].Name != "add" {
-		return FirstSliceEmission{}, fmt.Errorf("first-slice C ABI requires exactly one function named add")
+	if len(module.Functions) != 1 || (module.Functions[0].Name != "add" && module.Functions[0].Name != "choose") {
+		return FirstSliceEmission{}, fmt.Errorf("primitive C ABI requires exactly one supported function")
 	}
 	emission, err := m.emitFirstSlice(module)
 	if err != nil {

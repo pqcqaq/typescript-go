@@ -86,19 +86,16 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 	module.SetTarget(manifest.TargetTriple)
 	module.SetDataLayout(manifest.DataLayout.LayoutString)
 
-	double := ctx.DoubleType()
-	function := llvm.AddFunction(module, "add", llvm.FunctionType(double, []llvm.Type{double, double}, false))
-	function.SetFunctionCallConv(llvm.CCallConv)
-	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
-	function.Param(0).SetName(mir.Functions[0].Parameters[0].Name)
-	function.Param(1).SetName(mir.Functions[0].Parameters[1].Name)
-
-	block := llvm.AddBasicBlock(function, "entry")
 	builder := ctx.NewBuilder()
 	defer builder.Dispose()
-	builder.SetInsertPointAtEnd(block)
-	result := builder.CreateFAdd(function.Param(0), function.Param(1), "sum")
-	builder.CreateRet(result)
+	switch mir.Functions[0].Name {
+	case "add":
+		emitNumberAddLLVM(ctx, builder, module, mir.Functions[0])
+	case "choose":
+		emitBooleanChooseLLVM(ctx, builder, module, mir.Functions[0])
+	default:
+		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function %q", mir.Functions[0].Name)
+	}
 
 	if err := llvm.VerifyModule(module, llvm.ReturnStatusAction); err != nil {
 		return FirstSliceEmission{}, fmt.Errorf("verify first-slice LLVM module: %w", err)
@@ -110,4 +107,56 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 	}
 	defer buffer.Dispose()
 	return newFirstSliceEmission(mir, manifest, llvmIR, buffer.Bytes())
+}
+
+func emitNumberAddLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {
+	double := ctx.DoubleType()
+	function := llvm.AddFunction(module, "add", llvm.FunctionType(double, []llvm.Type{double, double}, false))
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	function.Param(0).SetName(mir.Parameters[0].Name)
+	function.Param(1).SetName(mir.Parameters[1].Name)
+	entry := llvm.AddBasicBlock(function, "entry")
+	builder.SetInsertPointAtEnd(entry)
+	result := builder.CreateFAdd(function.Param(0), function.Param(1), "sum")
+	builder.CreateRet(result)
+}
+
+func emitBooleanChooseLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {
+	double := ctx.DoubleType()
+	i8 := ctx.Int8Type()
+	functionType := llvm.FunctionType(double, []llvm.Type{i8, double, double}, false)
+	function := llvm.AddFunction(module, "choose", functionType)
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	for index, parameter := range mir.Parameters {
+		function.Param(index).SetName(parameter.Name)
+	}
+
+	entry := llvm.AddBasicBlock(function, "entry")
+	decode := llvm.AddBasicBlock(function, "decode.boolean")
+	invalid := llvm.AddBasicBlock(function, "invalid.boolean")
+	trueBlock := llvm.AddBasicBlock(function, "bb2.true")
+	falseBlock := llvm.AddBasicBlock(function, "bb3.false")
+
+	builder.SetInsertPointAtEnd(entry)
+	canonical := builder.CreateICmp(llvm.IntULT, function.Param(0), llvm.ConstInt(i8, 2, false), "flag.canonical")
+	builder.CreateCondBr(canonical, decode, invalid)
+
+	builder.SetInsertPointAtEnd(invalid)
+	trapType := llvm.FunctionType(ctx.VoidType(), nil, false)
+	trap := llvm.AddFunction(module, "llvm.trap", trapType)
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("noreturn"), 0))
+	builder.CreateCall(trapType, trap, nil, "")
+	builder.CreateUnreachable()
+
+	builder.SetInsertPointAtEnd(decode)
+	condition := builder.CreateTrunc(function.Param(0), ctx.Int1Type(), "flag.i1")
+	builder.CreateCondBr(condition, trueBlock, falseBlock)
+
+	builder.SetInsertPointAtEnd(trueBlock)
+	builder.CreateRet(function.Param(1))
+	builder.SetInsertPointAtEnd(falseBlock)
+	builder.CreateRet(function.Param(2))
 }

@@ -58,14 +58,29 @@ type RepresentationPlan struct {
 }
 
 func NewRepresentationPlan(provenance TargetProvenance) (RepresentationPlan, error) {
-	number, err := PrimitiveRepresentationBinding(TypeNumber)
+	return NewPrimitiveRepresentationPlan(provenance, []TypeKind{TypeNumber})
+}
+
+// NewPrimitiveRepresentationPlan binds the exact primitive source types used
+// by a verified HIR module. The canonical order is boolean before number;
+// number-only plans retain the original single-binding bytes.
+func NewPrimitiveRepresentationPlan(provenance TargetProvenance, sourceTypes []TypeKind) (RepresentationPlan, error) {
+	canonicalTypes, err := canonicalPrimitiveSourceTypes(sourceTypes)
 	if err != nil {
 		return RepresentationPlan{}, err
+	}
+	bindings := make([]RepresentationBinding, 0, len(canonicalTypes))
+	for _, sourceType := range canonicalTypes {
+		binding, bindingErr := PrimitiveRepresentationBinding(sourceType)
+		if bindingErr != nil {
+			return RepresentationPlan{}, bindingErr
+		}
+		bindings = append(bindings, binding)
 	}
 	plan := RepresentationPlan{
 		SchemaVersion: RepresentationPlanSchemaVersion,
 		Provenance:    provenance,
-		Bindings:      []RepresentationBinding{number},
+		Bindings:      bindings,
 	}
 	digest, err := representationPlanContentHash(plan)
 	if err != nil {
@@ -76,6 +91,26 @@ func NewRepresentationPlan(provenance TargetProvenance) (RepresentationPlan, err
 		return RepresentationPlan{}, err
 	}
 	return plan, nil
+}
+
+func canonicalPrimitiveSourceTypes(sourceTypes []TypeKind) ([]TypeKind, error) {
+	seen := make(map[TypeKind]bool, len(sourceTypes))
+	for _, sourceType := range sourceTypes {
+		if sourceType != TypeBoolean && sourceType != TypeNumber {
+			return nil, fmt.Errorf("primitive source type %q has no representation binding", sourceType)
+		}
+		seen[sourceType] = true
+	}
+	if len(seen) == 0 {
+		return nil, fmt.Errorf("primitive representation plan requires at least one source type")
+	}
+	result := make([]TypeKind, 0, len(seen))
+	for _, sourceType := range []TypeKind{TypeBoolean, TypeNumber} {
+		if seen[sourceType] {
+			result = append(result, sourceType)
+		}
+	}
+	return result, nil
 }
 
 // PrimitiveRepresentationBinding is the only mapping from source primitive
@@ -122,12 +157,20 @@ func VerifyRepresentationPlan(plan RepresentationPlan) error {
 	if err := validateTargetProvenance(plan.Provenance); err != nil {
 		return fmt.Errorf("invalid representation plan provenance: %w", err)
 	}
-	number, err := PrimitiveRepresentationBinding(TypeNumber)
-	if err != nil {
-		return err
+	if plan.Bindings == nil {
+		return fmt.Errorf("primitive representation bindings are missing")
 	}
-	if len(plan.Bindings) != 1 || plan.Bindings[0] != number {
-		return fmt.Errorf("first-slice representation bindings are invalid: %#v", plan.Bindings)
+	sourceTypes := make([]TypeKind, len(plan.Bindings))
+	for index, binding := range plan.Bindings {
+		sourceTypes[index] = binding.SourceType
+		want, err := PrimitiveRepresentationBinding(binding.SourceType)
+		if err != nil || binding != want {
+			return fmt.Errorf("primitive representation binding %d is invalid: %#v", index, binding)
+		}
+	}
+	canonicalTypes, err := canonicalPrimitiveSourceTypes(sourceTypes)
+	if err != nil || !slices.Equal(sourceTypes, canonicalTypes) {
+		return fmt.Errorf("primitive representation bindings are not canonical: %#v", plan.Bindings)
 	}
 	want, err := representationPlanContentHash(plan)
 	if err != nil {
@@ -187,9 +230,10 @@ type FirstSliceMIRInstruction struct {
 }
 
 type FirstSliceMIRTerminator struct {
-	Kind   string  `json:"kind"`
-	Value  ValueID `json:"value"`
-	Origin Origin  `json:"origin"`
+	Kind       string    `json:"kind"`
+	Value      ValueID   `json:"value"`
+	Successors []BlockID `json:"successors,omitempty"`
+	Origin     Origin    `json:"origin"`
 }
 
 type BoundCapability struct {
@@ -209,9 +253,46 @@ type BoundCapabilityClosure struct {
 	ContentHash                         string            `json:"contentHash"`
 }
 
-func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRArtifact, error) {
+// NewRepresentationPlanForHIR derives the exact primitive representation set
+// from canonical HIR and binds it to the supplied target provenance.
+func NewRepresentationPlanForHIR(provenance TargetProvenance, hir HIRModule) (RepresentationPlan, error) {
+	if err := verifyPrimitiveHIRForMIR(hir); err != nil {
+		return RepresentationPlan{}, err
+	}
+	if provenance.HIRHash != hir.ContentHash || provenance.FrontendSnapshotHash != hir.Provenance.FrontendSnapshotHash || provenance.CompilerBuildIdentity != hir.Provenance.CompilerBuildIdentity {
+		return RepresentationPlan{}, fmt.Errorf("target provenance is not bound to the HIR input")
+	}
+	sourceTypes := make([]TypeKind, 0)
+	for _, function := range hir.Functions {
+		sourceTypes = append(sourceTypes, function.ReturnType)
+		for _, parameter := range function.Parameters {
+			sourceTypes = append(sourceTypes, parameter.Type)
+		}
+		for _, block := range function.Blocks {
+			for _, operation := range block.Operations {
+				sourceTypes = append(sourceTypes, operation.Type)
+			}
+		}
+	}
+	return NewPrimitiveRepresentationPlan(provenance, sourceTypes)
+}
+
+func verifyPrimitiveHIRForMIR(hir HIRModule) error {
+	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+		if err := VerifyCanonicalPhase2HIR(hir); err != nil {
+			return fmt.Errorf("verify Phase 2B HIR before MIR lowering: %w", err)
+		}
+		return nil
+	}
 	if err := VerifyCanonicalHIR(hir); err != nil {
-		return FirstSliceMIRArtifact{}, fmt.Errorf("verify HIR before MIR lowering: %w", err)
+		return fmt.Errorf("verify Phase 2A HIR before MIR lowering: %w", err)
+	}
+	return nil
+}
+
+func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRArtifact, error) {
+	if err := verifyPrimitiveHIRForMIR(hir); err != nil {
+		return FirstSliceMIRArtifact{}, err
 	}
 	if err := VerifyRepresentationPlan(plan); err != nil {
 		return FirstSliceMIRArtifact{}, err
@@ -220,20 +301,45 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 		plan.Provenance.CompilerBuildIdentity != hir.Provenance.CompilerBuildIdentity {
 		return FirstSliceMIRArtifact{}, fmt.Errorf("representation plan is not bound to the HIR input")
 	}
+	expectedPlan, err := NewRepresentationPlanForHIR(plan.Provenance, hir)
+	if err != nil {
+		return FirstSliceMIRArtifact{}, err
+	}
+	if plan.ContentHash != expectedPlan.ContentHash || !slices.Equal(plan.Bindings, expectedPlan.Bindings) {
+		return FirstSliceMIRArtifact{}, fmt.Errorf("representation plan does not bind the exact HIR primitive types")
+	}
 	function := hir.Functions[0]
+	bindingByType := make(map[TypeKind]RepresentationBinding, len(plan.Bindings))
+	for _, binding := range plan.Bindings {
+		bindingByType[binding.SourceType] = binding
+	}
 	parameters := make([]FirstSliceMIRParameter, len(function.Parameters))
 	for index, parameter := range function.Parameters {
-		parameters[index] = FirstSliceMIRParameter{Name: parameter.Name, Value: parameter.Value, Type: RepF64, Origin: parameter.Origin}
+		binding, ok := bindingByType[parameter.Type]
+		if !ok {
+			return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for parameter type %q", parameter.Type)
+		}
+		parameters[index] = FirstSliceMIRParameter{Name: parameter.Name, Value: parameter.Value, Type: binding.RepType, Origin: parameter.Origin}
 	}
-	operation := function.Blocks[0].Operations[0]
-	instruction := FirstSliceMIRInstruction{
-		ID:                            operation.ID,
-		Kind:                          "fadd",
-		Type:                          RepF64,
-		Operands:                      slices.Clone(operation.Operands),
-		Effect:                        EffectPure,
-		LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements),
-		Origin:                        operation.Origin,
+	blocks := make([]FirstSliceMIRBlock, len(function.Blocks))
+	for blockIndex, hirBlock := range function.Blocks {
+		instructions := make([]FirstSliceMIRInstruction, len(hirBlock.Operations))
+		for operationIndex, operation := range hirBlock.Operations {
+			if operation.Kind != "binary" || operation.Operator != "+" {
+				return FirstSliceMIRArtifact{}, fmt.Errorf("unsupported Phase 2B HIR operation %q", operation.Kind)
+			}
+			binding, ok := bindingByType[operation.Type]
+			if !ok || binding.RepType != RepF64 {
+				return FirstSliceMIRArtifact{}, fmt.Errorf("binary operation %d has no f64 representation", operation.ID)
+			}
+			instructions[operationIndex] = FirstSliceMIRInstruction{ID: operation.ID, Kind: "fadd", Type: binding.RepType, Operands: slices.Clone(operation.Operands), Effect: EffectPure, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
+		}
+		terminator := FirstSliceMIRTerminator{Kind: hirBlock.Terminator.Kind, Value: hirBlock.Terminator.Value, Successors: slices.Clone(hirBlock.Terminator.Successors), Origin: hirBlock.Terminator.Origin}
+		blocks[blockIndex] = FirstSliceMIRBlock{ID: hirBlock.ID, Instructions: instructions, Terminator: terminator}
+	}
+	returnBinding, ok := bindingByType[function.ReturnType]
+	if !ok {
+		return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for return type %q", function.ReturnType)
 	}
 	module := FirstSliceMIRArtifact{
 		SchemaVersion: FirstSliceMIRSchemaVersion,
@@ -247,16 +353,8 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 			ID:         function.ID,
 			Name:       function.Name,
 			Parameters: parameters,
-			Blocks: []FirstSliceMIRBlock{{
-				ID:           function.Blocks[0].ID,
-				Instructions: []FirstSliceMIRInstruction{instruction},
-				Terminator: FirstSliceMIRTerminator{
-					Kind:   function.Blocks[0].Terminator.Kind,
-					Value:  function.Blocks[0].Terminator.Value,
-					Origin: function.Blocks[0].Terminator.Origin,
-				},
-			}},
-			ReturnType: RepF64,
+			Blocks:     blocks,
+			ReturnType: returnBinding.RepType,
 			Origin:     function.Origin,
 		}},
 	}
@@ -374,7 +472,30 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		return fmt.Errorf("first-slice MIR requires exactly one function, got %d", len(module.Functions))
 	}
 	function := module.Functions[0]
-	if function.ID != 1 || function.Name == "" || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 1 {
+	switch function.Name {
+	case "add":
+		if err := verifyNumberAddMIRFunction(function); err != nil {
+			return err
+		}
+	case "choose":
+		if err := verifyBooleanChooseMIRFunction(function); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("first-slice MIR function is invalid")
+	}
+	want, err := firstSliceMIRContentHash(module)
+	if err != nil {
+		return err
+	}
+	if module.ContentHash != want {
+		return fmt.Errorf("first-slice MIR content hash mismatch: got %q, want %q", module.ContentHash, want)
+	}
+	return nil
+}
+
+func verifyNumberAddMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 1 {
 		return fmt.Errorf("first-slice MIR function is invalid")
 	}
 	for index, parameter := range function.Parameters {
@@ -392,15 +513,38 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		instruction.LogicalCapabilityRequirements == nil || len(instruction.LogicalCapabilityRequirements) != 0 || !validOrigin(instruction.Origin) {
 		return fmt.Errorf("first-slice MIR instruction is invalid")
 	}
-	if block.Terminator.Kind != "return" || block.Terminator.Value != instruction.ID || !validOrigin(block.Terminator.Origin) {
+	if block.Terminator.Kind != "return" || block.Terminator.Value != instruction.ID || len(block.Terminator.Successors) != 0 || !validOrigin(block.Terminator.Origin) {
 		return fmt.Errorf("first-slice MIR terminator is invalid")
 	}
-	want, err := firstSliceMIRContentHash(module)
-	if err != nil {
-		return err
+	return nil
+}
+
+func verifyBooleanChooseMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 3 || len(function.Blocks) != 3 {
+		return fmt.Errorf("Phase 2B choose MIR function is invalid")
 	}
-	if module.ContentHash != want {
-		return fmt.Errorf("first-slice MIR content hash mismatch: got %q, want %q", module.ContentHash, want)
+	wantParameterTypes := []RepType{RepI1, RepF64, RepF64}
+	for index, parameter := range function.Parameters {
+		if parameter.Name == "" || parameter.Value != ValueID(index+1) || parameter.Type != wantParameterTypes[index] || !validOrigin(parameter.Origin) {
+			return fmt.Errorf("Phase 2B choose MIR parameter %d is invalid", index)
+		}
+	}
+	for index, block := range function.Blocks {
+		if block.ID != BlockID(index+1) || block.Instructions == nil || len(block.Instructions) != 0 {
+			return fmt.Errorf("Phase 2B choose MIR block %d is invalid", index+1)
+		}
+	}
+	entry := function.Blocks[0].Terminator
+	if entry.Kind != "condbranch" || entry.Value != function.Parameters[0].Value || !slices.Equal(entry.Successors, []BlockID{2, 3}) || !validOrigin(entry.Origin) {
+		return fmt.Errorf("Phase 2B choose MIR conditional branch is invalid")
+	}
+	trueReturn := function.Blocks[1].Terminator
+	if trueReturn.Kind != "return" || trueReturn.Value != function.Parameters[1].Value || len(trueReturn.Successors) != 0 || !validOrigin(trueReturn.Origin) {
+		return fmt.Errorf("Phase 2B choose MIR true return is invalid")
+	}
+	falseReturn := function.Blocks[2].Terminator
+	if falseReturn.Kind != "return" || falseReturn.Value != function.Parameters[2].Value || len(falseReturn.Successors) != 0 || !validOrigin(falseReturn.Origin) {
+		return fmt.Errorf("Phase 2B choose MIR false return is invalid")
 	}
 	return nil
 }

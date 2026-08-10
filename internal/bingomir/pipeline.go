@@ -485,7 +485,7 @@ func verifyJoinedInputs(joined joinedInputs) error {
 }
 
 func representationPlan(joined joinedInputs) (bingo.RepresentationPlan, error) {
-	return bingo.NewRepresentationPlan(bingo.TargetProvenance{
+	provenance := bingo.TargetProvenance{
 		HIRHash:                        joined.typedHIR.HIR.ContentHash,
 		FrontendSnapshotHash:           joined.plan.FrontendHash,
 		BuildPlanHash:                  joined.plan.ContentHash,
@@ -495,7 +495,8 @@ func representationPlan(joined joinedInputs) (bingo.RepresentationPlan, error) {
 		AvailableCapabilityCatalogHash: joined.catalog.ContentHash,
 		ToolchainManifestHash:          joined.toolchain.ContentHash,
 		RuntimeManifestHash:            joined.runtime.ContentHash,
-	})
+	}
+	return bingo.NewRepresentationPlanForHIR(provenance, joined.typedHIR.HIR)
 }
 
 func decodeMIRLoweringInputs(state bingo.PassState) (bingo.HIRModule, bingo.RepresentationPlan, error) {
@@ -599,10 +600,17 @@ func decodeVerifiedTypedHIR(raw []byte, identity bingo.CompilerBuildIdentity) (a
 		typed.CompilerBuildIdentity != identity || typed.CompilerBuildIdentity != typed.HIR.Provenance.CompilerBuildIdentity {
 		return ast2bingo.PrimitiveTypedHIRArtifact{}, fmt.Errorf("typed HIR wrapper provenance is invalid")
 	}
-	if err := bingo.VerifyCanonicalHIR(typed.HIR); err != nil {
+	if err := verifyCanonicalPrimitiveHIR(typed.HIR); err != nil {
 		return ast2bingo.PrimitiveTypedHIRArtifact{}, fmt.Errorf("verify canonical typed HIR: %w", err)
 	}
 	return typed, nil
+}
+
+func verifyCanonicalPrimitiveHIR(hir bingo.HIRModule) error {
+	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+		return bingo.VerifyCanonicalPhase2HIR(hir)
+	}
+	return bingo.VerifyCanonicalHIR(hir)
 }
 
 func requiredArtifact(state bingo.PassState, name bingo.PassArtifactName, schema string) (bingo.PassArtifact, error) {

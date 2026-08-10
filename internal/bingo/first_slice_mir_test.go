@@ -1,6 +1,7 @@
 package bingo
 
 import (
+	"bytes"
 	"slices"
 	"strings"
 	"testing"
@@ -19,8 +20,12 @@ func TestFirstSliceRepresentationAndMIRAreCanonicalAndTargetAware(t *testing.T) 
 	if structural.BoundCapabilityClosure != nil {
 		t.Fatal("structural MIR bound capabilities before the binding pass")
 	}
-	if _, err := structural.CanonicalStructuralBytes(); err != nil {
+	structuralBytes, err := structural.CanonicalStructuralBytes()
+	if err != nil {
 		t.Fatal(err)
+	}
+	if bytes.Contains(structuralBytes, []byte(`"successors"`)) {
+		t.Fatalf("Phase 2A add MIR bytes changed after CFG successor support: %s", structuralBytes)
 	}
 	function := structural.Functions[0]
 	if function.ReturnType != RepF64 || function.Blocks[0].Instructions[0].Kind != "fadd" {
@@ -64,6 +69,112 @@ func TestPrimitiveRepresentationBindingsSeparateBooleanAndNumber(t *testing.T) {
 	}
 	if _, err := PrimitiveRepresentationBinding(TypeString); err == nil || !strings.Contains(err.Error(), "no representation binding") {
 		t.Fatalf("unsupported representation error = %v", err)
+	}
+}
+
+func TestPhase2ChooseRepresentationAndMIRAreCanonical(t *testing.T) {
+	hir := validPhase2ChooseHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Bindings) != 2 || plan.Bindings[0].SourceType != TypeBoolean || plan.Bindings[0].RepType != RepI1 || plan.Bindings[1].SourceType != TypeNumber || plan.Bindings[1].RepType != RepF64 {
+		t.Fatalf("choose representation plan = %#v", plan.Bindings)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyStructuralFirstSliceMIR(structural); err != nil {
+		t.Fatal(err)
+	}
+	function := structural.Functions[0]
+	if function.ReturnType != RepF64 || len(function.Parameters) != 3 || function.Parameters[0].Type != RepI1 || function.Parameters[1].Type != RepF64 || function.Parameters[2].Type != RepF64 || len(function.Blocks) != 3 {
+		t.Fatalf("choose target MIR = %#v", function)
+	}
+	if entry := function.Blocks[0].Terminator; entry.Kind != "condbranch" || entry.Value != 1 || !slices.Equal(entry.Successors, []BlockID{2, 3}) {
+		t.Fatalf("choose MIR entry = %#v", function.Blocks[0].Terminator)
+	}
+	if function.Blocks[1].Terminator.Value != 2 || function.Blocks[2].Terminator.Value != 3 {
+		t.Fatalf("choose MIR returns = %#v / %#v", function.Blocks[1].Terminator, function.Blocks[2].Terminator)
+	}
+	bound, err := BindFirstSliceCapabilities(structural)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPhase2ChooseMIRVerifierRejectsRehashedCFGTampering(t *testing.T) {
+	hir := validPhase2ChooseHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+		want   string
+	}{
+		{name: "condition representation", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Parameters[0].Type = RepF64 }, want: "parameter 0 is invalid"},
+		{name: "successor", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[0].Terminator.Successors[1] = 9 }, want: "conditional branch is invalid"},
+		{name: "true return", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[1].Terminator.Value = 3 }, want: "true return is invalid"},
+		{name: "missing operations slice", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[2].Instructions = nil }, want: "block 3 is invalid"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := base
+			candidate.Functions = cloneFirstSliceFunctions(base.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("choose MIR tamper error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestMIRLoweringRejectsRepresentationPlanWithUnusedBinding(t *testing.T) {
+	hir, numberOnly := firstSliceMIRFixture(t)
+	plan, err := NewPrimitiveRepresentationPlan(numberOnly.Provenance, []TypeKind{TypeBoolean, TypeNumber})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LowerFirstSliceMIR(hir, plan); err == nil || !strings.Contains(err.Error(), "exact HIR primitive types") {
+		t.Fatalf("extra representation binding error = %v", err)
+	}
+}
+
+func phase2ChooseProvenance(hir HIRModule) TargetProvenance {
+	return TargetProvenance{
+		HIRHash:                        hir.ContentHash,
+		FrontendSnapshotHash:           hir.Provenance.FrontendSnapshotHash,
+		BuildPlanHash:                  strings.Repeat("1", 64),
+		CompilerBuildIdentity:          hir.Provenance.CompilerBuildIdentity,
+		TargetContextHash:              strings.Repeat("2", 64),
+		DataLayoutHash:                 strings.Repeat("3", 64),
+		AvailableCapabilityCatalogHash: strings.Repeat("4", 64),
+		ToolchainManifestHash:          strings.Repeat("5", 64),
+		RuntimeManifestHash:            strings.Repeat("6", 64),
 	}
 }
 
@@ -175,6 +286,7 @@ func cloneFirstSliceFunctions(input []FirstSliceMIRFunction) []FirstSliceMIRFunc
 		result[index].Blocks = make([]FirstSliceMIRBlock, len(function.Blocks))
 		for blockIndex, block := range function.Blocks {
 			result[index].Blocks[blockIndex] = block
+			result[index].Blocks[blockIndex].Terminator.Successors = slices.Clone(block.Terminator.Successors)
 			result[index].Blocks[blockIndex].Instructions = make([]FirstSliceMIRInstruction, len(block.Instructions))
 			for instructionIndex, instruction := range block.Instructions {
 				result[index].Blocks[blockIndex].Instructions[instructionIndex] = instruction

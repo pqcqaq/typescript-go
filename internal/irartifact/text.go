@@ -11,7 +11,7 @@ import (
 // intentionally derived from the typed artifact, so it cannot hide malformed
 // fields or depend on map iteration order.
 func RenderHIRText(module bingo.HIRModule) (string, error) {
-	if err := bingo.VerifyCanonicalHIR(module); err != nil {
+	if err := verifyCanonicalPrimitiveHIR(module); err != nil {
 		return "", err
 	}
 	var out strings.Builder
@@ -89,11 +89,23 @@ func RenderMIRText(module bingo.FirstSliceMIRArtifact) (string, error) {
 					joinCapabilities(instruction.LogicalCapabilityRequirements),
 					instruction.Origin.File, instruction.Origin.Start, instruction.Origin.End)
 			}
-			fmt.Fprintf(&out, "    terminator %s value=%d origin=%s:%d-%d\n",
-				block.Terminator.Kind, block.Terminator.Value, block.Terminator.Origin.File, block.Terminator.Origin.Start, block.Terminator.Origin.End)
+			if len(block.Terminator.Successors) == 0 {
+				fmt.Fprintf(&out, "    terminator %s value=%d origin=%s:%d-%d\n",
+					block.Terminator.Kind, block.Terminator.Value, block.Terminator.Origin.File, block.Terminator.Origin.Start, block.Terminator.Origin.End)
+			} else {
+				fmt.Fprintf(&out, "    terminator %s value=%d successors=%s origin=%s:%d-%d\n",
+					block.Terminator.Kind, block.Terminator.Value, joinBlockIDs(block.Terminator.Successors), block.Terminator.Origin.File, block.Terminator.Origin.Start, block.Terminator.Origin.End)
+			}
 		}
 	}
 	return out.String(), nil
+}
+
+func verifyCanonicalPrimitiveHIR(module bingo.HIRModule) error {
+	if len(module.Functions) == 1 && len(module.Functions[0].Blocks) > 1 {
+		return bingo.VerifyCanonicalPhase2HIR(module)
+	}
+	return bingo.VerifyCanonicalHIR(module)
 }
 
 func joinValueIDs(values []bingo.ValueID) string {
