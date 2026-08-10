@@ -12,6 +12,7 @@ import (
 
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/firstslicerunner"
 	"github.com/microsoft/typescript-go/internal/irartifact"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 )
@@ -67,6 +68,17 @@ func TestFirstSliceIRCommandsUseVerifiedArtifacts(t *testing.T) {
 		}
 		if _, err := irartifact.DecodeMIR(bytes.TrimSpace(mirOutput.Bytes())); err != nil {
 			t.Fatalf("decode emitted MIR: %v", err)
+		}
+		var stageOutput, stageStderr bytes.Buffer
+		if code := run(context.Background(), []string{"test", "--stage", "static-core", "--json"}, &stageOutput, &stageStderr); code != exitSuccess {
+			t.Fatalf("static-core exit = %d, stderr = %s", code, &stageStderr)
+		}
+		var report firstslicerunner.Report
+		if err := json.Unmarshal(bytes.TrimSpace(stageOutput.Bytes()), &report); err != nil {
+			t.Fatalf("decode static-core report: %v\n%s", err, stageOutput.Bytes())
+		}
+		if err := firstslicerunner.VerifyReport(report); err != nil || !report.OK {
+			t.Fatalf("invalid static-core report: err=%v report=%#v", err, report)
 		}
 		mirPath := filepath.Join(t.TempDir(), "final.mir.json")
 		if err := os.WriteFile(mirPath, bytes.TrimSpace(mirOutput.Bytes()), 0o600); err != nil {

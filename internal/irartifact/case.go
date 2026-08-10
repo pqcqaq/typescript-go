@@ -25,11 +25,21 @@ const CaseManifestSchemaVersion uint32 = 1
 // CaseManifest identifies the immutable artifacts used by a first-slice
 // command. Paths are relative to the directory containing case.json.
 type CaseManifest struct {
-	SchemaVersion    uint32 `json:"schemaVersion"`
-	Name             string `json:"name"`
-	FrontendSnapshot string `json:"frontendSnapshot"`
-	BuildPlan        string `json:"buildPlan,omitempty"`
-	RuntimeManifest  string `json:"runtimeManifest,omitempty"`
+	SchemaVersion    uint32          `json:"schemaVersion"`
+	Name             string          `json:"name"`
+	FrontendSnapshot string          `json:"frontendSnapshot"`
+	BuildPlan        string          `json:"buildPlan,omitempty"`
+	RuntimeManifest  string          `json:"runtimeManifest,omitempty"`
+	TimeoutMS        uint32          `json:"timeoutMs,omitempty"`
+	Executions       []CaseExecution `json:"executions,omitempty"`
+}
+
+// CaseExecution is one observable first-slice C ABI invocation.
+type CaseExecution struct {
+	Name         string `json:"name"`
+	LeftBits     string `json:"leftBits"`
+	RightBits    string `json:"rightBits"`
+	ExpectedBits string `json:"expectedBits"`
 }
 
 type Case struct {
@@ -112,7 +122,53 @@ func validateManifest(manifest CaseManifest, requireBackend bool) error {
 	if requireBackend && (strings.TrimSpace(manifest.BuildPlan) == "" || strings.TrimSpace(manifest.RuntimeManifest) == "") {
 		return fmt.Errorf("case manifest requires buildPlan and runtimeManifest for backend commands")
 	}
+	if manifest.TimeoutMS != 0 || len(manifest.Executions) != 0 {
+		if err := ValidateRunnableManifest(manifest); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// ValidateRunnableManifest checks the isolation and observable-input contract
+// required by the REL-001a runner.
+func ValidateRunnableManifest(manifest CaseManifest) error {
+	if manifest.TimeoutMS == 0 || manifest.TimeoutMS > 60_000 {
+		return fmt.Errorf("case timeoutMs must be between 1 and 60000")
+	}
+	if len(manifest.Executions) == 0 {
+		return fmt.Errorf("runnable case has no executions")
+	}
+	names := make(map[string]struct{}, len(manifest.Executions))
+	for _, execution := range manifest.Executions {
+		if strings.TrimSpace(execution.Name) == "" {
+			return fmt.Errorf("case execution name is empty")
+		}
+		if _, exists := names[execution.Name]; exists {
+			return fmt.Errorf("duplicate case execution name %q", execution.Name)
+		}
+		names[execution.Name] = struct{}{}
+		for label, value := range map[string]string{
+			"leftBits": execution.LeftBits, "rightBits": execution.RightBits, "expectedBits": execution.ExpectedBits,
+		} {
+			if !isCanonicalBits(value) {
+				return fmt.Errorf("execution %q has invalid %s %q", execution.Name, label, value)
+			}
+		}
+	}
+	return nil
+}
+
+func isCanonicalBits(value string) bool {
+	if len(value) != 16 {
+		return false
+	}
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 func readCaseFile(directory, relative, label string) ([]byte, error) {

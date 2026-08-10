@@ -19,6 +19,7 @@ import (
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/core"
+	"github.com/microsoft/typescript-go/internal/firstslicerunner"
 	"github.com/microsoft/typescript-go/internal/irartifact"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 	"github.com/microsoft/typescript-go/internal/tsfrontend"
@@ -32,7 +33,11 @@ const (
 
 const commandReportSchemaVersion = 1
 
-var loadCompilerBuildIdentity = ast2bingo.InjectedCompilerBuildIdentity
+var (
+	loadCompilerBuildIdentity   = ast2bingo.InjectedCompilerBuildIdentity
+	openStaticCoreTargetMachine = llvmbackend.OpenFirstSliceTargetMachine
+	executeStaticCoreCase       = firstslicerunner.RunCase
+)
 
 type processResult struct {
 	Output   []byte
@@ -587,13 +592,16 @@ func writeDoctorFailure(stdout, stderr io.Writer, jsonOutput bool, err error) in
 func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, environment commandEnvironment) int {
 	flags := flag.NewFlagSet("test", flag.ContinueOnError)
 	flags.SetOutput(stderr)
-	stage := flags.String("stage", "", "test stage (currently frontend)")
+	stage := flags.String("stage", "", "test stage: frontend or static-core")
 	jsonOutput := flags.Bool("json", false, "print the test report as JSON")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 {
 		return exitUsage
 	}
+	if *stage == "static-core" {
+		return runStaticCoreTests(ctx, stdout, stderr, *jsonOutput, environment)
+	}
 	if *stage != "frontend" {
-		err := fmt.Errorf("unsupported or missing stage %q; expected frontend", *stage)
+		err := fmt.Errorf("unsupported or missing stage %q; expected frontend or static-core", *stage)
 		return writeFrontendTestFailure(stdout, stderr, *jsonOutput, "", err, exitUsage)
 	}
 	repositoryRoot, err := resolveRepositoryRoot(environment)
@@ -626,6 +634,85 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 		return exitDiagnostics
 	}
 	return exitSuccess
+}
+
+func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutput bool, environment commandEnvironment) int {
+	repositoryRoot, err := resolveRepositoryRoot(environment)
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, err, exitUsage)
+	}
+	identity, err := loadCompilerBuildIdentity()
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, fmt.Errorf("compiler identity: %w", err), exitUsage)
+	}
+	machine, err := openStaticCoreTargetMachine()
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, err, exitDiagnostics)
+	}
+	defer machine.Close()
+	clang, err := firstAvailableTool(environment.lookPath, "clang-20", "clang")
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, fmt.Errorf("Clang 20 not found: %w", err), exitDiagnostics)
+	}
+	lld, err := firstAvailableTool(environment.lookPath, "ld.lld-20", "ld.lld")
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, fmt.Errorf("LLD 20 not found: %w", err), exitDiagnostics)
+	}
+	outputDirectory, err := os.MkdirTemp("", "ts2bin-static-core-stage-")
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, err, exitUsage)
+	}
+	defer os.RemoveAll(outputDirectory)
+	runtimeDirectory := filepath.Join(repositoryRoot, "runtime", "bingo-rt", "target", "first-slice")
+	runtimeArchive := filepath.Join(runtimeDirectory, "cargo", llvmbackend.FirstSliceTriple, "release", "libbingo_runtime.a")
+	caseDirectory := filepath.Join(repositoryRoot, "typescript-go", "testdata", "ts2bin", "lowering")
+	report, err := executeStaticCoreCase(ctx, caseDirectory, identity, machine, firstslicerunner.Options{
+		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
+		OutputDirectory: outputDirectory, Clang: clang, LLD: lld,
+	})
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, report, err, exitDiagnostics)
+	}
+	if jsonOutput {
+		data, err := report.CanonicalBytes()
+		if err != nil {
+			fmt.Fprintf(stderr, "ts2bin test: encode static-core report: %v\n", err)
+			return exitUsage
+		}
+		_, _ = stdout.Write(data)
+		_, _ = io.WriteString(stdout, "\n")
+	} else {
+		fmt.Fprintf(stdout, "[ok] static-core %s %s\n", report.CaseName, report.Artifacts.ExecutableHash)
+		for _, execution := range report.Executions {
+			fmt.Fprintf(stdout, "[ok] %s %s\n", execution.Name, execution.ActualBits)
+		}
+	}
+	return exitSuccess
+}
+
+func writeStaticCoreFailure(stdout, stderr io.Writer, jsonOutput bool, report firstslicerunner.Report, err error, exitCode int) int {
+	if jsonOutput && report.SchemaVersion != 0 {
+		if data, encodeErr := report.CanonicalBytes(); encodeErr == nil {
+			_, _ = stdout.Write(data)
+			_, _ = io.WriteString(stdout, "\n")
+		} else {
+			fmt.Fprintf(stderr, "ts2bin test: encode failed static-core report: %v\n", encodeErr)
+		}
+	}
+	fmt.Fprintf(stderr, "ts2bin test: static-core: %v\n", err)
+	return exitCode
+}
+
+func firstAvailableTool(lookPath func(string) (string, error), names ...string) (string, error) {
+	var last error
+	for _, name := range names {
+		if path, err := lookPath(name); err == nil {
+			return path, nil
+		} else {
+			last = err
+		}
+	}
+	return "", last
 }
 
 func writeFrontendTestFailure(stdout, stderr io.Writer, jsonOutput bool, runner string, err error, exitCode int) int {
