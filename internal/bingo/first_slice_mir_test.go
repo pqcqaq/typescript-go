@@ -47,6 +47,26 @@ func TestFirstSliceRepresentationAndMIRAreCanonicalAndTargetAware(t *testing.T) 
 	}
 }
 
+func TestPrimitiveRepresentationBindingsSeparateBooleanAndNumber(t *testing.T) {
+	boolean, err := PrimitiveRepresentationBinding(TypeBoolean)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if boolean != (RepresentationBinding{SourceType: TypeBoolean, RepType: RepI1, BitWidth: 1, ABIAlign: 1}) {
+		t.Fatalf("boolean representation binding = %#v", boolean)
+	}
+	number, err := PrimitiveRepresentationBinding(TypeNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if number != (RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}) {
+		t.Fatalf("number representation binding = %#v", number)
+	}
+	if _, err := PrimitiveRepresentationBinding(TypeString); err == nil || !strings.Contains(err.Error(), "no representation binding") {
+		t.Fatalf("unsupported representation error = %v", err)
+	}
+}
+
 func TestFirstSliceMIRVerifierRejectsRehashedStructuralAndClosureTampering(t *testing.T) {
 	hir, plan := firstSliceMIRFixture(t)
 	base, err := LowerFirstSliceMIR(hir, plan)

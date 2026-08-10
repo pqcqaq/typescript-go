@@ -22,7 +22,10 @@ const (
 // from TypeKind, which records source-language semantics.
 type RepType string
 
-const RepF64 RepType = "f64"
+const (
+	RepI1  RepType = "i1"
+	RepF64 RepType = "f64"
+)
 
 type RepresentationBinding struct {
 	SourceType TypeKind `json:"sourceType"`
@@ -55,15 +58,14 @@ type RepresentationPlan struct {
 }
 
 func NewRepresentationPlan(provenance TargetProvenance) (RepresentationPlan, error) {
+	number, err := PrimitiveRepresentationBinding(TypeNumber)
+	if err != nil {
+		return RepresentationPlan{}, err
+	}
 	plan := RepresentationPlan{
 		SchemaVersion: RepresentationPlanSchemaVersion,
 		Provenance:    provenance,
-		Bindings: []RepresentationBinding{{
-			SourceType: TypeNumber,
-			RepType:    RepF64,
-			BitWidth:   64,
-			ABIAlign:   8,
-		}},
+		Bindings:      []RepresentationBinding{number},
 	}
 	digest, err := representationPlanContentHash(plan)
 	if err != nil {
@@ -74,6 +76,25 @@ func NewRepresentationPlan(provenance TargetProvenance) (RepresentationPlan, err
 		return RepresentationPlan{}, err
 	}
 	return plan, nil
+}
+
+// PrimitiveRepresentationBinding is the only mapping from source primitive
+// types to target MIR representations. ABI widening is a separate boundary.
+func PrimitiveRepresentationBinding(sourceType TypeKind) (RepresentationBinding, error) {
+	switch sourceType {
+	case TypeBoolean:
+		if err := ValidateBooleanContract(BooleanContract()); err != nil {
+			return RepresentationBinding{}, err
+		}
+		return RepresentationBinding{SourceType: TypeBoolean, RepType: RepI1, BitWidth: 1, ABIAlign: 1}, nil
+	case TypeNumber:
+		if err := ValidateNumberContract(NumberContract()); err != nil {
+			return RepresentationBinding{}, err
+		}
+		return RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}, nil
+	default:
+		return RepresentationBinding{}, fmt.Errorf("primitive source type %q has no representation binding", sourceType)
+	}
 }
 
 func DecodeRepresentationPlan(data []byte) (*RepresentationPlan, error) {
@@ -101,7 +122,11 @@ func VerifyRepresentationPlan(plan RepresentationPlan) error {
 	if err := validateTargetProvenance(plan.Provenance); err != nil {
 		return fmt.Errorf("invalid representation plan provenance: %w", err)
 	}
-	if len(plan.Bindings) != 1 || plan.Bindings[0] != (RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}) {
+	number, err := PrimitiveRepresentationBinding(TypeNumber)
+	if err != nil {
+		return err
+	}
+	if len(plan.Bindings) != 1 || plan.Bindings[0] != number {
 		return fmt.Errorf("first-slice representation bindings are invalid: %#v", plan.Bindings)
 	}
 	want, err := representationPlanContentHash(plan)
