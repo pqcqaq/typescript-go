@@ -67,7 +67,7 @@ func (r SnapshotReplayResult) CanonicalBytes() ([]byte, error) {
 	if r.CompilerBuildIdentity != r.HIR.Provenance.CompilerBuildIdentity {
 		return nil, fmt.Errorf("replay compiler build identity does not match HIR provenance")
 	}
-	if err := bingo.VerifyCanonicalHIR(r.HIR); err != nil {
+	if err := verifyCanonicalPrimitiveHIR(r.HIR); err != nil {
 		return nil, fmt.Errorf("verify replay HIR: %w", err)
 	}
 	withoutHash := r
@@ -122,10 +122,12 @@ var snapshotSemanticFactRegistry = map[string]snapshotSemanticFactValidator{
 const (
 	snapshotKindBinaryExpression    = "KindBinaryExpression"
 	snapshotKindBlock               = "KindBlock"
+	snapshotKindBooleanKeyword      = "KindBooleanKeyword"
 	snapshotKindEndOfFile           = "KindEndOfFile"
 	snapshotKindExportKeyword       = "KindExportKeyword"
 	snapshotKindFunctionDeclaration = "KindFunctionDeclaration"
 	snapshotKindIdentifier          = "KindIdentifier"
+	snapshotKindIfStatement         = "KindIfStatement"
 	snapshotKindNumberKeyword       = "KindNumberKeyword"
 	snapshotKindParameter           = "KindParameter"
 	snapshotKindPlusToken           = "KindPlusToken"
@@ -145,10 +147,12 @@ const (
 var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindBinaryExpression, PayloadTag: snapshotKindBinaryExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateBinaryExpressionLowerer},
 	{Kind: snapshotKindBlock, PayloadTag: snapshotKindBlock, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindBooleanKeyword, PayloadTag: snapshotKindBooleanKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindEndOfFile, PayloadTag: snapshotKindEndOfFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindExportKeyword, PayloadTag: snapshotKindExportKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindFunctionDeclaration, PayloadTag: snapshotKindFunctionDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactFunctionContract, snapshotFactModule, snapshotFactSymbol}, Handle: validateFunctionLowerer},
 	{Kind: snapshotKindIdentifier, PayloadTag: snapshotKindIdentifier, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateIdentifierLowerer},
+	{Kind: snapshotKindIfStatement, PayloadTag: snapshotKindIfStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateIfLowerer},
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
@@ -402,11 +406,14 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 	switch node.Kind {
 	case snapshotKindBlock:
 		statements := namedChildren(node, "statement[")
-		if len(statements) != 1 || len(node.NamedChildren) != 1 || len(node.Children) != 1 {
-			return fmt.Errorf("primitive block requires exactly one statement")
+		if len(statements) == 0 || len(statements) > 2 || len(node.NamedChildren) != len(statements) || len(node.Children) != len(statements) {
+			return fmt.Errorf("primitive block requires one or two statements")
 		}
-		if _, err := requireChildKind(node, statements[0], snapshotKindReturnStatement, nodes); err != nil {
-			return err
+		for _, statement := range statements {
+			child, ok := nodes[statement]
+			if !ok || child.Parent != node.ID || (child.Kind != snapshotKindReturnStatement && child.Kind != snapshotKindIfStatement) {
+				return fmt.Errorf("primitive block statement %q is not return or if", statement)
+			}
 		}
 	case snapshotKindSourceFile:
 		statements := namedChildren(node, "statement[")
@@ -420,7 +427,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		if _, err := requireChildKind(node, eof[0], snapshotKindEndOfFile, nodes); err != nil {
 			return err
 		}
-	case snapshotKindEndOfFile, snapshotKindExportKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken:
+	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindExportKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken:
 		if len(node.NamedChildren) != 0 || len(node.Children) != 0 {
 			return fmt.Errorf("primitive token Kind %q cannot have children", node.Kind)
 		}
@@ -431,8 +438,8 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 }
 
 func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
-	if len(node.NamedChildren) != 6 || len(node.Children) != 6 {
-		return fmt.Errorf("primitive function requires export, name, two parameters, number return type, and body")
+	if len(node.NamedChildren) < 6 || len(node.NamedChildren) > 7 || len(node.Children) != len(node.NamedChildren) {
+		return fmt.Errorf("primitive function requires export, name, two or three parameters, number return type, and body")
 	}
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
@@ -444,8 +451,8 @@ func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) e
 		return err
 	}
 	parameters := namedChildren(node, "parameter[")
-	if len(parameters) != 2 {
-		return fmt.Errorf("primitive function requires exactly two parameters")
+	if len(parameters) < 2 || len(parameters) > 3 {
+		return fmt.Errorf("primitive function requires two or three parameters")
 	}
 	for _, parameter := range parameters {
 		if _, err := requireChildKind(node, parameter, snapshotKindParameter, nodes); err != nil {
@@ -482,8 +489,10 @@ func validateParameterLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
 	}
-	if _, err := requireRoleKind(node, "type", snapshotKindNumberKeyword, nodes); err != nil {
-		return err
+	typeNodeID := childByRole(node, "type")
+	typeNode, ok := nodes[typeNodeID]
+	if !ok || typeNode.Parent != node.ID || (typeNode.Kind != snapshotKindNumberKeyword && typeNode.Kind != snapshotKindBooleanKeyword) {
+		return fmt.Errorf("primitive parameter type must be number or boolean")
 	}
 	if node.DeclaredType == 0 && node.NarrowedType == 0 && node.ContextualType == 0 {
 		return fmt.Errorf("parameter has no type reference")
@@ -495,7 +504,22 @@ func validateReturnLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) err
 	if len(node.NamedChildren) != 1 || len(node.Children) != 1 {
 		return fmt.Errorf("primitive return requires exactly one expression")
 	}
-	if _, err := requireRoleKind(node, "expression", snapshotKindBinaryExpression, nodes); err != nil {
+	expressionID := childByRole(node, "expression")
+	expression, ok := nodes[expressionID]
+	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier) {
+		return fmt.Errorf("primitive return expression must be an identifier or binary expression")
+	}
+	return nil
+}
+
+func validateIfLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
+		return fmt.Errorf("primitive if requires condition and then block")
+	}
+	if _, err := requireRoleKind(node, "child[0]", snapshotKindIdentifier, nodes); err != nil {
+		return err
+	}
+	if _, err := requireRoleKind(node, "child[1]", snapshotKindBlock, nodes); err != nil {
 		return err
 	}
 	return nil
@@ -621,6 +645,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	if bodyID == "" {
 		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s has no body", functionNode.ID)
 	}
+	choose, isChoose, err := findPrimitiveChoose(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isChoose {
+		return replayChooseFunction(function, events, choose, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
+	}
 	returnNode, binaryNode, err := findPrimitiveReturn(bodyID, nodes)
 	if err != nil {
 		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
@@ -696,6 +727,129 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	function.Blocks = []bingo.HIRBlock{block}
 	events = append(events, LoweringEvent{Kind: "return", Node: returnNode.ID, Origin: returnNode.Origin, Type: returnType})
 	events = append(events, LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin})
+	return function, events, nil
+}
+
+type primitiveChooseSource struct {
+	IfNode     NodeSnapshot
+	Condition  NodeSnapshot
+	ThenReturn NodeSnapshot
+	ThenValue  NodeSnapshot
+	ElseReturn NodeSnapshot
+	ElseValue  NodeSnapshot
+}
+
+func findPrimitiveChoose(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveChooseSource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveChooseSource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 2 {
+		return primitiveChooseSource{}, false, nil
+	}
+	firstStatement, ok := nodes[statements[0]]
+	if !ok || firstStatement.Kind != snapshotKindIfStatement {
+		return primitiveChooseSource{}, false, nil
+	}
+	secondStatement, ok := nodes[statements[1]]
+	if !ok || secondStatement.Kind != snapshotKindReturnStatement {
+		return primitiveChooseSource{}, false, nil
+	}
+	ifNode, err := requireChildKind(body, statements[0], snapshotKindIfStatement, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	elseReturn, err := requireChildKind(body, statements[1], snapshotKindReturnStatement, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	condition, err := requireRoleKind(ifNode, "child[0]", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	thenBlock, err := requireRoleKind(ifNode, "child[1]", snapshotKindBlock, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	thenStatements := namedChildren(thenBlock, "statement[")
+	if len(thenStatements) != 1 {
+		return primitiveChooseSource{}, false, fmt.Errorf("primitive if block requires exactly one return")
+	}
+	thenReturn, err := requireChildKind(thenBlock, thenStatements[0], snapshotKindReturnStatement, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	thenValue, err := requireRoleKind(thenReturn, "expression", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	elseValue, err := requireRoleKind(elseReturn, "expression", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveChooseSource{}, false, err
+	}
+	return primitiveChooseSource{IfNode: ifNode, Condition: condition, ThenReturn: thenReturn, ThenValue: thenValue, ElseReturn: elseReturn, ElseValue: elseValue}, true, nil
+}
+
+func replayChooseFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	choose primitiveChooseSource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	conditionValue, ok := parameterValue(choose.Condition, parameterValues)
+	if !ok {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("if condition %s is not a parameter", choose.Condition.ID)
+	}
+	conditionTypeID := nodeTypeID(choose.Condition)
+	conditionType, err := bingoType(conditionTypeID, types)
+	if err != nil || conditionType != bingo.TypeBoolean || parameterTypes[conditionValue] != bingo.TypeBoolean {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("if condition %s is not canonical boolean", choose.Condition.ID)
+	}
+	thenValue, ok := parameterValue(choose.ThenValue, parameterValues)
+	if !ok {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("then return %s is not a parameter", choose.ThenValue.ID)
+	}
+	elseValue, ok := parameterValue(choose.ElseValue, parameterValues)
+	if !ok {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("fallthrough return %s is not a parameter", choose.ElseValue.ID)
+	}
+	for _, value := range []struct {
+		node  NodeSnapshot
+		value bingo.ValueID
+	}{{choose.ThenValue, thenValue}, {choose.ElseValue, elseValue}} {
+		typeID := nodeTypeID(value.node)
+		typ, typeErr := bingoType(typeID, types)
+		if typeErr != nil || typ != bingo.TypeNumber || parameterTypes[value.value] != bingo.TypeNumber {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("return value %s is not canonical number", value.node.ID)
+		}
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, err := bingoType(returnTypeID, types)
+	if err != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s return type is not canonical number", functionNode.ID)
+	}
+	function.ReturnType = returnType
+	function.Blocks = []bingo.HIRBlock{
+		{ID: 1, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: conditionValue, Successors: []bingo.BlockID{2, 3}, Origin: originOf(choose.IfNode)}},
+		{ID: 2, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "return", Value: thenValue, Origin: originOf(choose.ThenReturn)}},
+		{ID: 3, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "return", Value: elseValue, Origin: originOf(choose.ElseReturn)}},
+	}
+	events = append(events,
+		LoweringEvent{Kind: "if.condition", Node: choose.IfNode.ID, Origin: choose.IfNode.Origin, Type: conditionTypeID, Inputs: []NodeID{choose.Condition.ID}},
+		LoweringEvent{Kind: "return", Node: choose.ThenReturn.ID, Origin: choose.ThenReturn.Origin, Type: nodeTypeID(choose.ThenValue), Inputs: []NodeID{choose.ThenValue.ID}},
+		LoweringEvent{Kind: "return", Node: choose.ElseReturn.ID, Origin: choose.ElseReturn.Origin, Type: nodeTypeID(choose.ElseValue), Inputs: []NodeID{choose.ElseValue.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
 	return function, events, nil
 }
 
@@ -850,7 +1004,20 @@ func bingoType(id TypeID, types map[TypeID]TypeSnapshot) (bingo.TypeKind, error)
 	if typ.Kind == "intrinsic" && typ.Flags == 64 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "intrinsic" && typ.TypePayload.Scalar == "intrinsic|64|0|||intrinsic:number" {
 		return bingo.TypeNumber, nil
 	}
-	return "", fmt.Errorf("type %d (%s) is not the canonical number type", id, typ.Kind)
+	if typ.Kind == "union" && typ.TypePayload.Tag == "union" && len(typ.ElementTypes) == 2 {
+		seen := map[string]bool{}
+		for _, elementID := range typ.ElementTypes {
+			element, ok := types[elementID]
+			if !ok || element.Kind != "literal" || element.Flags != 8192 || element.ObjectFlags != 0 || element.TypePayload.Tag != "literal" {
+				return "", fmt.Errorf("type %d is not the canonical boolean union", id)
+			}
+			seen[element.TypePayload.Scalar] = true
+		}
+		if seen["literal|8192|0|||literal:bool:false"] && seen["literal|8192|0|||literal:bool:true"] {
+			return bingo.TypeBoolean, nil
+		}
+	}
+	return "", fmt.Errorf("type %d (%s) is not a canonical primitive type", id, typ.Kind)
 }
 
 func originOf(node NodeSnapshot) bingo.Origin {

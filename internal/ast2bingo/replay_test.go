@@ -142,6 +142,108 @@ func TestReplaySerializedAddUsesResolvedSymbolFallback(t *testing.T) {
 	}
 }
 
+func TestReplaySerializedChooseProducesVerifiedPhase2HIR(t *testing.T) {
+	snapshot := buildReplayChooseSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	serialized, err := snapshot.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatal("serialized choose replay is not deterministic")
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(first.HIR); err != nil {
+		t.Fatalf("verify choose HIR: %v", err)
+	}
+	function := first.HIR.Functions[0]
+	if function.Name != "choose" || function.ReturnType != bingo.TypeNumber || len(function.Parameters) != 3 || len(function.Blocks) != 3 {
+		t.Fatalf("choose HIR function = %#v", function)
+	}
+	if function.Parameters[0].Type != bingo.TypeBoolean || function.Parameters[1].Type != bingo.TypeNumber || function.Parameters[2].Type != bingo.TypeNumber {
+		t.Fatalf("choose parameters = %#v", function.Parameters)
+	}
+	entry := function.Blocks[0].Terminator
+	if entry.Kind != "condbranch" || entry.Value != 1 || !slices.Equal(entry.Successors, []bingo.BlockID{2, 3}) {
+		t.Fatalf("choose entry = %#v", entry)
+	}
+	if function.Blocks[1].Terminator.Value != 2 || function.Blocks[2].Terminator.Value != 3 {
+		t.Fatalf("choose returns = %#v / %#v", function.Blocks[1].Terminator, function.Blocks[2].Terminator)
+	}
+	wantEvents := []string{"function.begin", "parameter", "parameter", "parameter", "if.condition", "return", "return", "function.end"}
+	gotEvents := make([]string, len(first.Events))
+	for index, event := range first.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("choose evaluation events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
+func TestReplayRejectsRehashedChooseSourceTampering(t *testing.T) {
+	base := buildReplayChooseSnapshot(t)
+	identity := testCompilerIdentity(t, *base)
+	tests := []struct {
+		name   string
+		mutate func(*ProgramSnapshot)
+	}{
+		{name: "if condition child role", mutate: func(snapshot *ProgramSnapshot) {
+			index := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindIfStatement })
+			for childIndex := range snapshot.Nodes[index].NamedChildren {
+				if snapshot.Nodes[index].NamedChildren[childIndex].Role == "child[0]" {
+					snapshot.Nodes[index].NamedChildren[childIndex].Role = "condition"
+					return
+				}
+			}
+			t.Fatal("choose if statement has no condition child")
+		}},
+		{name: "condition type", mutate: func(snapshot *ProgramSnapshot) {
+			nodes := make(map[NodeID]NodeSnapshot, len(snapshot.Nodes))
+			for _, node := range snapshot.Nodes {
+				nodes[node.ID] = node
+			}
+			ifIndex := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindIfStatement })
+			conditionID := childByRole(snapshot.Nodes[ifIndex], "child[0]")
+			conditionIndex := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool { return node.ID == conditionID })
+			leftIndex := slices.IndexFunc(snapshot.Nodes, func(node NodeSnapshot) bool {
+				return node.Kind == snapshotKindParameter && childText(node, "name", nodes) == "left"
+			})
+			if conditionIndex < 0 || leftIndex < 0 {
+				t.Fatal("choose condition or left parameter is missing")
+			}
+			numberType := nodeTypeID(snapshot.Nodes[leftIndex])
+			snapshot.Nodes[conditionIndex].DeclaredType = numberType
+			snapshot.Nodes[conditionIndex].NarrowedType = numberType
+			snapshot.Nodes[conditionIndex].ContextualType = 0
+			snapshot.Nodes[conditionIndex].Flow = tsfrontend.FlowFactSnapshot{}
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneReplaySnapshot(t, base)
+			test.mutate(&broken)
+			if err := finalizeTestSnapshot(&broken); err != nil {
+				t.Fatal(err)
+			}
+			result, err := ReplaySnapshot(broken, identity)
+			if err == nil {
+				t.Fatal("rehashed choose source tamper was accepted")
+			}
+			if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
+				t.Fatalf("rejected choose tamper emitted partial HIR: %#v", result)
+			}
+		})
+	}
+}
+
 func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
 	snapshot := buildReplayAddSnapshot(t)
 	identity := testCompilerIdentity(t, *snapshot)
@@ -235,7 +337,7 @@ func TestPrimitiveReadinessRequiresRegisteredSemanticFacts(t *testing.T) {
 	identity := testCompilerIdentity(t, *snapshot)
 
 	t.Run("binary type", func(t *testing.T) {
-		broken := cloneReplaySnapshot(snapshot)
+		broken := cloneReplaySnapshot(t, snapshot)
 		index := slices.IndexFunc(broken.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindBinaryExpression })
 		broken.Nodes[index].DeclaredType = 0
 		broken.Nodes[index].NarrowedType = 0
@@ -250,7 +352,7 @@ func TestPrimitiveReadinessRequiresRegisteredSemanticFacts(t *testing.T) {
 	})
 
 	t.Run("implementation signature", func(t *testing.T) {
-		broken := cloneReplaySnapshot(snapshot)
+		broken := cloneReplaySnapshot(t, snapshot)
 		function := replayFunctionNode(t, &broken, "add")
 		index := replaySignatureIndex(t, &broken, function.ID)
 		broken.Signatures[index].Declaration = ""
@@ -263,7 +365,7 @@ func TestPrimitiveReadinessRequiresRegisteredSemanticFacts(t *testing.T) {
 	})
 
 	t.Run("incomplete effect", func(t *testing.T) {
-		broken := cloneReplaySnapshot(snapshot)
+		broken := cloneReplaySnapshot(t, snapshot)
 		function := replayFunctionNode(t, &broken, "add")
 		index := replaySignatureIndex(t, &broken, function.ID)
 		broken.Signatures[index].EffectProof.Complete = false
@@ -319,7 +421,7 @@ func TestReplayRejectsRehashedPrimitiveFactCorruption(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			broken := cloneReplaySnapshot(base)
+			broken := cloneReplaySnapshot(t, base)
 			test.mutate(&broken)
 			if err := finalizeTestSnapshot(&broken); err != nil {
 				t.Fatal(err)
@@ -360,7 +462,7 @@ func TestReplayRejectsRehashedSubsetGateTamperingAcrossAllWrappers(t *testing.T)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			broken := cloneReplaySnapshot(base)
+			broken := cloneReplaySnapshot(t, base)
 			test.mutate(&broken)
 			if err := finalizeTestSnapshot(&broken); err != nil {
 				t.Fatal(err)
@@ -489,6 +591,19 @@ func buildReplayAddSnapshot(t *testing.T) *ProgramSnapshot {
 	return snapshot
 }
 
+func buildReplayChooseSnapshot(t *testing.T) *ProgramSnapshot {
+	t.Helper()
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function choose(flag: boolean, left: number, right: number): number { if (flag) { return left; } return right; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
+	}
+	return snapshot
+}
+
 func replayTestRequest(files map[string]string) (tsfrontend.BuildRequest, *tsfrontend.Frontend) {
 	fs := vfstest.FromMap(files, true)
 	frontend := tsfrontend.NewFrontend(bundled.WrapFS(fs), bundled.LibPath(), tsfrontend.TypeScriptGoCommit, tsfrontend.StandardLibraryHash)
@@ -499,12 +614,16 @@ func replayTestRequest(files map[string]string) (tsfrontend.BuildRequest, *tsfro
 	}, frontend
 }
 
-func cloneReplaySnapshot(snapshot *ProgramSnapshot) ProgramSnapshot {
-	clone := *snapshot
-	clone.Nodes = slices.Clone(snapshot.Nodes)
-	clone.Types = slices.Clone(snapshot.Types)
-	clone.Symbols = slices.Clone(snapshot.Symbols)
-	clone.Signatures = slices.Clone(snapshot.Signatures)
+func cloneReplaySnapshot(t *testing.T, snapshot *ProgramSnapshot) ProgramSnapshot {
+	t.Helper()
+	encoded, err := jsonx.Marshal(snapshot, jsonx.Deterministic(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var clone ProgramSnapshot
+	if err := jsonx.Unmarshal(encoded, &clone, jsonx.RejectUnknownMembers(true)); err != nil {
+		t.Fatal(err)
+	}
 	return clone
 }
 

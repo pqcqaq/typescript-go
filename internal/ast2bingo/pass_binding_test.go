@@ -203,6 +203,69 @@ func TestPrimitiveTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 	}
 }
 
+func TestPrimitiveChooseTypedHIRPostVerifierRejectsTampering(t *testing.T) {
+	snapshot := buildReplayChooseSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	plan, err := buildPrimitiveSourceTypePlan(*snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planJSON, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid, err := lowerPrimitiveSourceTypePlan(plan, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := primitiveHIRPassHandlers(identity)[bingo.PassTypedHIR]
+	spec := primitivePassSpec(t, bingo.PassTypedHIR)
+	input := bingo.PassState{Schema: "source-type-plan-v1", Facts: []string{"source-type-plan"}, Artifact: planJSON}
+
+	tests := []struct {
+		name   string
+		mutate func(*primitiveTypedHIRArtifact)
+		want   string
+	}{
+		{name: "boolean parameter type", mutate: func(value *primitiveTypedHIRArtifact) {
+			value.HIR.Functions[0].Parameters[0].Type = bingo.TypeNumber
+		}, want: "conditional branch value"},
+		{name: "number condition", mutate: func(value *primitiveTypedHIRArtifact) {
+			value.HIR.Functions[0].Blocks[0].Terminator.Value = 2
+		}, want: "conditional branch value"},
+		{name: "missing successor", mutate: func(value *primitiveTypedHIRArtifact) {
+			value.HIR.Functions[0].Blocks[0].Terminator.Successors[1] = 9
+		}, want: "targets missing block"},
+		{name: "swapped returns", mutate: func(value *primitiveTypedHIRArtifact) {
+			blocks := value.HIR.Functions[0].Blocks
+			blocks[1].Terminator.Value, blocks[2].Terminator.Value = blocks[2].Terminator.Value, blocks[1].Terminator.Value
+		}, want: "true return does not match source plan"},
+		{name: "event order", mutate: func(value *primitiveTypedHIRArtifact) {
+			value.Events[4], value.Events[5] = value.Events[5], value.Events[4]
+		}, want: "evaluation-order events"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := clonePrimitiveTypedHIRTestArtifact(t, valid)
+			test.mutate(&candidate)
+			rehashPrimitiveHIRTestArtifact(t, &candidate)
+			output := bingo.PassState{
+				Schema:   "hir-v2",
+				Facts:    []string{"source-type-plan", "typed-hir"},
+				Artifact: marshalPrimitivePassTestArtifact(t, candidate),
+			}
+			if _, err := handler.PostVerify(context.Background(), spec, 1, input, output); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("post-verifier error = %v, want %q", err, test.want)
+			}
+		})
+	}
+
+	if err := verifyPrimitiveTypedHIRArtifact(plan, valid, identity); err != nil {
+		t.Fatalf("choose fixture no longer verifies: %v", err)
+	}
+}
+
 func primitiveTypedHIRVerifierFixture(t *testing.T) (bingo.CompilerBuildIdentity, primitiveSourceTypePlan, bingo.PassState, primitiveTypedHIRArtifact) {
 	t.Helper()
 	snapshot := buildReplayAddSnapshot(t)

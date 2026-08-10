@@ -338,7 +338,7 @@ func lowerPrimitiveSourceTypePlan(plan primitiveSourceTypePlan, identity bingo.C
 		LogicalCapabilityRequirements: requirements,
 		Functions:                     []bingo.HIRFunction{function},
 	}
-	_, hirHash, err := bingo.CanonicalHIR(hir)
+	_, hirHash, err := canonicalPrimitiveHIR(hir)
 	if err != nil {
 		return primitiveTypedHIRArtifact{}, err
 	}
@@ -376,7 +376,7 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	if len(artifact.HIR.LogicalCapabilityRequirements) != 0 {
 		return fmt.Errorf("first-slice HIR does not bind runtime capabilities %v", artifact.HIR.LogicalCapabilityRequirements)
 	}
-	if err := bingo.VerifyCanonicalHIR(artifact.HIR); err != nil {
+	if err := verifyCanonicalPrimitiveHIR(artifact.HIR); err != nil {
 		return fmt.Errorf("verify canonical primitive HIR: %w", err)
 	}
 	indexes := indexPrimitiveSnapshot(plan.Snapshot)
@@ -402,7 +402,7 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	}
 
 	parameterIDs := namedChildren(functionNode, "parameter[")
-	if len(function.Parameters) != len(parameterIDs) || len(parameterIDs) != 2 {
+	if len(function.Parameters) != len(parameterIDs) || len(parameterIDs) < 2 || len(parameterIDs) > 3 {
 		return fmt.Errorf("primitive HIR parameter count does not match source plan")
 	}
 	parameterValues := make(map[SymbolID]bingo.ValueID, len(parameterIDs)*2)
@@ -411,8 +411,8 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 		parameterNode := indexes.Nodes[parameterID]
 		parameterTypeID := nodeTypeID(parameterNode)
 		parameterType, typeErr := bingoType(parameterTypeID, indexes.Types)
-		if typeErr != nil || parameterType != bingo.TypeNumber {
-			return fmt.Errorf("primitive source parameter %q is not canonical number", parameterID)
+		if typeErr != nil || (parameterType != bingo.TypeNumber && parameterType != bingo.TypeBoolean) {
+			return fmt.Errorf("primitive source parameter %q is not canonical number or boolean", parameterID)
 		}
 		expected := bingo.HIRParameter{
 			Name:   childText(parameterNode, "name", indexes.Nodes),
@@ -430,6 +430,13 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	}
 
 	bodyID := childByRole(functionNode, "body")
+	choose, isChoose, err := findPrimitiveChoose(bodyID, indexes.Nodes)
+	if err != nil {
+		return err
+	}
+	if isChoose {
+		return verifyPrimitiveChooseHIR(functionNode, function, artifact.Events, parameterValues, choose, indexes, returnTypeID)
+	}
 	returnNode, binaryNode, err := findPrimitiveReturn(bodyID, indexes.Nodes)
 	if err != nil {
 		return err
@@ -478,6 +485,82 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	)
 	if !equalLoweringEvents(artifact.Events, expectedEvents) {
 		return fmt.Errorf("primitive HIR evaluation-order events do not match source plan")
+	}
+	return nil
+}
+
+func canonicalPrimitiveHIR(hir bingo.HIRModule) ([]byte, string, error) {
+	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+		return bingo.CanonicalPhase2HIR(hir)
+	}
+	return bingo.CanonicalHIR(hir)
+}
+
+func verifyCanonicalPrimitiveHIR(hir bingo.HIRModule) error {
+	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+		return bingo.VerifyCanonicalPhase2HIR(hir)
+	}
+	return bingo.VerifyCanonicalHIR(hir)
+}
+
+func verifyPrimitiveChooseHIR(
+	functionNode NodeSnapshot,
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	parameterValues map[SymbolID]bingo.ValueID,
+	choose primitiveChooseSource,
+	indexes snapshotSemanticFactIndexes,
+	returnTypeID TypeID,
+) error {
+	conditionValue, ok := parameterValue(choose.Condition, parameterValues)
+	if !ok {
+		return fmt.Errorf("primitive choose condition is not a parameter")
+	}
+	conditionTypeID := nodeTypeID(choose.Condition)
+	conditionType, err := bingoType(conditionTypeID, indexes.Types)
+	if err != nil || conditionType != bingo.TypeBoolean {
+		return fmt.Errorf("primitive choose condition is not canonical boolean")
+	}
+	thenValue, ok := parameterValue(choose.ThenValue, parameterValues)
+	if !ok {
+		return fmt.Errorf("primitive choose then value is not a parameter")
+	}
+	elseValue, ok := parameterValue(choose.ElseValue, parameterValues)
+	if !ok {
+		return fmt.Errorf("primitive choose else value is not a parameter")
+	}
+	if len(function.Blocks) != 3 || function.Blocks[0].ID != 1 || function.Blocks[1].ID != 2 || function.Blocks[2].ID != 3 {
+		return fmt.Errorf("primitive choose HIR must contain three canonical blocks")
+	}
+	for _, block := range function.Blocks {
+		if block.Operations == nil || len(block.Operations) != 0 {
+			return fmt.Errorf("primitive choose HIR blocks must have explicit empty operations")
+		}
+	}
+	entry := function.Blocks[0].Terminator
+	if entry.Kind != "condbranch" || entry.Value != conditionValue || !slices.Equal(entry.Successors, []bingo.BlockID{2, 3}) || entry.Origin != originOf(choose.IfNode) {
+		return fmt.Errorf("primitive choose condition branch does not match source plan")
+	}
+	if then := function.Blocks[1].Terminator; then.Kind != "return" || then.Value != thenValue || len(then.Successors) != 0 || then.Origin != originOf(choose.ThenReturn) {
+		return fmt.Errorf("primitive choose true return does not match source plan")
+	}
+	if otherwise := function.Blocks[2].Terminator; otherwise.Kind != "return" || otherwise.Value != elseValue || len(otherwise.Successors) != 0 || otherwise.Origin != originOf(choose.ElseReturn) {
+		return fmt.Errorf("primitive choose false return does not match source plan")
+	}
+	expectedEvents := make([]LoweringEvent, 0, len(function.Parameters)+5)
+	expectedEvents = append(expectedEvents, LoweringEvent{Kind: "function.begin", Node: functionNode.ID, Origin: functionNode.Origin})
+	for _, parameterID := range namedChildren(functionNode, "parameter[") {
+		parameter := indexes.Nodes[parameterID]
+		expectedEvents = append(expectedEvents, LoweringEvent{Kind: "parameter", Node: parameter.ID, Origin: parameter.Origin, Type: nodeTypeID(parameter)})
+	}
+	expectedEvents = append(expectedEvents,
+		LoweringEvent{Kind: "if.condition", Node: choose.IfNode.ID, Origin: choose.IfNode.Origin, Type: conditionTypeID, Inputs: []NodeID{choose.Condition.ID}},
+		LoweringEvent{Kind: "return", Node: choose.ThenReturn.ID, Origin: choose.ThenReturn.Origin, Type: nodeTypeID(choose.ThenValue), Inputs: []NodeID{choose.ThenValue.ID}},
+		LoweringEvent{Kind: "return", Node: choose.ElseReturn.ID, Origin: choose.ElseReturn.Origin, Type: nodeTypeID(choose.ElseValue), Inputs: []NodeID{choose.ElseValue.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
+	if returnTypeID == 0 || !equalLoweringEvents(events, expectedEvents) {
+		return fmt.Errorf("primitive choose HIR evaluation-order events do not match source plan")
 	}
 	return nil
 }
