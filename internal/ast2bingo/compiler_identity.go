@@ -13,7 +13,7 @@ import (
 // PrimitiveLoweringSchema names the source-to-HIR implementation contract.
 // It is separate from the HIR wire major so implementation changes can
 // invalidate caches without inventing a compatible compiler identity.
-const PrimitiveLoweringSchema = "bingo-hir-lowering-v3"
+const PrimitiveLoweringSchema = "bingo-hir-lowering-v4"
 
 // These values are intentionally empty in source. Fork builds inject them
 // from ts2bin.lock.json with -ldflags -X, so the exact checkout is recorded

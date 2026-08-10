@@ -34,3 +34,9 @@ func TestNodeComputeScriptBindsLocalAssignmentAndDirectCall(t *testing.T) {
 		t.Fatalf("compute Node script does not bind source semantics: %s", ComputeScriptHash())
 	}
 }
+
+func TestNodeLoopScriptBindsWhileAndPhiSourceSemantics(t *testing.T) {
+	if LoopScriptHash() == ScriptHash() || LoopScriptHash() == ComputeScriptHash() || LoopScriptHash() == ChooseScriptHash() || !strings.Contains(nodeLoopScript, "while(value<limit)") || !strings.Contains(nodeLoopScript, "value=value+step") {
+		t.Fatalf("loop Node script does not bind source semantics: %s", LoopScriptHash())
+	}
+}

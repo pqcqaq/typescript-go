@@ -13,9 +13,9 @@ import (
 
 const (
 	// HIRSchemaVersion is the serialized typed-HIR contract.
-	HIRSchemaVersion uint32 = 3
+	HIRSchemaVersion uint32 = 4
 	// HIRFrontendSnapshotSchemaVersion is the only frontend snapshot schema
-	// accepted by HIR v3. Supporting another major requires an explicit reader.
+	// accepted by HIR v4. Supporting another major requires an explicit reader.
 	HIRFrontendSnapshotSchemaVersion uint32 = 2
 	// MIRSchemaVersion is the serialized target-aware MIR contract.
 	MIRSchemaVersion uint32 = 1
@@ -117,6 +117,7 @@ type HIROp struct {
 	Kind                          string                `json:"kind"`
 	Type                          TypeKind              `json:"type"`
 	Operands                      []ValueID             `json:"operands,omitempty"`
+	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
 	Operator                      string                `json:"operator,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`

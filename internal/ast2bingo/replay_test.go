@@ -219,6 +219,75 @@ func TestReplaySerializedChooseProducesVerifiedPhase2HIR(t *testing.T) {
 	}
 }
 
+func TestReplaySerializedLoopProducesVerifiedPhase2HIR(t *testing.T) {
+	snapshot := buildReplayLoopSnapshot(t)
+	identity := testCompilerIdentity(t, *snapshot)
+	serialized, err := snapshot.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReplaySerializedSnapshot(serialized, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
+		t.Fatalf("verify loop HIR: %v", err)
+	}
+	function := result.HIR.Functions[0]
+	if function.Name != "compute" || len(function.Blocks) != 4 {
+		t.Fatalf("loop HIR function = %#v", function)
+	}
+	phi := function.Blocks[1].Operations[0]
+	comparison := function.Blocks[1].Operations[1]
+	if phi.Kind != "phi" || !slices.Equal(phi.Operands, []bingo.ValueID{1, 5}) || !slices.Equal(phi.IncomingBlocks, []bingo.BlockID{1, 3}) || comparison.Kind != "compare" || comparison.Operator != "<" || comparison.Type != bingo.TypeBoolean {
+		t.Fatalf("loop header operations = %#v", function.Blocks[1].Operations)
+	}
+	if body := function.Blocks[2]; body.Operations[0].ID != 5 || body.Terminator.Kind != "branch" || !slices.Equal(body.Terminator.Successors, []bingo.BlockID{2}) {
+		t.Fatalf("loop body = %#v", body)
+	}
+	wantEvents := []string{"function.begin", "parameter", "parameter", "local.bind", "while.condition", "phi", "binary.add", "local.assign", "return", "function.end"}
+	gotEvents := make([]string, len(result.Events))
+	for index, event := range result.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("loop evaluation events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
+func TestReplayLoopRejectsRehashedConditionBindingTampering(t *testing.T) {
+	base := buildReplayLoopSnapshot(t)
+	identity := testCompilerIdentity(t, *base)
+	broken := cloneReplaySnapshot(t, base)
+	whileIndex := slices.IndexFunc(broken.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindWhileStatement })
+	if whileIndex < 0 {
+		t.Fatal("loop snapshot has no while statement")
+	}
+	nodes := make(map[NodeID]int, len(broken.Nodes))
+	for index, node := range broken.Nodes {
+		nodes[node.ID] = index
+	}
+	condition := broken.Nodes[nodes[childByRole(broken.Nodes[whileIndex], "child[0]")]]
+	leftIndex := nodes[childByRole(condition, "left")]
+	rightIndex := nodes[childByRole(condition, "right")]
+	broken.Nodes[rightIndex].Symbol = broken.Nodes[leftIndex].Symbol
+	broken.Nodes[rightIndex].ResolvedSymbol = broken.Nodes[leftIndex].ResolvedSymbol
+	if err := finalizeTestSnapshot(&broken); err != nil {
+		t.Fatal(err)
+	}
+	serialized, err := broken.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReplaySerializedSnapshot(serialized, identity)
+	if err == nil || !strings.Contains(err.Error(), "limit is not the other number parameter") {
+		t.Fatalf("rehashed loop binding tamper result/error = %#v / %v", result, err)
+	}
+	if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
+		t.Fatalf("rejected loop tamper emitted partial HIR: %#v", result)
+	}
+}
+
 func TestReplayRejectsRehashedChooseSourceTampering(t *testing.T) {
 	base := buildReplayChooseSnapshot(t)
 	identity := testCompilerIdentity(t, *base)
@@ -286,9 +355,9 @@ func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
 	if index < 0 {
 		t.Fatal("add snapshot has no plus token")
 	}
-	copy.Nodes[index].Kind = "KindWhileStatement"
-	copy.Nodes[index].KindValue = 248
-	copy.Nodes[index].SyntaxPayload.Tag = "KindWhileStatement"
+	copy.Nodes[index].Kind = "KindForStatement"
+	copy.Nodes[index].KindValue = 249
+	copy.Nodes[index].SyntaxPayload.Tag = "KindForStatement"
 	if err := finalizeTestSnapshot(&copy); err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +366,7 @@ func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := ReplaySerializedSnapshot(serialized, identity)
-	if err == nil || !strings.Contains(err.Error(), `lowerer for Kind "KindWhileStatement" is not bound`) {
+	if err == nil || !strings.Contains(err.Error(), `lowerer for Kind "KindForStatement" is not bound`) {
 		t.Fatalf("unbound lowerer result/error = %#v / %v", result, err)
 	}
 	if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
@@ -632,6 +701,19 @@ func buildReplayChooseSnapshot(t *testing.T) *ProgramSnapshot {
 	snapshot, diagnostics := frontend.Build(context.Background(), request)
 	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
 		t.Fatalf("snapshot/diagnostics = %#v / %#v", snapshot, diagnostics)
+	}
+	return snapshot
+}
+
+func buildReplayLoopSnapshot(t *testing.T) *ProgramSnapshot {
+	t.Helper()
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true,"noEmit":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function compute(step: number, limit: number): number { let value = step; while (value < limit) { value = value + step; } return value; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("loop snapshot diagnostics = %#v", diagnostics)
 	}
 	return snapshot
 }

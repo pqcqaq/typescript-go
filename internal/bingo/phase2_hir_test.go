@@ -65,6 +65,31 @@ func validPhase2LocalCallHIR() HIRModule {
 	}
 }
 
+func validPhase2LoopHIR() HIRModule {
+	requirements := make([]RuntimeCapabilityID, 0)
+	return HIRModule{
+		SchemaVersion:                 HIRSchemaVersion,
+		Provenance:                    testHIRProvenance(requirements),
+		LogicalCapabilityRequirements: requirements,
+		Functions: []HIRFunction{{
+			ID: 1, Name: "compute", Exported: true, ReturnType: TypeNumber, Origin: testOrigin(0, 180),
+			Parameters: []HIRParameter{
+				{Name: "step", Value: 1, Type: TypeNumber, Origin: testOrigin(24, 36)},
+				{Name: "limit", Value: 2, Type: TypeNumber, Origin: testOrigin(38, 51)},
+			},
+			Blocks: []HIRBlock{
+				{ID: 1, Operations: []HIROp{}, Terminator: HIRTerminator{Kind: "branch", Successors: []BlockID{2}, Origin: testOrigin(68, 73)}},
+				{ID: 2, Operations: []HIROp{
+					{ID: 3, Kind: "phi", Type: TypeNumber, Operands: []ValueID{1, 5}, IncomingBlocks: []BlockID{1, 3}, Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(76, 81)},
+					{ID: 4, Kind: "compare", Type: TypeBoolean, Operands: []ValueID{3, 2}, Operator: "<", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(83, 96)},
+				}, Terminator: HIRTerminator{Kind: "condbranch", Value: 4, Successors: []BlockID{3, 4}, Origin: testOrigin(68, 100)}},
+				{ID: 3, Operations: []HIROp{{ID: 5, Kind: "binary", Type: TypeNumber, Operands: []ValueID{3, 1}, Operator: "+", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(111, 123)}}, Terminator: HIRTerminator{Kind: "branch", Successors: []BlockID{2}, Origin: testOrigin(104, 126)}},
+				{ID: 4, Operations: []HIROp{}, Terminator: HIRTerminator{Kind: "return", Value: 3, Origin: testOrigin(132, 145)}},
+			},
+		}},
+	}
+}
+
 func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	module := validPhase2ChooseHIR()
 	encoded, hash, err := CanonicalPhase2HIR(module)
@@ -95,6 +120,21 @@ func TestPhase2LocalAssignmentAndDirectCallHIRAreCanonical(t *testing.T) {
 	}
 	if err := VerifyHIR(module); err == nil {
 		t.Fatal("multi-function Phase 2B HIR was accepted by the frozen Phase 2A verifier")
+	}
+}
+
+func TestPhase2LoopHIRIsCanonicalAndVerifiesEdgeDominance(t *testing.T) {
+	module := validPhase2LoopHIR()
+	_, hash, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	if err := VerifyCanonicalPhase2HIR(module); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyHIR(module); err == nil {
+		t.Fatal("loop HIR was accepted by the frozen Phase 2A verifier")
 	}
 }
 
@@ -146,6 +186,33 @@ func TestPhase2ChooseHIRRejectsMalformedCFGAndTypes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			module := validPhase2ChooseHIR()
+			test.mutate(&module)
+			if err := VerifyPhase2HIR(module); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("VerifyPhase2HIR error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestPhase2LoopHIRRejectsRehashedPhiAndComparisonTampering(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*HIRModule)
+		want   string
+	}{
+		{name: "missing incoming block", mutate: func(module *HIRModule) { module.Functions[0].Blocks[1].Operations[0].IncomingBlocks = []BlockID{1} }, want: "outside"},
+		{name: "noncanonical incoming order", mutate: func(module *HIRModule) { module.Functions[0].Blocks[1].Operations[0].IncomingBlocks = []BlockID{3, 1} }, want: "incoming blocks"},
+		{name: "phi after compare", mutate: func(module *HIRModule) {
+			operations := module.Functions[0].Blocks[1].Operations
+			operations[0], operations[1] = operations[1], operations[0]
+			operations[0].ID, operations[1].ID = 3, 4
+		}, want: "appears after"},
+		{name: "backedge does not dominate predecessor", mutate: func(module *HIRModule) { module.Functions[0].Blocks[1].Operations[0].Operands[0] = 5 }, want: "not dominated"},
+		{name: "comparison result", mutate: func(module *HIRModule) { module.Functions[0].Blocks[1].Operations[1].Type = TypeNumber }, want: "boolean result"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			module := validPhase2LoopHIR()
 			test.mutate(&module)
 			if err := VerifyPhase2HIR(module); err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("VerifyPhase2HIR error = %v, want %q", err, test.want)

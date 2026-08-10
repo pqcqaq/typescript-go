@@ -21,7 +21,7 @@ import (
 	"github.com/microsoft/typescript-go/internal/targetcontext"
 )
 
-const ReportSchemaVersion uint32 = 2
+const ReportSchemaVersion uint32 = 3
 
 type Options struct {
 	RuntimeDirectory   string
@@ -70,6 +70,7 @@ type Report struct {
 	Stage                 string                      `json:"stage"`
 	CaseName              string                      `json:"caseName"`
 	EntryPoint            string                      `json:"entryPoint"`
+	OracleProgram         string                      `json:"oracleProgram"`
 	TargetTriple          string                      `json:"targetTriple"`
 	TimeoutMS             uint32                      `json:"timeoutMs"`
 	NodeVersion           string                      `json:"nodeVersion"`
@@ -133,6 +134,10 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
+	oracleProgram, err := oracleProgramForHIR(entryPoint, hir)
+	if err != nil {
+		return Report{}, fmt.Errorf("case %s oracle selection: %w", caseData.Manifest.Name, err)
+	}
 	executable := filepath.Join(workspace, entryPoint+"-harness")
 	linkArtifact, err := firstslicelink.LinkFirstSlice(caseContext, firstslicelink.LinkRequest{
 		Emission:           emission,
@@ -172,6 +177,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var nodeResult firstsliceoracle.Result
 		if entryPoint == "choose" {
 			nodeResult, err = nodeOracle.Choose(caseContext, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if oracleProgram == "loop" {
+			nodeResult, err = nodeOracle.Loop(caseContext, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "compute" {
 			nodeResult, err = nodeOracle.Compute(caseContext, execution.LeftBits, execution.RightBits)
 		} else {
@@ -204,6 +211,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	nodeScriptHash := nodeOracle.ScriptHash()
 	if entryPoint == "choose" {
 		nodeScriptHash = firstsliceoracle.ChooseScriptHash()
+	} else if oracleProgram == "loop" {
+		nodeScriptHash = firstsliceoracle.LoopScriptHash()
 	} else if entryPoint == "compute" {
 		nodeScriptHash = firstsliceoracle.ComputeScriptHash()
 	}
@@ -212,6 +221,7 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		Stage:                 "static-core",
 		CaseName:              caseData.Manifest.Name,
 		EntryPoint:            entryPoint,
+		OracleProgram:         oracleProgram,
 		TargetTriple:          runtimeManifest.Target.Triple,
 		TimeoutMS:             caseData.Manifest.TimeoutMS,
 		NodeVersion:           nodeOracle.Version(),
@@ -261,10 +271,17 @@ func VerifyReport(report Report) error {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
-	if entryPoint == "choose" {
+	if entryPoint == "add" && report.OracleProgram != "add" ||
+		entryPoint == "choose" && report.OracleProgram != "choose" ||
+		entryPoint == "compute" && report.OracleProgram != "calllocal" && report.OracleProgram != "loop" {
+		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
+	}
+	if report.OracleProgram == "choose" {
 		wantScriptHash = firstsliceoracle.ChooseScriptHash()
-	} else if entryPoint == "compute" {
+	} else if report.OracleProgram == "calllocal" {
 		wantScriptHash = firstsliceoracle.ComputeScriptHash()
+	} else if report.OracleProgram == "loop" {
+		wantScriptHash = firstsliceoracle.LoopScriptHash()
 	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
 		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
@@ -377,6 +394,7 @@ func reportContentHash(report Report) (string, error) {
 		Stage                 string                      `json:"stage"`
 		CaseName              string                      `json:"caseName"`
 		EntryPoint            string                      `json:"entryPoint"`
+		OracleProgram         string                      `json:"oracleProgram"`
 		TargetTriple          string                      `json:"targetTriple"`
 		TimeoutMS             uint32                      `json:"timeoutMs"`
 		NodeVersion           string                      `json:"nodeVersion"`
@@ -387,11 +405,26 @@ func reportContentHash(report Report) (string, error) {
 		Executions            []ExecutionReport           `json:"executions"`
 		BoundaryRejections    []BoundaryRejectionReport   `json:"boundaryRejections,omitempty"`
 		OK                    bool                        `json:"ok"`
-	}{report.SchemaVersion, report.Stage, report.CaseName, report.EntryPoint, report.TargetTriple, report.TimeoutMS, report.NodeVersion, report.NodeScriptHash, report.NonCanonicalRejected, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.BoundaryRejections, report.OK})
+	}{report.SchemaVersion, report.Stage, report.CaseName, report.EntryPoint, report.OracleProgram, report.TargetTriple, report.TimeoutMS, report.NodeVersion, report.NodeScriptHash, report.NonCanonicalRejected, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.BoundaryRejections, report.OK})
 	if err != nil {
 		return "", err
 	}
 	return hashBytes(data), nil
+}
+
+func oracleProgramForHIR(entryPoint string, hir bingo.HIRModule) (string, error) {
+	switch {
+	case entryPoint == "add" && len(hir.Functions) == 1 && hir.Functions[0].Name == "add":
+		return "add", nil
+	case entryPoint == "choose" && len(hir.Functions) == 1 && hir.Functions[0].Name == "choose":
+		return "choose", nil
+	case entryPoint == "compute" && len(hir.Functions) == 2 && hir.Functions[1].Name == "compute":
+		return "calllocal", nil
+	case entryPoint == "compute" && len(hir.Functions) == 1 && hir.Functions[0].Name == "compute" && len(hir.Functions[0].Blocks) == 4:
+		return "loop", nil
+	default:
+		return "", fmt.Errorf("verified HIR does not identify the %q oracle program", entryPoint)
+	}
 }
 
 func hashBytes(data []byte) string {

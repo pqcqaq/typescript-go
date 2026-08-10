@@ -14,7 +14,7 @@ import (
 
 const (
 	RepresentationPlanSchemaVersion uint32 = 1
-	FirstSliceMIRSchemaVersion      uint32 = 1
+	FirstSliceMIRSchemaVersion      uint32 = 2
 	BoundCapabilitySchemaVersion    uint32 = 1
 )
 
@@ -225,6 +225,7 @@ type FirstSliceMIRInstruction struct {
 	Kind                          string                `json:"kind"`
 	Type                          RepType               `json:"type"`
 	Operands                      []ValueID             `json:"operands"`
+	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
@@ -332,13 +333,20 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 				if !ok {
 					return FirstSliceMIRArtifact{}, fmt.Errorf("operation %d has no representation binding", operation.ID)
 				}
-				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
+				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), IncomingBlocks: slices.Clone(operation.IncomingBlocks), Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
 				switch operation.Kind {
 				case "binary":
 					if operation.Operator != "+" || binding.RepType != RepF64 {
 						return FirstSliceMIRArtifact{}, fmt.Errorf("binary operation %d has no f64 representation", operation.ID)
 					}
 					instruction.Kind = "fadd"
+				case "compare":
+					if operation.Operator != "<" || binding.RepType != RepI1 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("comparison operation %d has no i1 representation", operation.ID)
+					}
+					instruction.Kind = "fcmp.olt"
+				case "phi":
+					instruction.Kind = "phi"
 				case "call":
 					instruction.Kind = "call"
 				default:
@@ -488,6 +496,10 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		if err := verifyLocalCallMIRFunctions(module.Functions); err != nil {
 			return err
 		}
+	case len(module.Functions) == 1 && module.Functions[0].Name == "compute":
+		if err := verifyLoopMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("first-slice MIR function set is invalid")
 	}
@@ -516,7 +528,7 @@ func verifyNumberAddMIRFunction(function FirstSliceMIRFunction) error {
 	}
 	instruction := block.Instructions[0]
 	if instruction.ID != 3 || instruction.Kind != "fadd" || instruction.Type != RepF64 ||
-		!slices.Equal(instruction.Operands, []ValueID{1, 2}) || instruction.Effect != EffectPure ||
+		!slices.Equal(instruction.Operands, []ValueID{1, 2}) || len(instruction.IncomingBlocks) != 0 || instruction.Effect != EffectPure ||
 		instruction.LogicalCapabilityRequirements == nil || len(instruction.LogicalCapabilityRequirements) != 0 || !validOrigin(instruction.Origin) {
 		return fmt.Errorf("first-slice MIR instruction is invalid")
 	}
@@ -588,7 +600,7 @@ func verifyLocalCallMIRFunctions(functions []FirstSliceMIRFunction) error {
 		return fmt.Errorf("Phase 2B local-call entry block is invalid")
 	}
 	call := block.Instructions[0]
-	if call.ID != 3 || call.Kind != "call" || call.Type != RepF64 || !slices.Equal(call.Operands, []ValueID{1, 2}) || call.Callee != 1 || call.Effect != EffectCall || call.LogicalCapabilityRequirements == nil || len(call.LogicalCapabilityRequirements) != 0 || !validOrigin(call.Origin) {
+	if call.ID != 3 || call.Kind != "call" || call.Type != RepF64 || !slices.Equal(call.Operands, []ValueID{1, 2}) || len(call.IncomingBlocks) != 0 || call.Callee != 1 || call.Effect != EffectCall || call.LogicalCapabilityRequirements == nil || len(call.LogicalCapabilityRequirements) != 0 || !validOrigin(call.Origin) {
 		return fmt.Errorf("Phase 2B local-call direct call is invalid")
 	}
 	if !validFAddInstruction(block.Instructions[1], 4, []ValueID{3, 2}) {
@@ -596,6 +608,48 @@ func verifyLocalCallMIRFunctions(functions []FirstSliceMIRFunction) error {
 	}
 	if block.Terminator.Kind != "return" || block.Terminator.Value != 4 || len(block.Terminator.Successors) != 0 || !validOrigin(block.Terminator.Origin) {
 		return fmt.Errorf("Phase 2B local-call return is invalid")
+	}
+	return nil
+}
+
+func verifyLoopMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.Name != "compute" || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
+		return fmt.Errorf("Phase 2B loop MIR function is invalid")
+	}
+	if err := verifyNumberFunctionParameters(function.Parameters); err != nil {
+		return fmt.Errorf("Phase 2B loop parameters: %w", err)
+	}
+	for index, block := range function.Blocks {
+		if block.ID != BlockID(index+1) || block.Instructions == nil {
+			return fmt.Errorf("Phase 2B loop block %d is invalid", index+1)
+		}
+	}
+	entry := function.Blocks[0]
+	if len(entry.Instructions) != 0 || entry.Terminator.Kind != "branch" || entry.Terminator.Value != 0 || !slices.Equal(entry.Terminator.Successors, []BlockID{2}) || !validOrigin(entry.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B loop entry is invalid")
+	}
+	header := function.Blocks[1]
+	if len(header.Instructions) != 2 {
+		return fmt.Errorf("Phase 2B loop header is invalid")
+	}
+	phi := header.Instructions[0]
+	if phi.ID != 3 || phi.Kind != "phi" || phi.Type != RepF64 || !slices.Equal(phi.Operands, []ValueID{1, 5}) || !slices.Equal(phi.IncomingBlocks, []BlockID{1, 3}) || phi.Callee != 0 || phi.Effect != EffectPure || phi.LogicalCapabilityRequirements == nil || len(phi.LogicalCapabilityRequirements) != 0 || !validOrigin(phi.Origin) {
+		return fmt.Errorf("Phase 2B loop phi is invalid")
+	}
+	comparison := header.Instructions[1]
+	if comparison.ID != 4 || comparison.Kind != "fcmp.olt" || comparison.Type != RepI1 || !slices.Equal(comparison.Operands, []ValueID{3, 2}) || len(comparison.IncomingBlocks) != 0 || comparison.Callee != 0 || comparison.Effect != EffectPure || comparison.LogicalCapabilityRequirements == nil || len(comparison.LogicalCapabilityRequirements) != 0 || !validOrigin(comparison.Origin) {
+		return fmt.Errorf("Phase 2B loop comparison is invalid")
+	}
+	if header.Terminator.Kind != "condbranch" || header.Terminator.Value != 4 || !slices.Equal(header.Terminator.Successors, []BlockID{3, 4}) || !validOrigin(header.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B loop conditional branch is invalid")
+	}
+	body := function.Blocks[2]
+	if len(body.Instructions) != 1 || !validFAddInstruction(body.Instructions[0], 5, []ValueID{3, 1}) || body.Terminator.Kind != "branch" || body.Terminator.Value != 0 || !slices.Equal(body.Terminator.Successors, []BlockID{2}) || !validOrigin(body.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B loop body is invalid")
+	}
+	exit := function.Blocks[3]
+	if len(exit.Instructions) != 0 || exit.Terminator.Kind != "return" || exit.Terminator.Value != 3 || len(exit.Terminator.Successors) != 0 || !validOrigin(exit.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B loop exit is invalid")
 	}
 	return nil
 }
@@ -610,7 +664,7 @@ func verifyNumberFunctionParameters(parameters []FirstSliceMIRParameter) error {
 }
 
 func validFAddInstruction(instruction FirstSliceMIRInstruction, id ValueID, operands []ValueID) bool {
-	return instruction.ID == id && instruction.Kind == "fadd" && instruction.Type == RepF64 && slices.Equal(instruction.Operands, operands) && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
+	return instruction.ID == id && instruction.Kind == "fadd" && instruction.Type == RepF64 && slices.Equal(instruction.Operands, operands) && len(instruction.IncomingBlocks) == 0 && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
 }
 
 func verifyBoundCapabilityClosure(closure BoundCapabilityClosure, module FirstSliceMIRArtifact) error {

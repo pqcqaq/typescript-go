@@ -2,6 +2,7 @@ package bingo
 
 import (
 	"bytes"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -140,6 +141,77 @@ func TestPhase2LocalAssignmentAndDirectCallMIRAreCanonical(t *testing.T) {
 	}
 	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPhase2LoopRepresentationAndMIRAreCanonical(t *testing.T) {
+	hir := validPhase2LoopHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	function := structural.Functions[0]
+	if len(function.Blocks) != 4 || function.Blocks[1].Instructions[0].Kind != "phi" || function.Blocks[1].Instructions[1].Kind != "fcmp.olt" || !slices.Equal(function.Blocks[1].Instructions[0].IncomingBlocks, []BlockID{1, 3}) {
+		t.Fatalf("loop MIR = %#v", function)
+	}
+	bound, err := BindFirstSliceCapabilities(structural)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPhase2LoopMIRRejectsRehashedPhiAndCFGTampering(t *testing.T) {
+	hir := validPhase2LoopHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+		want   string
+	}{
+		{name: "phi incoming edge", mutate: func(module *FirstSliceMIRArtifact) {
+			module.Functions[0].Blocks[1].Instructions[0].IncomingBlocks[1] = 4
+		}, want: "phi is invalid"},
+		{name: "phi value", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[1].Instructions[0].Operands[1] = 4 }, want: "phi is invalid"},
+		{name: "comparison", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[1].Instructions[1].Kind = "fcmp.ule" }, want: "comparison is invalid"},
+		{name: "back edge", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[2].Terminator.Successors[0] = 4 }, want: "body is invalid"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := base
+			candidate.Functions = cloneFirstSliceFunctions(base.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("loop MIR tamper error = %v, want %q", err, test.want)
+			}
+		})
 	}
 }
 
@@ -320,7 +392,7 @@ func TestRepresentationPlanAndMIRStrictDecodersRejectUnknownFields(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	unknownMIR := strings.Replace(string(moduleBytes), `"schemaVersion":1`, `"schemaVersion":1,"unknown":true`, 1)
+	unknownMIR := strings.Replace(string(moduleBytes), fmt.Sprintf(`"schemaVersion":%d`, FirstSliceMIRSchemaVersion), fmt.Sprintf(`"schemaVersion":%d,"unknown":true`, FirstSliceMIRSchemaVersion), 1)
 	if _, err := DecodeStructuralFirstSliceMIR([]byte(unknownMIR)); err == nil || !strings.Contains(err.Error(), "unknown") {
 		t.Fatalf("unknown MIR field error = %v", err)
 	}
@@ -364,6 +436,7 @@ func cloneFirstSliceFunctions(input []FirstSliceMIRFunction) []FirstSliceMIRFunc
 			for instructionIndex, instruction := range block.Instructions {
 				result[index].Blocks[blockIndex].Instructions[instructionIndex] = instruction
 				result[index].Blocks[blockIndex].Instructions[instructionIndex].Operands = slices.Clone(instruction.Operands)
+				result[index].Blocks[blockIndex].Instructions[instructionIndex].IncomingBlocks = slices.Clone(instruction.IncomingBlocks)
 				result[index].Blocks[blockIndex].Instructions[instructionIndex].LogicalCapabilityRequirements = slices.Clone(instruction.LogicalCapabilityRequirements)
 			}
 		}

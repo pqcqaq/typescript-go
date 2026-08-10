@@ -10,98 +10,98 @@
     "sequence": 1,
     "pass": "typed-hir",
     "iteration": 1,
-    "schema": "hir-v3",
-    "contentHash": "3df9a50541cba2c83035329a0c6a4ff433a4eaf4e497449369e3f69a09a21cb2"
+    "schema": "hir-v4",
+    "contentHash": "1b963ebf9e77e1047630f09e64a4275de8c8632ba95e776bb668ef97b823ae08"
   },
   {
     "sequence": 2,
     "pass": "evaluation-order-and-semantic-sugar",
     "iteration": 1,
-    "schema": "hir-v3",
-    "contentHash": "36c5d42da5554b539c511ccbdc4477dc3fae77d9db13cdc5ad46cd083d4b8c7f"
+    "schema": "hir-v4",
+    "contentHash": "8b754370d287931304f879977414a47a9c6f16e86b84c7591a0d93e2c0d2217c"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 1,
-    "schema": "hir-v3",
-    "contentHash": "b248d30906ab5db0224a6794c4a45259eda6538b5f88bb3c2b7b88d12c7ba9ac"
+    "schema": "hir-v4",
+    "contentHash": "3fb81a0c424662d3995fef31bb9a05909e3cdd1b74a1dbf5d4595cdc468dcbdf"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 2,
-    "schema": "hir-v3",
-    "contentHash": "0278ebc550eb0059c4407752c0f910b8116e8436636111abd8e34337b34398f5"
+    "schema": "hir-v4",
+    "contentHash": "afe6f14073ad88c1556f0669e2f3c1fc94493d6d4871618868c13a8814f12ee6"
   },
   {
     "sequence": 4,
     "pass": "variance-aliasing-and-conversions",
     "iteration": 1,
-    "schema": "hir-v3",
-    "contentHash": "5fa25c76a55701098360be4e9471527af715af0d4c90dc2faad977aadff87458"
+    "schema": "hir-v4",
+    "contentHash": "f04bf1ddac8bb7f7f1f572d69c491e9899bc6ca1a15a547eddcab682a148e5de"
   },
   {
     "sequence": 5,
     "pass": "resolve-target-context",
     "iteration": 1,
     "schema": "target-context-v1",
-    "contentHash": "8e2be5582ade9a698429d19a1742aaa4956cec39ec9f95af8062239f1d665fa1"
+    "contentHash": "715b14e25ea5f28c704ef1f3bedac881123bbfb504a3c08833eb1e1b665b2835"
   },
   {
     "sequence": 6,
     "pass": "target-representation-plan",
     "iteration": 1,
     "schema": "rep-plan-v1",
-    "contentHash": "3b5a446b37c34e7a68c692eb5ec3481cd698fda5a7820891fb14d5d945da5816"
+    "contentHash": "49c8895cb474073f90c19bbf82d92ba3fccc773b178d1560c32cfbcb44159f6a"
   },
   {
     "sequence": 7,
     "pass": "mir-cfg-ssa",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "965d7378ae3584d4800402121c5c92631c2f3a3f5dee6bdef9a872a24e7dcd59"
+    "contentHash": "8690ed2534b4f023d6ba41a0e98afa9c9bddf5ca621018061c7ce09ba686d89a"
   },
   {
     "sequence": 8,
     "pass": "cleanup-exception-async-state",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "79ff28bf182ab04202ac61af5f19cbe176ec4e8be07cba891bd5a639b19eba9d"
+    "contentHash": "cbfdc46a5e26642b19e5bbc88e1033269156f35a54f87dc837d51e8a966b342d"
   },
   {
     "sequence": 9,
     "pass": "structural-mir-verifier",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "8bc3d8d203241be238c40e818850c517830bf18d8e1ca05f3bd79dfd2afeb86c"
+    "contentHash": "60fa9d64c0ed6dcdeb00275b3de37188f41b0498e2339f40d52f12a5c85c48d3"
   },
   {
     "sequence": 10,
     "pass": "capability-binding-effect-freeze",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "97572c716c81aae591807abc4675fd653f4846d7e9e288825b3a4f2559befaa7"
+    "contentHash": "12e0c2e8bf56ca2c713cf6e609f05656ba1bd70d084d3a5a48bb3ca70985c7aa"
   },
   {
     "sequence": 11,
     "pass": "optimize-proven-mir",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "1e5de291368f1a96f4f2f68b5a62e94c4029a11334fd64ca8398e1e88417da70"
+    "contentHash": "637347b4860e8a158794cf8ef4654dcacd058fda083e15a1198f8ab66fb48b17"
   },
   {
     "sequence": 12,
     "pass": "place-gc-roots-freeze-cleanup",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "934e0b4f1cc9aa507e28cc0c3d3de88feb46edc1aca6bc9cdcb85e44b8c51a61"
+    "contentHash": "953460afedc9b23ebbdd18e652c461b6742a252a24ae4242ae980064cf2db365"
   },
   {
     "sequence": 13,
     "pass": "final-verifier",
     "iteration": 1,
     "schema": "verified-mir-v1",
-    "contentHash": "3ecfbc8641b7dacc25ccf3b31a1806d29c8712198a9e07eb224020a21010d665"
+    "contentHash": "8bc3b7eb19b945d724c88499a699573c3d1f2baec0d904b6b1d4c06c8cea0853"
   }
 ]

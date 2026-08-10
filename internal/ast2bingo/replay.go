@@ -132,6 +132,7 @@ const (
 	snapshotKindFunctionDeclaration = "KindFunctionDeclaration"
 	snapshotKindIdentifier          = "KindIdentifier"
 	snapshotKindIfStatement         = "KindIfStatement"
+	snapshotKindLessThanToken       = "KindLessThanToken"
 	snapshotKindNumberKeyword       = "KindNumberKeyword"
 	snapshotKindParameter           = "KindParameter"
 	snapshotKindPlusToken           = "KindPlusToken"
@@ -140,6 +141,7 @@ const (
 	snapshotKindVariableDeclaration = "KindVariableDeclaration"
 	snapshotKindVariableList        = "KindVariableDeclarationList"
 	snapshotKindVariableStatement   = "KindVariableStatement"
+	snapshotKindWhileStatement      = "KindWhileStatement"
 )
 
 const (
@@ -163,6 +165,7 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindFunctionDeclaration, PayloadTag: snapshotKindFunctionDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactFunctionContract, snapshotFactModule, snapshotFactSymbol}, Handle: validateFunctionLowerer},
 	{Kind: snapshotKindIdentifier, PayloadTag: snapshotKindIdentifier, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateIdentifierLowerer},
 	{Kind: snapshotKindIfStatement, PayloadTag: snapshotKindIfStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateIfLowerer},
+	{Kind: snapshotKindLessThanToken, PayloadTag: snapshotKindLessThanToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
@@ -171,6 +174,7 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindVariableDeclaration, PayloadTag: snapshotKindVariableDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateVariableDeclarationLowerer},
 	{Kind: snapshotKindVariableList, PayloadTag: snapshotKindVariableList, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateVariableListLowerer},
 	{Kind: snapshotKindVariableStatement, PayloadTag: snapshotKindVariableStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateVariableStatementLowerer},
+	{Kind: snapshotKindWhileStatement, PayloadTag: snapshotKindWhileStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateWhileLowerer},
 }
 
 func validateSnapshotLowererReadinessRegistry(registry []snapshotLowererReadinessDefinition) error {
@@ -437,7 +441,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		}
 		for _, statement := range statements {
 			child, ok := nodes[statement]
-			if !ok || child.Parent != node.ID || (child.Kind != snapshotKindReturnStatement && child.Kind != snapshotKindIfStatement && child.Kind != snapshotKindVariableStatement && child.Kind != snapshotKindExpressionStatement) {
+			if !ok || child.Parent != node.ID || (child.Kind != snapshotKindReturnStatement && child.Kind != snapshotKindIfStatement && child.Kind != snapshotKindWhileStatement && child.Kind != snapshotKindVariableStatement && child.Kind != snapshotKindExpressionStatement) {
 				return fmt.Errorf("primitive block statement %q is not supported", statement)
 			}
 		}
@@ -455,7 +459,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		if _, err := requireChildKind(node, eof[0], snapshotKindEndOfFile, nodes); err != nil {
 			return err
 		}
-	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken:
+	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNumberKeyword, snapshotKindPlusToken:
 		if len(node.NamedChildren) != 0 || len(node.Children) != 0 {
 			return fmt.Errorf("primitive token Kind %q cannot have children", node.Kind)
 		}
@@ -555,6 +559,21 @@ func validateIfLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
 	return nil
 }
 
+func validateWhileLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
+		return fmt.Errorf("primitive while requires condition and body block")
+	}
+	condition, err := requireRoleKind(node, "child[0]", snapshotKindBinaryExpression, nodes)
+	if err != nil {
+		return err
+	}
+	if condition.SyntaxPayload.Operator != snapshotKindLessThanToken {
+		return fmt.Errorf("primitive while condition must use <")
+	}
+	_, err = requireRoleKind(node, "child[1]", snapshotKindBlock, nodes)
+	return err
+}
+
 func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
 	if len(node.NamedChildren) != 3 || len(node.Children) != 3 {
 		return fmt.Errorf("primitive binary expression requires exactly left, operator, and right children")
@@ -575,6 +594,13 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 			return err
 		}
 		if _, err := requireRoleKind(node, "right", snapshotKindBinaryExpression, nodes); err != nil {
+			return err
+		}
+	case snapshotKindLessThanToken:
+		if _, err := requireRoleKind(node, "operator", snapshotKindLessThanToken, nodes); err != nil {
+			return err
+		}
+		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
 			return err
 		}
 	default:
@@ -635,8 +661,12 @@ func validateVariableDeclarationLowerer(node NodeSnapshot, nodes map[NodeID]Node
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
 	}
-	_, err := requireRoleKind(node, "initializer", snapshotKindCallExpression, nodes)
-	return err
+	initializerID := childByRole(node, "initializer")
+	initializer, ok := nodes[initializerID]
+	if !ok || initializer.Parent != node.ID || (initializer.Kind != snapshotKindCallExpression && initializer.Kind != snapshotKindIdentifier) {
+		return fmt.Errorf("primitive variable initializer must be a direct call or identifier")
+	}
+	return nil
 }
 
 func requireRoleKind(parent NodeSnapshot, role, kind string, nodes map[NodeID]NodeSnapshot) (NodeSnapshot, error) {
@@ -742,6 +772,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	}
 	if localCall, ok := findPrimitiveLocalCall(bodyID, nodes); ok {
 		return replayLocalCallFunction(function, events, localCall, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures, functionIDs)
+	}
+	loop, isLoop, err := findPrimitiveLoop(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isLoop {
+		return replayLoopFunction(function, events, loop, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
 	}
 	choose, isChoose, err := findPrimitiveChoose(bodyID, nodes)
 	if err != nil {
@@ -1035,6 +1072,197 @@ func replayLocalCallFunction(
 	function.ReturnType = returnType
 	function.Blocks = []bingo.HIRBlock{{ID: 1, Operations: operations, Terminator: bingo.HIRTerminator{Kind: "return", Value: returnValue, Origin: originOf(source.Return)}}}
 	events = append(events,
+		LoweringEvent{Kind: "return", Node: source.Return.ID, Origin: source.Return.Origin, Type: nodeTypeID(source.ReturnValue), Inputs: []NodeID{source.ReturnValue.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
+	return function, events, nil
+}
+
+type primitiveLoopSource struct {
+	Declaration    NodeSnapshot
+	LocalName      NodeSnapshot
+	Initializer    NodeSnapshot
+	While          NodeSnapshot
+	Condition      NodeSnapshot
+	ConditionLeft  NodeSnapshot
+	ConditionRight NodeSnapshot
+	Assignment     NodeSnapshot
+	AssignLeft     NodeSnapshot
+	Add            NodeSnapshot
+	AddInputs      []NodeSnapshot
+	Return         NodeSnapshot
+	ReturnValue    NodeSnapshot
+}
+
+func findPrimitiveLoop(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveLoopSource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveLoopSource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 3 {
+		return primitiveLoopSource{}, false, nil
+	}
+	variableStatement, ok := nodes[statements[0]]
+	if !ok || variableStatement.Kind != snapshotKindVariableStatement {
+		return primitiveLoopSource{}, false, nil
+	}
+	whileNode, ok := nodes[statements[1]]
+	if !ok || whileNode.Kind != snapshotKindWhileStatement {
+		return primitiveLoopSource{}, false, nil
+	}
+	returnNode, ok := nodes[statements[2]]
+	if !ok || returnNode.Kind != snapshotKindReturnStatement {
+		return primitiveLoopSource{}, false, nil
+	}
+	list, err := requireRoleKind(variableStatement, "declarationList", snapshotKindVariableList, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	declarationIDs := namedChildren(list, "declaration[")
+	if len(declarationIDs) != 1 {
+		return primitiveLoopSource{}, false, fmt.Errorf("primitive loop requires one local declaration")
+	}
+	declaration, err := requireChildKind(list, declarationIDs[0], snapshotKindVariableDeclaration, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	localName, err := requireRoleKind(declaration, "name", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	initializer, err := requireRoleKind(declaration, "initializer", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	condition, err := requireRoleKind(whileNode, "child[0]", snapshotKindBinaryExpression, nodes)
+	if err != nil || condition.SyntaxPayload.Operator != snapshotKindLessThanToken {
+		return primitiveLoopSource{}, false, fmt.Errorf("primitive loop condition must be a < comparison")
+	}
+	conditionLeft, err := requireRoleKind(condition, "left", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	conditionRight, err := requireRoleKind(condition, "right", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	loopBody, err := requireRoleKind(whileNode, "child[1]", snapshotKindBlock, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	bodyStatements := namedChildren(loopBody, "statement[")
+	if len(bodyStatements) != 1 {
+		return primitiveLoopSource{}, false, fmt.Errorf("primitive loop body requires one assignment")
+	}
+	expressionStatement, err := requireChildKind(loopBody, bodyStatements[0], snapshotKindExpressionStatement, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	assignment, err := requireRoleKind(expressionStatement, "expression", snapshotKindBinaryExpression, nodes)
+	if err != nil || assignment.SyntaxPayload.Operator != snapshotKindEqualsToken {
+		return primitiveLoopSource{}, false, fmt.Errorf("primitive loop body must assign its local")
+	}
+	assignLeft, err := requireRoleKind(assignment, "left", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	add, err := requireRoleKind(assignment, "right", snapshotKindBinaryExpression, nodes)
+	if err != nil || add.SyntaxPayload.Operator != snapshotKindPlusToken {
+		return primitiveLoopSource{}, false, fmt.Errorf("primitive loop assignment must add")
+	}
+	addInputs := make([]NodeSnapshot, 2)
+	for index, role := range []string{"left", "right"} {
+		input, inputErr := requireRoleKind(add, role, snapshotKindIdentifier, nodes)
+		if inputErr != nil {
+			return primitiveLoopSource{}, false, inputErr
+		}
+		addInputs[index] = input
+	}
+	returnValue, err := requireRoleKind(returnNode, "expression", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveLoopSource{}, false, err
+	}
+	return primitiveLoopSource{
+		Declaration: declaration, LocalName: localName, Initializer: initializer,
+		While: whileNode, Condition: condition, ConditionLeft: conditionLeft, ConditionRight: conditionRight,
+		Assignment: assignment, AssignLeft: assignLeft, Add: add, AddInputs: addInputs,
+		Return: returnNode, ReturnValue: returnValue,
+	}, true, nil
+}
+
+func replayLoopFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	source primitiveLoopSource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if len(function.Parameters) != 2 {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop requires exactly two number parameters")
+	}
+	initialValue, ok := parameterValue(source.Initializer, parameterValues)
+	if !ok || parameterTypes[initialValue] != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop initializer is not a number parameter")
+	}
+	limitValue, ok := parameterValue(source.ConditionRight, parameterValues)
+	if !ok || limitValue == initialValue || parameterTypes[limitValue] != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop limit is not the other number parameter")
+	}
+	localValues := make(map[SymbolID]bingo.ValueID)
+	for _, symbolID := range nodeSymbolIDs(source.LocalName) {
+		localValues[symbolID] = 3
+	}
+	for _, localUse := range []NodeSnapshot{source.ConditionLeft, source.AssignLeft, source.AddInputs[0], source.ReturnValue} {
+		if value, found := parameterValue(localUse, localValues); !found || value != 3 {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop local use %s does not resolve to the loop binding", localUse.ID)
+		}
+	}
+	addStep, ok := parameterValue(source.AddInputs[1], parameterValues)
+	if !ok || addStep != initialValue {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop increment does not use the initializer parameter")
+	}
+	for _, numberNode := range []NodeSnapshot{source.Initializer, source.ConditionLeft, source.ConditionRight, source.AssignLeft, source.Add, source.AddInputs[0], source.AddInputs[1], source.ReturnValue} {
+		typeID := nodeTypeID(numberNode)
+		typ, typeErr := bingoType(typeID, types)
+		if typeErr != nil || typ != bingo.TypeNumber {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop node %s is not canonical number", numberNode.ID)
+		}
+	}
+	conditionTypeID := nodeTypeID(source.Condition)
+	conditionType, err := bingoType(conditionTypeID, types)
+	if err != nil || conditionType != bingo.TypeBoolean {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop condition is not canonical boolean")
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, err := bingoType(returnTypeID, types)
+	if err != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive loop return type is not canonical number")
+	}
+	function.ReturnType = returnType
+	function.Blocks = []bingo.HIRBlock{
+		{ID: 1, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{2}, Origin: originOf(source.Declaration)}},
+		{ID: 2, Operations: []bingo.HIROp{
+			{ID: 3, Kind: "phi", Type: bingo.TypeNumber, Operands: []bingo.ValueID{initialValue, 5}, IncomingBlocks: []bingo.BlockID{1, 3}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Declaration)},
+			{ID: 4, Kind: "compare", Type: bingo.TypeBoolean, Operands: []bingo.ValueID{3, limitValue}, Operator: "<", Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Condition)},
+		}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: 4, Successors: []bingo.BlockID{3, 4}, Origin: originOf(source.While)}},
+		{ID: 3, Operations: []bingo.HIROp{{ID: 5, Kind: "binary", Type: bingo.TypeNumber, Operands: []bingo.ValueID{3, addStep}, Operator: "+", Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Add)}}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{2}, Origin: originOf(source.Assignment)}},
+		{ID: 4, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 3, Origin: originOf(source.Return)}},
+	}
+	events = append(events,
+		LoweringEvent{Kind: "local.bind", Node: source.Declaration.ID, Origin: source.Declaration.Origin, Type: nodeTypeID(source.Declaration), Inputs: []NodeID{source.Initializer.ID}},
+		LoweringEvent{Kind: "while.condition", Node: source.While.ID, Origin: source.While.Origin, Type: conditionTypeID, Operator: "<", Inputs: []NodeID{source.ConditionLeft.ID, source.ConditionRight.ID}},
+		LoweringEvent{Kind: "phi", Node: source.Declaration.ID, Origin: source.Declaration.Origin, Type: nodeTypeID(source.Declaration), Inputs: []NodeID{source.Initializer.ID, source.Add.ID}},
+		LoweringEvent{Kind: "binary.add", Node: source.Add.ID, Origin: source.Add.Origin, Type: nodeTypeID(source.Add), Operator: "+", Inputs: []NodeID{source.AddInputs[0].ID, source.AddInputs[1].ID}},
+		LoweringEvent{Kind: "local.assign", Node: source.Assignment.ID, Origin: source.Assignment.Origin, Type: nodeTypeID(source.Assignment), Inputs: []NodeID{source.AssignLeft.ID, source.Add.ID}},
 		LoweringEvent{Kind: "return", Node: source.Return.ID, Origin: source.Return.Origin, Type: nodeTypeID(source.ReturnValue), Inputs: []NodeID{source.ReturnValue.ID}},
 		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
 	)

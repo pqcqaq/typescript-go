@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 )
 
 // VerifyPhase2HIR validates the Phase 2B primitive CFG subset. The Phase 2A
@@ -77,6 +78,7 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 			return fmt.Errorf("block %d operations are missing", block.ID)
 		}
 		blocks[block.ID] = blockIndex
+		seenNonPhi := false
 		for operationIndex, operation := range block.Operations {
 			if operation.ID != nextValue {
 				return fmt.Errorf("operation value ID %d is not canonical dense ID %d", operation.ID, nextValue)
@@ -86,6 +88,13 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 			}
 			if _, duplicate := values[operation.ID]; duplicate {
 				return fmt.Errorf("duplicate value %d", operation.ID)
+			}
+			if operation.Kind == "phi" {
+				if seenNonPhi {
+					return fmt.Errorf("block %d phi operation %d appears after a non-phi operation", block.ID, operation.ID)
+				}
+			} else {
+				seenNonPhi = true
 			}
 			values[operation.ID] = valueDefinition{typ: operation.Type, block: blockIndex, position: operationIndex}
 			nextValue++
@@ -124,19 +133,51 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 	}
 	dominators := computeDominators(len(function.Blocks), predecessors)
 	for blockIndex, block := range function.Blocks {
+		predecessorIDs := make([]BlockID, len(predecessors[blockIndex]))
+		for index, predecessor := range predecessors[blockIndex] {
+			predecessorIDs[index] = function.Blocks[predecessor].ID
+		}
 		for operationIndex, operation := range block.Operations {
-			for _, operand := range operation.Operands {
-				if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
-					return fmt.Errorf("operation %d: %w", operation.ID, err)
-				}
-			}
 			switch operation.Kind {
 			case "binary":
+				for _, operand := range operation.Operands {
+					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
+						return fmt.Errorf("operation %d: %w", operation.ID, err)
+					}
+				}
 				left, right := values[operation.Operands[0]], values[operation.Operands[1]]
 				if left.typ != TypeNumber || right.typ != TypeNumber || operation.Type != TypeNumber {
 					return fmt.Errorf("binary operation %d requires number operands and result", operation.ID)
 				}
+			case "compare":
+				for _, operand := range operation.Operands {
+					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
+						return fmt.Errorf("operation %d: %w", operation.ID, err)
+					}
+				}
+				left, right := values[operation.Operands[0]], values[operation.Operands[1]]
+				if left.typ != TypeNumber || right.typ != TypeNumber || operation.Type != TypeBoolean {
+					return fmt.Errorf("comparison operation %d requires number operands and boolean result", operation.ID)
+				}
+			case "phi":
+				if !slices.Equal(operation.IncomingBlocks, predecessorIDs) {
+					return fmt.Errorf("phi operation %d incoming blocks %v do not match canonical predecessors %v", operation.ID, operation.IncomingBlocks, predecessorIDs)
+				}
+				for index, operand := range operation.Operands {
+					predecessor := predecessors[blockIndex][index]
+					if err := validateValueUse(operand, predecessor, len(function.Blocks[predecessor].Operations), values, dominators); err != nil {
+						return fmt.Errorf("phi operation %d incoming block %d: %w", operation.ID, predecessorIDs[index], err)
+					}
+					if values[operand].typ != operation.Type {
+						return fmt.Errorf("phi operation %d incoming value %d has type %q, want %q", operation.ID, operand, values[operand].typ, operation.Type)
+					}
+				}
 			case "call":
+				for _, operand := range operation.Operands {
+					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
+						return fmt.Errorf("operation %d: %w", operation.ID, err)
+					}
+				}
 				callee, ok := functions[operation.Callee]
 				if !ok {
 					return fmt.Errorf("call operation %d targets missing function %d", operation.ID, operation.Callee)
@@ -190,11 +231,19 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 	}
 	switch operation.Kind {
 	case "binary":
-		if len(operation.Operands) != 2 || operation.Operator != "+" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "+" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "compare":
+		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "<" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "phi":
+		if len(operation.Operands) < 2 || len(operation.Operands) != len(operation.IncomingBlocks) || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "call":
-		if len(operation.Operands) == 0 || operation.Operator != "" || operation.Callee == 0 || operation.Effect != EffectCall {
+		if len(operation.Operands) == 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee == 0 || operation.Effect != EffectCall {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	default:

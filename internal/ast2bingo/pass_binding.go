@@ -17,7 +17,7 @@ import (
 
 const (
 	primitiveSourceTypePlanSchemaVersion uint32 = 2
-	primitiveTypedHIRSchemaVersion       uint32 = 3
+	primitiveTypedHIRSchemaVersion       uint32 = 4
 )
 
 // PrimitiveTypedHIRSchemaVersion is the wire version consumed by target-aware
@@ -78,7 +78,7 @@ func executePrimitiveHIRPasses(ctx context.Context, snapshot ProgramSnapshot, id
 	if err != nil {
 		return primitiveTypedHIRArtifact{}, execution, err
 	}
-	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v3" {
+	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v4" {
 		return primitiveTypedHIRArtifact{}, execution, fmt.Errorf(
 			"primitive pass prefix ended with %d dumps and schema %q",
 			len(execution.Dumps), execution.State.Schema,
@@ -180,7 +180,7 @@ func postVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, ite
 }
 
 func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
 		return err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -191,7 +191,7 @@ func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iter
 }
 
 func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassResult, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
 		return bingo.PassResult{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -213,7 +213,7 @@ func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration 
 }
 
 func postVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, input, output bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassVerification, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
 		return bingo.PassVerification{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(input.Artifact)
@@ -475,6 +475,39 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	}
 
 	bodyID := childByRole(functionNode, "body")
+	loop, isLoop, loopErr := findPrimitiveLoop(bodyID, indexes.Nodes)
+	if loopErr != nil {
+		return fmt.Errorf("primitive loop source: %w", loopErr)
+	}
+	if isLoop {
+		expectedFunction, expectedLoopEvents, err := replayLoopFunction(
+			bingo.HIRFunction{ID: function.ID, Name: expectedName, Exported: function.Exported, Parameters: slices.Clone(function.Parameters), Origin: originOf(functionNode)},
+			expectedEvents,
+			loop,
+			parameterValues,
+			func() map[bingo.ValueID]bingo.TypeKind {
+				result := make(map[bingo.ValueID]bingo.TypeKind, len(function.Parameters))
+				for _, parameter := range function.Parameters {
+					result[parameter.Value] = parameter.Type
+				}
+				return result
+			}(),
+			functionNode,
+			indexes.Nodes,
+			indexes.Types,
+			indexes.Symbols,
+			indexes.Signatures,
+		)
+		if err != nil {
+			return fmt.Errorf("rebuild primitive loop HIR: %w", err)
+		}
+		expectedJSON, expectedErr := json.Marshal(expectedFunction)
+		actualJSON, actualErr := json.Marshal(function)
+		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) || !equalLoweringEvents(artifact.Events, expectedLoopEvents) {
+			return fmt.Errorf("primitive loop HIR or evaluation-order events do not match source plan")
+		}
+		return nil
+	}
 	choose, isChoose, err := findPrimitiveChoose(bodyID, indexes.Nodes)
 	if err != nil {
 		return err

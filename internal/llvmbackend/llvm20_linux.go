@@ -97,6 +97,8 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		if err := emitLocalCallLLVM(ctx, builder, module, mir.Functions); err != nil {
 			return FirstSliceEmission{}, err
 		}
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "compute":
+		emitLoopLLVM(ctx, builder, module, mir.Functions[0])
 	default:
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
@@ -192,4 +194,32 @@ func emitBooleanChooseLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.M
 	builder.CreateRet(function.Param(1))
 	builder.SetInsertPointAtEnd(falseBlock)
 	builder.CreateRet(function.Param(2))
+}
+
+func emitLoopLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {
+	double := ctx.DoubleType()
+	functionType := llvm.FunctionType(double, []llvm.Type{double, double}, false)
+	function := llvm.AddFunction(module, "compute", functionType)
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	for index, parameter := range mir.Parameters {
+		function.Param(index).SetName(parameter.Name)
+	}
+	entry := llvm.AddBasicBlock(function, "entry")
+	header := llvm.AddBasicBlock(function, "bb2.loop.header")
+	body := llvm.AddBasicBlock(function, "bb3.loop.body")
+	exit := llvm.AddBasicBlock(function, "bb4.loop.exit")
+
+	builder.SetInsertPointAtEnd(entry)
+	builder.CreateBr(header)
+	builder.SetInsertPointAtEnd(header)
+	value := builder.CreatePHI(double, "value.phi")
+	condition := builder.CreateFCmp(llvm.FloatOLT, value, function.Param(1), "value.lt.limit")
+	builder.CreateCondBr(condition, body, exit)
+	builder.SetInsertPointAtEnd(body)
+	next := builder.CreateFAdd(value, function.Param(0), "value.next")
+	builder.CreateBr(header)
+	value.AddIncoming([]llvm.Value{function.Param(0), next}, []llvm.BasicBlock{entry, body})
+	builder.SetInsertPointAtEnd(exit)
+	builder.CreateRet(value)
 }

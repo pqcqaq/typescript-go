@@ -37,12 +37,42 @@ func TestRunnerReportAcceptsComputeOracleIdentity(t *testing.T) {
 	report := validReport(t)
 	report.CaseName = "local-assignment-direct-call"
 	report.EntryPoint = "compute"
+	report.OracleProgram = "calllocal"
 	report.NodeScriptHash = firstsliceoracle.ComputeScriptHash()
 	if err := finalizeReport(&report); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := report.CanonicalBytes(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRunnerReportAcceptsLoopOracleIdentityAndRejectsAmbiguousCompute(t *testing.T) {
+	report := validReport(t)
+	report.CaseName = "loop-cfg-ssa-phi"
+	report.EntryPoint = "compute"
+	report.OracleProgram = "loop"
+	report.NodeScriptHash = firstsliceoracle.LoopScriptHash()
+	if err := finalizeReport(&report); err != nil {
+		t.Fatal(err)
+	}
+	report.OracleProgram = "calllocal"
+	if err := VerifyReport(report); err == nil {
+		t.Fatal("loop report accepted a substituted calllocal oracle identity")
+	}
+}
+
+func TestOracleProgramIsDerivedFromVerifiedHIRShape(t *testing.T) {
+	loop := bingo.HIRModule{Functions: []bingo.HIRFunction{{Name: "compute", Blocks: make([]bingo.HIRBlock, 4)}}}
+	if got, err := oracleProgramForHIR("compute", loop); err != nil || got != "loop" {
+		t.Fatalf("loop oracle program = %q / %v", got, err)
+	}
+	calllocal := bingo.HIRModule{Functions: []bingo.HIRFunction{{Name: "add"}, {Name: "compute"}}}
+	if got, err := oracleProgramForHIR("compute", calllocal); err != nil || got != "calllocal" {
+		t.Fatalf("calllocal oracle program = %q / %v", got, err)
+	}
+	if _, err := oracleProgramForHIR("compute", bingo.HIRModule{Functions: []bingo.HIRFunction{{Name: "compute"}}}); err == nil {
+		t.Fatal("ambiguous compute HIR selected an oracle")
 	}
 }
 
@@ -56,6 +86,7 @@ func validReport(t *testing.T) Report {
 		SchemaVersion:         ReportSchemaVersion,
 		Stage:                 "static-core",
 		CaseName:              "add-number-number",
+		OracleProgram:         "add",
 		TargetTriple:          llvmbackend.FirstSliceTriple,
 		TimeoutMS:             2000,
 		NodeVersion:           firstsliceoracle.LockedNodeVersion,

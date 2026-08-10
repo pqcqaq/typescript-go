@@ -57,6 +57,7 @@ func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
 		{name: "add", directory: "lowering", entryPoint: "add", executions: 3},
 		{name: "choose", directory: "choose", entryPoint: "choose", executions: 2, rejectsByte: true},
 		{name: "calllocal", directory: "calllocal", entryPoint: "compute", executions: 3},
+		{name: "loop", directory: "loop", entryPoint: "compute", executions: 4},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			caseDirectory := filepath.Join("..", "..", "testdata", "ts2bin", test.directory)

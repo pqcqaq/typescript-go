@@ -240,7 +240,7 @@ func LoadHIR(directory string, identity bingo.CompilerBuildIdentity) (bingo.HIRM
 }
 
 func isPhase2HIR(module bingo.HIRModule) bool {
-	return len(module.Functions) > 1 || (len(module.Functions) == 1 && module.Functions[0].Name == "choose")
+	return len(module.Functions) > 1 || (len(module.Functions) == 1 && len(module.Functions[0].Blocks) > 1)
 }
 
 func LoadMIR(ctx context.Context, directory string, identity bingo.CompilerBuildIdentity, machine *llvmbackend.TargetMachine) (bingo.FirstSliceMIRArtifact, error) {
