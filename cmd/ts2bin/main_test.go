@@ -189,6 +189,7 @@ func TestDoctorJSONWrapsAuthoritativeScript(t *testing.T) {
 	var gotDirectory, gotName string
 	var gotArgs []string
 	environment := commandEnvironment{
+		goos:  "windows",
 		getwd: func() (string, error) { return repositoryRoot, nil },
 		lookPath: func(name string) (string, error) {
 			return filepath.Join(repositoryRoot, name+".exe"), nil
@@ -218,6 +219,38 @@ func TestDoctorJSONWrapsAuthoritativeScript(t *testing.T) {
 	doctorScript := filepath.Join(repositoryRoot, "scripts", "doctor.ps1")
 	if len(gotArgs) == 0 || gotArgs[len(gotArgs)-1] != doctorScript {
 		t.Fatalf("doctor script not passed to PowerShell: %q", gotArgs)
+	}
+}
+
+func TestDoctorUsesBashRunnerOutsideWindows(t *testing.T) {
+	repositoryRoot := writeFakeRepositoryRoot(t)
+	doctorScript := filepath.Join(repositoryRoot, "scripts", "doctor.sh")
+	if err := os.WriteFile(doctorScript, []byte("#!/usr/bin/env bash\nexit 0\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	var gotDirectory, gotName string
+	var gotArgs []string
+	environment := commandEnvironment{
+		goos:  "linux",
+		getwd: func() (string, error) { return repositoryRoot, nil },
+		lookPath: func(name string) (string, error) {
+			return filepath.Join(repositoryRoot, name), nil
+		},
+		execute: func(_ context.Context, directory, name string, args ...string) (processResult, error) {
+			gotDirectory, gotName, gotArgs = directory, name, append([]string(nil), args...)
+			return processResult{Output: []byte("[ok]   Go: go version go1.26.0 linux/amd64\n"), ExitCode: 0}, nil
+		},
+	}
+	var stdout, stderr bytes.Buffer
+	if code := runWithEnvironment(context.Background(), []string{"doctor", "--json"}, &stdout, &stderr, environment); code != exitSuccess {
+		t.Fatalf("exit = %d, stderr = %s", code, &stderr)
+	}
+	if gotDirectory != repositoryRoot || !strings.HasSuffix(gotName, "bash") {
+		t.Fatalf("execute directory/name = %q, %q", gotDirectory, gotName)
+	}
+	wantArgs := []string{"--noprofile", "--norc", doctorScript}
+	if strings.Join(gotArgs, "\x00") != strings.Join(wantArgs, "\x00") {
+		t.Fatalf("bash args = %q, want %q", gotArgs, wantArgs)
 	}
 }
 
@@ -251,28 +284,27 @@ func TestFrontendStageReportsMissingRunner(t *testing.T) {
 	}
 }
 
-func TestFrontendStageRejectsUnavailableExplicitRunner(t *testing.T) {
+func TestFrontendStageRejectsRunnerOverride(t *testing.T) {
 	repositoryRoot := writeFakeRepositoryRoot(t)
-	missingRunner := filepath.Join(repositoryRoot, "missing-frontend-runner.ps1")
+	runner := filepath.Join(repositoryRoot, "bypass.go")
+	if err := os.WriteFile(runner, []byte("package main\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	environment := commandEnvironment{
 		getwd:    func() (string, error) { return repositoryRoot, nil },
 		lookPath: func(name string) (string, error) { return name, nil },
 		execute: func(context.Context, string, string, ...string) (processResult, error) {
-			t.Fatal("unavailable runner must not execute a process")
+			t.Fatal("runner override must not execute a process")
 			return processResult{}, nil
 		},
 	}
 	var stdout, stderr bytes.Buffer
-	args := []string{"test", "--stage", "frontend", "--runner", missingRunner, "--json"}
+	args := []string{"test", "--stage", "frontend", "--runner", runner, "--json"}
 	if code := runWithEnvironment(context.Background(), args, &stdout, &stderr, environment); code != exitUsage {
 		t.Fatalf("exit = %d, stderr = %s", code, &stderr)
 	}
-	var report frontendTestReport
-	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
-		t.Fatal(err)
-	}
-	if report.OK || !strings.Contains(report.Error, "unavailable") {
-		t.Fatalf("unexpected report: %+v", report)
+	if stdout.Len() != 0 || !strings.Contains(stderr.String(), "flag provided but not defined: -runner") {
+		t.Fatalf("unexpected output: stdout=%s stderr=%s", &stdout, &stderr)
 	}
 }
 
@@ -315,45 +347,6 @@ func TestFrontendStagePrefersRepositoryPowerShellRunner(t *testing.T) {
 	}
 	if len(report.Output) != 3 || !strings.Contains(report.Output[0], "command:") || !strings.Contains(report.Output[1], "result: passed") || !strings.Contains(report.Output[2], "[frontend:summary]") {
 		t.Fatalf("runner output was not preserved: %#v", report.Output)
-	}
-}
-
-func TestFrontendStageExecutesExplicitGoFixtureRunner(t *testing.T) {
-	repositoryRoot := writeFakeRepositoryRoot(t)
-	runner := filepath.Join(repositoryRoot, "typescript-go", "internal", "tsfrontend", "frontend_fixture_test.go")
-	if err := os.MkdirAll(filepath.Dir(runner), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(runner, []byte("package tsfrontend\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	var gotDirectory, gotName string
-	var gotArgs []string
-	environment := commandEnvironment{
-		getwd:    func() (string, error) { return repositoryRoot, nil },
-		lookPath: func(name string) (string, error) { return filepath.Join(repositoryRoot, name+".exe"), nil },
-		execute: func(_ context.Context, directory, name string, args ...string) (processResult, error) {
-			gotDirectory, gotName, gotArgs = directory, name, append([]string(nil), args...)
-			return processResult{Output: []byte("ok frontend\n"), ExitCode: 0}, nil
-		},
-	}
-	var stdout, stderr bytes.Buffer
-	if code := runWithEnvironment(context.Background(), []string{"test", "--stage", "frontend", "--runner", runner, "--json"}, &stdout, &stderr, environment); code != exitSuccess {
-		t.Fatalf("exit = %d, stderr = %s", code, &stderr)
-	}
-	if gotDirectory != filepath.Join(repositoryRoot, "typescript-go") || !strings.HasSuffix(gotName, "go.exe") {
-		t.Fatalf("execute directory/name = %q, %q", gotDirectory, gotName)
-	}
-	wantArgs := []string{"test", "./internal/tsfrontend", "-run", "^TestFrontendConformanceFixtures$", "-count=1"}
-	if strings.Join(gotArgs, "\x00") != strings.Join(wantArgs, "\x00") {
-		t.Fatalf("go args = %q, want %q", gotArgs, wantArgs)
-	}
-	var report frontendTestReport
-	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
-		t.Fatal(err)
-	}
-	if !report.OK || report.Runner != "typescript-go/internal/tsfrontend/frontend_fixture_test.go" {
-		t.Fatalf("unexpected report: %+v", report)
 	}
 }
 

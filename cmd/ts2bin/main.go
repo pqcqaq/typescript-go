@@ -34,6 +34,7 @@ type processResult struct {
 }
 
 type commandEnvironment struct {
+	goos                 string
 	getwd                func() (string, error)
 	lookPath             func(string) (string, error)
 	execute              func(context.Context, string, string, ...string) (processResult, error)
@@ -105,6 +106,7 @@ func runWithEnvironment(ctx context.Context, args []string, stdout, stderr io.Wr
 
 func defaultCommandEnvironment() commandEnvironment {
 	return commandEnvironment{
+		goos:                 runtime.GOOS,
 		getwd:                os.Getwd,
 		lookPath:             exec.LookPath,
 		execute:              executeProcess,
@@ -330,18 +332,26 @@ func runDoctor(ctx context.Context, args []string, stdout, stderr io.Writer, env
 	if err != nil {
 		return writeDoctorFailure(stdout, stderr, *jsonOutput, err)
 	}
-	script := filepath.Join(repositoryRoot, "scripts", "doctor.ps1")
+	goos := environment.goos
+	if goos == "" {
+		goos = runtime.GOOS
+	}
+	scriptName := "doctor.sh"
+	if goos == "windows" {
+		scriptName = "doctor.ps1"
+	}
+	script := filepath.Join(repositoryRoot, "scripts", scriptName)
 	if info, statErr := os.Stat(script); statErr != nil || info.IsDir() {
 		if statErr == nil {
 			statErr = fmt.Errorf("%s is not a file", script)
 		}
 		return writeDoctorFailure(stdout, stderr, *jsonOutput, fmt.Errorf("doctor script unavailable: %w", statErr))
 	}
-	powerShell, err := resolvePowerShell(environment.lookPath)
+	name, commandArgs, err := doctorCommand(goos, script, environment.lookPath)
 	if err != nil {
 		return writeDoctorFailure(stdout, stderr, *jsonOutput, err)
 	}
-	result, err := environment.execute(ctx, repositoryRoot, powerShell, "-NoLogo", "-NoProfile", "-NonInteractive", "-File", script)
+	result, err := environment.execute(ctx, repositoryRoot, name, commandArgs...)
 	if err != nil {
 		return writeDoctorFailure(stdout, stderr, *jsonOutput, err)
 	}
@@ -378,7 +388,6 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	flags.SetOutput(stderr)
 	stage := flags.String("stage", "", "test stage (currently frontend)")
 	jsonOutput := flags.Bool("json", false, "print the test report as JSON")
-	runnerFlag := flags.String("runner", "", "explicit frontend manifest runner path")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 {
 		return exitUsage
 	}
@@ -390,7 +399,7 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	if err != nil {
 		return writeFrontendTestFailure(stdout, stderr, *jsonOutput, "", err, exitUsage)
 	}
-	runner, err := resolveFrontendRunner(repositoryRoot, *runnerFlag)
+	runner, err := resolveFrontendRunner(repositoryRoot)
 	if err != nil {
 		return writeFrontendTestFailure(stdout, stderr, *jsonOutput, "", err, exitUsage)
 	}
@@ -398,11 +407,7 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	if err != nil {
 		return writeFrontendTestFailure(stdout, stderr, *jsonOutput, runner, err, exitUsage)
 	}
-	runnerDirectory := repositoryRoot
-	if strings.EqualFold(filepath.Ext(runner), ".go") {
-		runnerDirectory = filepath.Join(repositoryRoot, "typescript-go")
-	}
-	result, err := environment.execute(ctx, runnerDirectory, name, runnerArgs...)
+	result, err := environment.execute(ctx, repositoryRoot, name, runnerArgs...)
 	if err != nil {
 		return writeFrontendTestFailure(stdout, stderr, *jsonOutput, runner, err, exitUsage)
 	}
@@ -434,20 +439,7 @@ func writeFrontendTestFailure(stdout, stderr io.Writer, jsonOutput bool, runner 
 	return exitCode
 }
 
-func resolveFrontendRunner(repositoryRoot, explicit string) (string, error) {
-	if strings.TrimSpace(explicit) != "" {
-		path, err := filepath.Abs(explicit)
-		if err != nil {
-			return "", err
-		}
-		if info, err := os.Stat(path); err != nil || info.IsDir() {
-			if err == nil {
-				err = fmt.Errorf("path is a directory")
-			}
-			return "", fmt.Errorf("frontend runner %q is unavailable: %w", path, err)
-		}
-		return path, nil
-	}
+func resolveFrontendRunner(repositoryRoot string) (string, error) {
 	candidates := []string{
 		filepath.Join(repositoryRoot, "scripts", "test-frontend.ps1"),
 		filepath.Join(repositoryRoot, "scripts", "test-frontend.cmd"),
@@ -475,12 +467,6 @@ func frontendRunnerCommand(runner string, lookPath func(string) (string, error))
 			return "", nil, fmt.Errorf("Windows command interpreter not found: %w", err)
 		}
 		return commandInterpreter, []string{"/d", "/s", "/c", runner}, nil
-	case ".go":
-		goCommand, err := lookPath("go")
-		if err != nil {
-			return "", nil, fmt.Errorf("Go executable not found: %w", err)
-		}
-		return goCommand, []string{"test", "./internal/tsfrontend", "-run", "^TestFrontendConformanceFixtures$", "-count=1"}, nil
 	}
 	return runner, nil, nil
 }
@@ -505,9 +491,9 @@ func resolveRepositoryRoot(environment commandEnvironment) (string, error) {
 	for _, start := range starts {
 		for directory := filepath.Clean(start); ; directory = filepath.Dir(directory) {
 			lock := filepath.Join(directory, "ts2bin.lock.json")
-			script := filepath.Join(directory, "scripts", "doctor.ps1")
+			scripts := filepath.Join(directory, "scripts")
 			if lockInfo, lockErr := os.Stat(lock); lockErr == nil && !lockInfo.IsDir() {
-				if scriptInfo, scriptErr := os.Stat(script); scriptErr == nil && !scriptInfo.IsDir() {
+				if scriptsInfo, scriptsErr := os.Stat(scripts); scriptsErr == nil && scriptsInfo.IsDir() {
 					return directory, nil
 				}
 			}
@@ -517,7 +503,7 @@ func resolveRepositoryRoot(environment commandEnvironment) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("repository root containing ts2bin.lock.json and scripts/doctor.ps1 was not found")
+	return "", fmt.Errorf("repository root containing ts2bin.lock.json and scripts/ was not found")
 }
 
 func resolvePowerShell(lookPath func(string) (string, error)) (string, error) {
@@ -527,6 +513,21 @@ func resolvePowerShell(lookPath func(string) (string, error)) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("PowerShell executable not found (tried pwsh and powershell)")
+}
+
+func doctorCommand(goos, script string, lookPath func(string) (string, error)) (string, []string, error) {
+	if goos == "windows" {
+		powerShell, err := resolvePowerShell(lookPath)
+		if err != nil {
+			return "", nil, err
+		}
+		return powerShell, []string{"-NoLogo", "-NoProfile", "-NonInteractive", "-File", script}, nil
+	}
+	bash, err := lookPath("bash")
+	if err != nil {
+		return "", nil, fmt.Errorf("Bash executable not found: %w", err)
+	}
+	return bash, []string{"--noprofile", "--norc", script}, nil
 }
 
 func executeProcess(ctx context.Context, directory, name string, args ...string) (processResult, error) {
