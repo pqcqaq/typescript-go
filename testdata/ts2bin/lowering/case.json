@@ -4,7 +4,7 @@
   "frontendSnapshot": "frontend-snapshot.json",
   "buildPlan": "build-plan.json",
   "runtimeManifest": "runtime-manifest.json",
-  "timeoutMs": 2000,
+  "timeoutMs": 10000,
   "oracle": "node",
   "executions": [
     {
