@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "coalesce-assignment-nullable-number",
+  "entryPoint": "coalesceAssign",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {"name":"number-kept","nullableTag":"number","leftBits":"8000000000000000","rightBits":"3ff0000000000000","expectedBits":"8000000000000000"},
+    {"name":"null-written","nullableTag":"null","leftBits":"0000000000000000","rightBits":"4008000000000000","expectedBits":"4008000000000000"},
+    {"name":"undefined-written","nullableTag":"undefined","leftBits":"0000000000000000","rightBits":"7ff8000000000000","expectedBits":"7ff8000000000000"}
+  ]
+}

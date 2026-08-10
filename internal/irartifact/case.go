@@ -150,7 +150,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -168,7 +168,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		if entryPoint != "choose" && execution.Flag != nil {
 			return fmt.Errorf("non-choose execution %q must not contain boolean flag", execution.Name)
 		}
-		if entryPoint == "coalesce" {
+		if entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
 			if execution.NullableTag != "number" && execution.NullableTag != "null" && execution.NullableTag != "undefined" {
 				return fmt.Errorf("coalesce execution %q has invalid nullableTag %q", execution.Name, execution.NullableTag)
 			}

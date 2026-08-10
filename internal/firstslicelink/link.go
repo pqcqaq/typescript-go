@@ -176,6 +176,15 @@ func RunCoalesce(ctx context.Context, executable, tag, value, fallback string) (
 	return runHarness(ctx, executable, "coalesce", tagByte, value, fallback)
 }
 
+// RunCoalesceAssign executes the nullable logical-assignment ABI harness.
+func RunCoalesceAssign(ctx context.Context, executable, tag, value, fallback string) (RunResult, error) {
+	tagByte, err := nullableTagByte(tag)
+	if err != nil {
+		return RunResult{}, err
+	}
+	return runHarness(ctx, executable, "coalesceAssign", tagByte, value, fallback)
+}
+
 // RejectNonCanonicalChoose executes choose with an invalid ABI byte and
 // requires the strict entry-point trap to reject the process.
 func RejectNonCanonicalChoose(ctx context.Context, executable, left, right string) (RunResult, error) {
@@ -186,6 +195,12 @@ func RejectNonCanonicalChoose(ctx context.Context, executable, left, right strin
 // unknown nullable tag before observing its payload.
 func RejectNonCanonicalCoalesce(ctx context.Context, executable, value, fallback string) (RunResult, error) {
 	return runHarnessExpectFailure(ctx, executable, "coalesce", "03", value, fallback)
+}
+
+// RejectNonCanonicalCoalesceAssign rejects an unknown nullable tag at the
+// logical-assignment entry point.
+func RejectNonCanonicalCoalesceAssign(ctx context.Context, executable, value, fallback string) (RunResult, error) {
+	return runHarnessExpectFailure(ctx, executable, "coalesceAssign", "03", value, fallback)
 }
 
 func runHarness(ctx context.Context, executable, entryPoint, flag, left, right string) (RunResult, error) {
@@ -201,15 +216,15 @@ func runHarness(ctx context.Context, executable, entryPoint, flag, left, right s
 	if strings.TrimSpace(executable) == "" {
 		return RunResult{}, fmt.Errorf("executable path is empty")
 	}
-	if entryPoint != "add" && entryPoint != "compute" && entryPoint != "choose" && entryPoint != "coalesce" {
+	if entryPoint != "add" && entryPoint != "compute" && entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
 		return RunResult{}, fmt.Errorf("unsupported harness entry point %q", entryPoint)
 	}
 	arguments := []string{left, right}
-	if entryPoint == "choose" || entryPoint == "coalesce" {
+	if entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
 		if entryPoint == "choose" && flag != "00" && flag != "01" {
 			return RunResult{}, fmt.Errorf("choose flag must be canonical 00 or 01")
 		}
-		if entryPoint == "coalesce" && flag != "00" && flag != "01" && flag != "02" {
+		if (entryPoint == "coalesce" || entryPoint == "coalesceAssign") && flag != "00" && flag != "01" && flag != "02" {
 			return RunResult{}, fmt.Errorf("coalesce tag must be canonical 00, 01, or 02")
 		}
 		arguments = []string{flag, left, right}
@@ -231,7 +246,7 @@ func runHarnessExpectFailure(ctx context.Context, executable, entryPoint, flag, 
 	if ctx == nil {
 		return RunResult{}, fmt.Errorf("run context is nil")
 	}
-	if (entryPoint != "choose" && entryPoint != "coalesce") || entryPoint == "choose" && (flag == "00" || flag == "01") || entryPoint == "coalesce" && (flag == "00" || flag == "01" || flag == "02") {
+	if (entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign") || entryPoint == "choose" && (flag == "00" || flag == "01") || (entryPoint == "coalesce" || entryPoint == "coalesceAssign") && (flag == "00" || flag == "01" || flag == "02") {
 		return RunResult{}, fmt.Errorf("invalid noncanonical choose invocation")
 	}
 	if err := validateBits(left); err != nil {
@@ -282,7 +297,7 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
 	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
@@ -308,6 +323,11 @@ func materializeLinkInputs(workspace string, request LinkRequest, entryPoint str
 			return fmt.Errorf("runtime manifest has no coalesce harness object")
 		}
 		harness = *request.Runtime.Artifacts.CoalesceHarnessObject
+	} else if entryPoint == "coalesceAssign" {
+		if request.Runtime.Artifacts.CoalesceAssignHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no coalesce assignment harness object")
+		}
+		harness = *request.Runtime.Artifacts.CoalesceAssignHarnessObject
 	}
 	inputs := []struct {
 		artifact targetcontext.RuntimeArtifact
@@ -351,6 +371,8 @@ func responseFileBytes(entryPoints ...string) []byte {
 		harness = "bingo_compute_harness.o"
 	} else if entryPoint == "coalesce" {
 		harness = "bingo_coalesce_harness.o"
+	} else if entryPoint == "coalesceAssign" {
+		harness = "bingo_coalesce_assign_harness.o"
 	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",

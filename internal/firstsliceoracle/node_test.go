@@ -46,3 +46,9 @@ func TestNodeCoalesceScriptBindsDistinctNullishTags(t *testing.T) {
 		t.Fatalf("coalesce Node script does not preserve tag semantics: %s", CoalesceScriptHash())
 	}
 }
+
+func TestNodeCoalesceAssignScriptUsesLogicalAssignment(t *testing.T) {
+	if CoalesceAssignScriptHash() == CoalesceScriptHash() || !strings.Contains(nodeCoalesceAssignScript, "value??=fromBits(b)") {
+		t.Fatalf("coalesce assignment Node script does not bind ??=: %s", CoalesceAssignScriptHash())
+	}
+}

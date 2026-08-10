@@ -516,7 +516,7 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		if err := verifyLoopMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "coalesce":
+	case len(module.Functions) == 1 && (module.Functions[0].Name == "coalesce" || module.Functions[0].Name == "coalesceAssign"):
 		if err := verifyCoalesceMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
@@ -675,7 +675,7 @@ func verifyLoopMIRFunction(function FirstSliceMIRFunction) error {
 }
 
 func verifyCoalesceMIRFunction(function FirstSliceMIRFunction) error {
-	if function.ID != 1 || function.Name != "coalesce" || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
+	if function.ID != 1 || (function.Name != "coalesce" && function.Name != "coalesceAssign") || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
 		return fmt.Errorf("Phase 2B coalesce MIR function is invalid")
 	}
 	wantParameterTypes := []RepType{RepNullableF64, RepF64}

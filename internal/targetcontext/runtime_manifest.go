@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "91f289c0d4a0435db1a4147d5497026fe785475068d6641cb759687a66c96f1a"
-	LockedABISchemaHash                 = "e3f41e041c51b57f818e95148217bfdf40e5df597fe061fbbaba1d551a2d2ff8"
-	LockedTargetManifestHash            = "494e7b5017488824e620d6867eef721028a5aaec750a9278587f2a1790f92929"
-	LockedRuntimeManifestHash           = "1750f08c024d597a1c234ab8b55639fa3e2d900e846cfc64f177a82bda4bec2c"
+	LockedRuntimeSourceHash             = "db229da631fc0d6c7aabe8470d69638f1f7efc672f9f6a4fa8e5321021f58bf9"
+	LockedABISchemaHash                 = "4bb4f2c0565ded7c96c01e33bf28f0aa64816a8715bb82237be2bed52b3c0c70"
+	LockedTargetManifestHash            = "1a592308475066a7b02fce7c7d59a08a6f59b3d1d97da62bf563b70a9d681838"
+	LockedRuntimeManifestHash           = "bf757104f324b18fc7bd34fac10bbff31319ad75ea90726fb767fdfa04307676"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -41,12 +41,13 @@ type RuntimeArtifact struct {
 
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
-	StartupObject         RuntimeArtifact  `json:"startupObject"`
-	HarnessObject         RuntimeArtifact  `json:"harnessObject"`
-	ComputeHarnessObject  *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
-	ChooseHarnessObject   *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
-	CoalesceHarnessObject *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
-	UmbrellaArchive       RuntimeArtifact  `json:"umbrellaArchive"`
+	StartupObject               RuntimeArtifact  `json:"startupObject"`
+	HarnessObject               RuntimeArtifact  `json:"harnessObject"`
+	ComputeHarnessObject        *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
+	ChooseHarnessObject         *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
+	CoalesceHarnessObject       *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
+	CoalesceAssignHarnessObject *RuntimeArtifact `json:"coalesceAssignHarnessObject,omitempty"`
+	UmbrellaArchive             RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
 // RuntimeCapability is one available versioned C ABI implementation.
@@ -151,6 +152,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	if manifest.Artifacts.CoalesceHarnessObject != nil {
 		if err := validateRuntimeArtifact(*manifest.Artifacts.CoalesceHarnessObject, "bingo_coalesce_harness.o"); err != nil {
 			return fmt.Errorf("coalesce harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.CoalesceAssignHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.CoalesceAssignHarnessObject, "bingo_coalesce_assign_harness.o"); err != nil {
+			return fmt.Errorf("coalesce assignment harness object: %w", err)
 		}
 	}
 	if len(manifest.Capabilities) != 1 {

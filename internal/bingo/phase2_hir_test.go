@@ -155,32 +155,38 @@ func TestPhase2LoopHIRIsCanonicalAndVerifiesEdgeDominance(t *testing.T) {
 	}
 }
 
-func TestPhase2CoalesceHIRIsCanonicalAndRejectsUnguardedUnwrap(t *testing.T) {
-	module := validPhase2CoalesceHIR()
-	_, hash, err := CanonicalPhase2HIR(module)
-	if err != nil {
-		t.Fatal(err)
-	}
-	module.ContentHash = hash
-	if err := VerifyCanonicalPhase2HIR(module); err != nil {
-		t.Fatal(err)
-	}
-	if err := VerifyHIR(module); err == nil {
-		t.Fatal("nullable Phase 2B HIR was accepted by the frozen Phase 2A verifier")
-	}
-	for _, test := range []struct {
-		name   string
-		mutate func(*HIRModule)
-	}{
-		{name: "wrong branch", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Terminator.Successors = []BlockID{3, 2} }},
-		{name: "wrong predicate", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Operations[0].Operands[0] = 2 }},
-		{name: "wrong unwrap block", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[2].ID = 4 }},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			candidate := validPhase2CoalesceHIR()
-			test.mutate(&candidate)
-			if err := VerifyPhase2HIR(candidate); err == nil {
-				t.Fatal("malformed nullable unwrap proof was accepted")
+func TestPhase2NullableCoalesceHIRIsCanonicalAndRejectsUnguardedUnwrap(t *testing.T) {
+	for _, functionName := range []string{"coalesce", "coalesceAssign"} {
+		t.Run(functionName, func(t *testing.T) {
+			module := validPhase2CoalesceHIR()
+			module.Functions[0].Name = functionName
+			_, hash, err := CanonicalPhase2HIR(module)
+			if err != nil {
+				t.Fatal(err)
+			}
+			module.ContentHash = hash
+			if err := VerifyCanonicalPhase2HIR(module); err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyHIR(module); err == nil {
+				t.Fatal("nullable Phase 2B HIR was accepted by the frozen Phase 2A verifier")
+			}
+			for _, test := range []struct {
+				name   string
+				mutate func(*HIRModule)
+			}{
+				{name: "wrong branch", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Terminator.Successors = []BlockID{3, 2} }},
+				{name: "wrong predicate", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Operations[0].Operands[0] = 2 }},
+				{name: "wrong unwrap block", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[2].ID = 4 }},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					candidate := validPhase2CoalesceHIR()
+					candidate.Functions[0].Name = functionName
+					test.mutate(&candidate)
+					if err := VerifyPhase2HIR(candidate); err == nil {
+						t.Fatal("malformed nullable unwrap proof was accepted")
+					}
+				})
 			}
 		})
 	}

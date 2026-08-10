@@ -508,6 +508,35 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 		}
 		return nil
 	}
+	coalesceAssign, isCoalesceAssign, coalesceAssignErr := findPrimitiveCoalesceAssign(bodyID, indexes.Nodes)
+	if coalesceAssignErr != nil {
+		return fmt.Errorf("primitive coalesce assignment source: %w", coalesceAssignErr)
+	}
+	if isCoalesceAssign {
+		expectedFunction, expectedEvents, err := replayCoalesceAssignFunction(
+			bingo.HIRFunction{ID: function.ID, Name: expectedName, Exported: function.Exported, Parameters: slices.Clone(function.Parameters), Origin: originOf(functionNode)},
+			expectedEvents,
+			coalesceAssign,
+			parameterValues,
+			func() map[bingo.ValueID]bingo.TypeKind {
+				result := make(map[bingo.ValueID]bingo.TypeKind, len(function.Parameters))
+				for _, parameter := range function.Parameters {
+					result[parameter.Value] = parameter.Type
+				}
+				return result
+			}(),
+			functionNode, indexes.Nodes, indexes.Types, indexes.Symbols, indexes.Signatures,
+		)
+		if err != nil {
+			return fmt.Errorf("rebuild primitive coalesce assignment HIR: %w", err)
+		}
+		expectedJSON, expectedErr := json.Marshal(expectedFunction)
+		actualJSON, actualErr := json.Marshal(function)
+		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) || !equalLoweringEvents(artifact.Events, expectedEvents) {
+			return fmt.Errorf("primitive coalesce assignment HIR or evaluation-order events do not match source plan")
+		}
+		return nil
+	}
 	coalesce, isCoalesce, coalesceErr := findPrimitiveCoalesce(bodyID, indexes.Nodes)
 	if coalesceErr != nil {
 		return fmt.Errorf("primitive coalesce source: %w", coalesceErr)

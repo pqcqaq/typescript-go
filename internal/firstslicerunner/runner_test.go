@@ -62,6 +62,34 @@ func TestRunnerReportAcceptsLoopOracleIdentityAndRejectsAmbiguousCompute(t *test
 	}
 }
 
+func TestRunnerReportAcceptsCoalesceAssignOracleIdentityAndRejectsSubstitution(t *testing.T) {
+	report := validReport(t)
+	report.CaseName = "coalesce-assignment-nullable-number"
+	report.EntryPoint = "coalesceAssign"
+	report.OracleProgram = "coalesceassign"
+	report.NodeScriptHash = firstsliceoracle.CoalesceAssignScriptHash()
+	report.NonCanonicalRejected = true
+	report.Executions = []ExecutionReport{{
+		Name: "number-kept", Arguments: []string{"00", "3ff0000000000000", "4000000000000000"},
+		ExpectedBits: "3ff0000000000000", ActualBits: "3ff0000000000000", OutputHash: hashBytes([]byte("3ff0000000000000\n")),
+		NodeBits: "3ff0000000000000", NodeOutputHash: hashBytes([]byte("3ff0000000000000\n")), OK: true,
+	}}
+	report.BoundaryRejections = []BoundaryRejectionReport{{
+		Name: "reject-noncanonical-coalesce-assignment-tag", Arguments: []string{"03", "3ff0000000000000", "4000000000000000"},
+		OutputHash: hashBytes(nil), Rejected: true,
+	}}
+	if err := finalizeReport(&report); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := report.CanonicalBytes(); err != nil {
+		t.Fatal(err)
+	}
+	report.OracleProgram = "coalesce"
+	if err := VerifyReport(report); err == nil || !strings.Contains(err.Error(), "does not match entry point") {
+		t.Fatalf("coalesce assignment report accepted a substituted oracle identity: %v", err)
+	}
+}
+
 func TestOracleProgramIsDerivedFromVerifiedHIRShape(t *testing.T) {
 	loop := bingo.HIRModule{Functions: []bingo.HIRFunction{{Name: "compute", Blocks: make([]bingo.HIRBlock, 4)}}}
 	if got, err := oracleProgramForHIR("compute", loop); err != nil || got != "loop" {

@@ -179,52 +179,57 @@ func TestPhase2LoopRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 }
 
-func TestPhase2CoalesceRepresentationAndMIRAreCanonical(t *testing.T) {
-	hir := validPhase2CoalesceHIR()
-	_, hirHash, err := CanonicalPhase2HIR(hir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	hir.ContentHash = hirHash
-	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(plan.Bindings) != 3 || plan.Bindings[2].SourceType != TypeNullableNumber || plan.Bindings[2].RepType != RepNullableF64 || plan.Bindings[2].BitWidth != 128 || plan.Bindings[2].ABIAlign != 8 {
-		t.Fatalf("coalesce representation bindings = %#v", plan.Bindings)
-	}
-	structural, err := LowerFirstSliceMIR(hir, plan)
-	if err != nil {
-		t.Fatal(err)
-	}
-	function := structural.Functions[0]
-	if function.Parameters[0].Type != RepNullableF64 || function.Blocks[0].Instructions[0].Kind != "nullable.is-nullish" || function.Blocks[2].Instructions[0].Kind != "nullable.unwrap" || function.Blocks[3].Instructions[0].Kind != "phi" {
-		t.Fatalf("coalesce MIR = %#v", function)
-	}
-	for _, test := range []struct {
-		name   string
-		mutate func(*FirstSliceMIRArtifact)
-	}{
-		{name: "tag test", mutate: func(candidate *FirstSliceMIRArtifact) {
-			candidate.Functions[0].Blocks[0].Instructions[0].Kind = "i1.copy"
-		}},
-		{name: "unwrap", mutate: func(candidate *FirstSliceMIRArtifact) {
-			candidate.Functions[0].Blocks[2].Instructions[0].Operands[0] = 2
-		}},
-		{name: "phi edge", mutate: func(candidate *FirstSliceMIRArtifact) {
-			candidate.Functions[0].Blocks[3].Instructions[0].IncomingBlocks[0] = 3
-		}},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			candidate := structural
-			candidate.Functions = cloneFirstSliceFunctions(structural.Functions)
-			test.mutate(&candidate)
-			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+func TestPhase2NullableCoalesceRepresentationAndMIRAreCanonical(t *testing.T) {
+	for _, functionName := range []string{"coalesce", "coalesceAssign"} {
+		t.Run(functionName, func(t *testing.T) {
+			hir := validPhase2CoalesceHIR()
+			hir.Functions[0].Name = functionName
+			_, hirHash, err := CanonicalPhase2HIR(hir)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil {
-				t.Fatal("malformed coalesce MIR was accepted")
+			hir.ContentHash = hirHash
+			plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(plan.Bindings) != 3 || plan.Bindings[2].SourceType != TypeNullableNumber || plan.Bindings[2].RepType != RepNullableF64 || plan.Bindings[2].BitWidth != 128 || plan.Bindings[2].ABIAlign != 8 {
+				t.Fatalf("%s representation bindings = %#v", functionName, plan.Bindings)
+			}
+			structural, err := LowerFirstSliceMIR(hir, plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			function := structural.Functions[0]
+			if function.Name != functionName || function.Parameters[0].Type != RepNullableF64 || function.Blocks[0].Instructions[0].Kind != "nullable.is-nullish" || function.Blocks[2].Instructions[0].Kind != "nullable.unwrap" || function.Blocks[3].Instructions[0].Kind != "phi" {
+				t.Fatalf("%s MIR = %#v", functionName, function)
+			}
+			for _, test := range []struct {
+				name   string
+				mutate func(*FirstSliceMIRArtifact)
+			}{
+				{name: "tag test", mutate: func(candidate *FirstSliceMIRArtifact) {
+					candidate.Functions[0].Blocks[0].Instructions[0].Kind = "i1.copy"
+				}},
+				{name: "unwrap", mutate: func(candidate *FirstSliceMIRArtifact) {
+					candidate.Functions[0].Blocks[2].Instructions[0].Operands[0] = 2
+				}},
+				{name: "phi edge", mutate: func(candidate *FirstSliceMIRArtifact) {
+					candidate.Functions[0].Blocks[3].Instructions[0].IncomingBlocks[0] = 3
+				}},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					candidate := structural
+					candidate.Functions = cloneFirstSliceFunctions(structural.Functions)
+					test.mutate(&candidate)
+					candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := VerifyStructuralFirstSliceMIR(candidate); err == nil {
+						t.Fatal("malformed nullable coalesce MIR was accepted")
+					}
+				})
 			}
 		})
 	}

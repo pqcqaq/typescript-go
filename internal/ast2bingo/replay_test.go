@@ -168,6 +168,74 @@ func TestReplayCommittedCoalesceSnapshotProducesGuardedHIR(t *testing.T) {
 	}
 }
 
+func TestReplayCommittedCoalesceAssignSnapshotProducesSingleEvaluationHIR(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/coalesceassign/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	result, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
+		t.Fatal(err)
+	}
+	function := result.HIR.Functions[0]
+	if function.Name != "coalesceAssign" || function.Parameters[0].Type != bingo.TypeNullableNumber || len(function.Blocks) != 4 || function.Blocks[0].Operations[0].Kind != "is_nullish" || function.Blocks[2].Operations[0].Kind != "unwrap_nullable" || function.Blocks[3].Operations[0].Kind != "phi" {
+		t.Fatalf("coalesce assignment HIR = %#v", function)
+	}
+	wantEvents := []string{"function.begin", "parameter", "parameter", "logical.assign.test", "logical.assign.store", "nullable.unwrap", "phi", "return", "function.end"}
+	gotEvents := make([]string, len(result.Events))
+	for index, event := range result.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("coalesce assignment events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
+func TestReplayCoalesceAssignRejectsRehashedReturnBindingTampering(t *testing.T) {
+	base := buildReplayCoalesceAssignSnapshot(t)
+	identity := testCompilerIdentity(t, *base)
+	broken := cloneReplaySnapshot(t, base)
+	nodeIndexes := make(map[NodeID]int, len(broken.Nodes))
+	for index, node := range broken.Nodes {
+		nodeIndexes[node.ID] = index
+	}
+	assignmentIndex := slices.IndexFunc(broken.Nodes, func(node NodeSnapshot) bool {
+		return node.Kind == snapshotKindBinaryExpression && node.SyntaxPayload.Operator == snapshotKindQuestionQuestionEqualsToken
+	})
+	returnIndex := slices.IndexFunc(broken.Nodes, func(node NodeSnapshot) bool { return node.Kind == snapshotKindReturnStatement })
+	if assignmentIndex < 0 || returnIndex < 0 {
+		t.Fatal("coalesce assignment snapshot is missing its assignment or return")
+	}
+	rightIndex, ok := nodeIndexes[childByRole(broken.Nodes[assignmentIndex], "right")]
+	if !ok {
+		t.Fatal("coalesce assignment snapshot is missing its fallback")
+	}
+	returnValueIndex, ok := nodeIndexes[childByRole(broken.Nodes[returnIndex], "expression")]
+	if !ok {
+		t.Fatal("coalesce assignment snapshot is missing its return value")
+	}
+	broken.Nodes[returnValueIndex].Symbol = broken.Nodes[rightIndex].Symbol
+	broken.Nodes[returnValueIndex].ResolvedSymbol = broken.Nodes[rightIndex].ResolvedSymbol
+	if err := finalizeTestSnapshot(&broken); err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReplaySnapshot(broken, identity)
+	if err == nil || !strings.Contains(err.Error(), "return does not read the assigned local exactly once") {
+		t.Fatalf("rehashed coalesce assignment return tamper result/error = %#v / %v", result, err)
+	}
+	if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
+		t.Fatalf("rejected coalesce assignment tamper emitted partial HIR: %#v", result)
+	}
+}
+
 func TestReplaySerializedAddUsesResolvedSymbolFallback(t *testing.T) {
 	snapshot := buildReplayAddSnapshot(t)
 	identity := testCompilerIdentity(t, *snapshot)
@@ -751,6 +819,19 @@ func buildReplayLoopSnapshot(t *testing.T) *ProgramSnapshot {
 	snapshot, diagnostics := frontend.Build(context.Background(), request)
 	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
 		t.Fatalf("loop snapshot diagnostics = %#v", diagnostics)
+	}
+	return snapshot
+}
+
+func buildReplayCoalesceAssignSnapshot(t *testing.T) *ProgramSnapshot {
+	t.Helper()
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true,"noEmit":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function coalesceAssign(value: number | null | undefined, fallback: number): number { value ??= fallback; return value; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("coalesce assignment snapshot diagnostics = %#v", diagnostics)
 	}
 	return snapshot
 }

@@ -317,7 +317,7 @@ func verifyNullableUnwrapGuard(function HIRFunction, blockIndex int, block HIRBl
 		if operation.Kind != "unwrap_nullable" {
 			continue
 		}
-		if function.Name != "coalesce" || len(function.Blocks) != 4 || blockIndex != 2 {
+		if (function.Name != "coalesce" && function.Name != "coalesceAssign") || len(function.Blocks) != 4 || blockIndex != 2 {
 			return fmt.Errorf("unwrap_nullable operation %d is outside the canonical coalesce CFG", operation.ID)
 		}
 		entry := function.Blocks[0]

@@ -99,7 +99,7 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		}
 	case len(mir.Functions) == 1 && mir.Functions[0].Name == "compute":
 		emitLoopLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "coalesce":
+	case len(mir.Functions) == 1 && (mir.Functions[0].Name == "coalesce" || mir.Functions[0].Name == "coalesceAssign"):
 		emitCoalesceLLVM(ctx, builder, module, mir.Functions[0])
 	default:
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
@@ -231,7 +231,7 @@ func emitCoalesceLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module
 	i8 := ctx.Int8Type()
 	nullable := ctx.StructType([]llvm.Type{i8, llvm.ArrayType(i8, 7), double}, false)
 	functionType := llvm.FunctionType(double, []llvm.Type{nullable, double}, false)
-	function := llvm.AddFunction(module, "coalesce", functionType)
+	function := llvm.AddFunction(module, mir.Name, functionType)
 	function.SetFunctionCallConv(llvm.CCallConv)
 	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
 	for index, parameter := range mir.Parameters {

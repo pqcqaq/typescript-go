@@ -121,32 +121,33 @@ var snapshotSemanticFactRegistry = map[string]snapshotSemanticFactValidator{
 }
 
 const (
-	snapshotKindBinaryExpression      = "KindBinaryExpression"
-	snapshotKindBlock                 = "KindBlock"
-	snapshotKindBooleanKeyword        = "KindBooleanKeyword"
-	snapshotKindCallExpression        = "KindCallExpression"
-	snapshotKindEndOfFile             = "KindEndOfFile"
-	snapshotKindEqualsToken           = "KindEqualsToken"
-	snapshotKindExportKeyword         = "KindExportKeyword"
-	snapshotKindExpressionStatement   = "KindExpressionStatement"
-	snapshotKindFunctionDeclaration   = "KindFunctionDeclaration"
-	snapshotKindIdentifier            = "KindIdentifier"
-	snapshotKindIfStatement           = "KindIfStatement"
-	snapshotKindLessThanToken         = "KindLessThanToken"
-	snapshotKindLiteralType           = "KindLiteralType"
-	snapshotKindNullKeyword           = "KindNullKeyword"
-	snapshotKindNumberKeyword         = "KindNumberKeyword"
-	snapshotKindParameter             = "KindParameter"
-	snapshotKindPlusToken             = "KindPlusToken"
-	snapshotKindQuestionQuestionToken = "KindQuestionQuestionToken"
-	snapshotKindReturnStatement       = "KindReturnStatement"
-	snapshotKindSourceFile            = "KindSourceFile"
-	snapshotKindUndefinedKeyword      = "KindUndefinedKeyword"
-	snapshotKindUnionType             = "KindUnionType"
-	snapshotKindVariableDeclaration   = "KindVariableDeclaration"
-	snapshotKindVariableList          = "KindVariableDeclarationList"
-	snapshotKindVariableStatement     = "KindVariableStatement"
-	snapshotKindWhileStatement        = "KindWhileStatement"
+	snapshotKindBinaryExpression            = "KindBinaryExpression"
+	snapshotKindBlock                       = "KindBlock"
+	snapshotKindBooleanKeyword              = "KindBooleanKeyword"
+	snapshotKindCallExpression              = "KindCallExpression"
+	snapshotKindEndOfFile                   = "KindEndOfFile"
+	snapshotKindEqualsToken                 = "KindEqualsToken"
+	snapshotKindExportKeyword               = "KindExportKeyword"
+	snapshotKindExpressionStatement         = "KindExpressionStatement"
+	snapshotKindFunctionDeclaration         = "KindFunctionDeclaration"
+	snapshotKindIdentifier                  = "KindIdentifier"
+	snapshotKindIfStatement                 = "KindIfStatement"
+	snapshotKindLessThanToken               = "KindLessThanToken"
+	snapshotKindLiteralType                 = "KindLiteralType"
+	snapshotKindNullKeyword                 = "KindNullKeyword"
+	snapshotKindNumberKeyword               = "KindNumberKeyword"
+	snapshotKindParameter                   = "KindParameter"
+	snapshotKindPlusToken                   = "KindPlusToken"
+	snapshotKindQuestionQuestionEqualsToken = "KindQuestionQuestionEqualsToken"
+	snapshotKindQuestionQuestionToken       = "KindQuestionQuestionToken"
+	snapshotKindReturnStatement             = "KindReturnStatement"
+	snapshotKindSourceFile                  = "KindSourceFile"
+	snapshotKindUndefinedKeyword            = "KindUndefinedKeyword"
+	snapshotKindUnionType                   = "KindUnionType"
+	snapshotKindVariableDeclaration         = "KindVariableDeclaration"
+	snapshotKindVariableList                = "KindVariableDeclarationList"
+	snapshotKindVariableStatement           = "KindVariableStatement"
+	snapshotKindWhileStatement              = "KindWhileStatement"
 )
 
 const (
@@ -176,6 +177,7 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindQuestionQuestionEqualsToken, PayloadTag: snapshotKindQuestionQuestionEqualsToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindQuestionQuestionToken, PayloadTag: snapshotKindQuestionQuestionToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindReturnStatement, PayloadTag: snapshotKindReturnStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateReturnLowerer},
 	{Kind: snapshotKindSourceFile, PayloadTag: snapshotKindSourceFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
@@ -469,7 +471,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		if _, err := requireChildKind(node, eof[0], snapshotKindEndOfFile, nodes); err != nil {
 			return err
 		}
-	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNullKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken, snapshotKindQuestionQuestionToken, snapshotKindUndefinedKeyword:
+	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNullKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken, snapshotKindQuestionQuestionEqualsToken, snapshotKindQuestionQuestionToken, snapshotKindUndefinedKeyword:
 		if len(node.NamedChildren) != 0 || len(node.Children) != 0 {
 			return fmt.Errorf("primitive token Kind %q cannot have children", node.Kind)
 		}
@@ -620,6 +622,13 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
 			return err
 		}
+	case snapshotKindQuestionQuestionEqualsToken:
+		if _, err := requireRoleKind(node, "operator", snapshotKindQuestionQuestionEqualsToken, nodes); err != nil {
+			return err
+		}
+		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("operator %q is outside primitive replay", node.SyntaxPayload.Operator)
 	}
@@ -671,8 +680,8 @@ func validateExpressionStatementLowerer(node NodeSnapshot, nodes map[NodeID]Node
 	if err != nil {
 		return err
 	}
-	if expression.SyntaxPayload.Operator != snapshotKindEqualsToken {
-		return fmt.Errorf("primitive expression statement requires assignment")
+	if expression.SyntaxPayload.Operator != snapshotKindEqualsToken && expression.SyntaxPayload.Operator != snapshotKindQuestionQuestionEqualsToken {
+		return fmt.Errorf("primitive expression statement requires supported assignment")
 	}
 	return nil
 }
@@ -818,6 +827,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	}
 	if isLoop {
 		return replayLoopFunction(function, events, loop, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
+	}
+	coalesceAssign, isCoalesceAssign, err := findPrimitiveCoalesceAssign(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isCoalesceAssign {
+		return replayCoalesceAssignFunction(function, events, coalesceAssign, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
 	}
 	coalesce, isCoalesce, err := findPrimitiveCoalesce(bodyID, nodes)
 	if err != nil {
@@ -1331,6 +1347,114 @@ type primitiveCoalesceSource struct {
 	Right      NodeSnapshot
 }
 
+type primitiveCoalesceAssignSource struct {
+	Assignment  NodeSnapshot
+	AssignLeft  NodeSnapshot
+	AssignRight NodeSnapshot
+	Return      NodeSnapshot
+	ReturnValue NodeSnapshot
+}
+
+func findPrimitiveCoalesceAssign(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveCoalesceAssignSource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveCoalesceAssignSource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 2 {
+		return primitiveCoalesceAssignSource{}, false, nil
+	}
+	statement, ok := nodes[statements[0]]
+	if !ok || statement.Kind != snapshotKindExpressionStatement {
+		return primitiveCoalesceAssignSource{}, false, nil
+	}
+	assignmentID := childByRole(statement, "expression")
+	assignment, ok := nodes[assignmentID]
+	if !ok || assignment.Kind != snapshotKindBinaryExpression || assignment.SyntaxPayload.Operator != snapshotKindQuestionQuestionEqualsToken {
+		return primitiveCoalesceAssignSource{}, false, nil
+	}
+	left, err := requireRoleKind(assignment, "left", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveCoalesceAssignSource{}, false, err
+	}
+	right, err := requireRoleKind(assignment, "right", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveCoalesceAssignSource{}, false, err
+	}
+	if _, err := requireRoleKind(assignment, "operator", snapshotKindQuestionQuestionEqualsToken, nodes); err != nil {
+		return primitiveCoalesceAssignSource{}, false, err
+	}
+	returnNode, ok := nodes[statements[1]]
+	if !ok || returnNode.Kind != snapshotKindReturnStatement {
+		return primitiveCoalesceAssignSource{}, false, nil
+	}
+	returnValue, err := requireRoleKind(returnNode, "expression", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveCoalesceAssignSource{}, false, err
+	}
+	return primitiveCoalesceAssignSource{Assignment: assignment, AssignLeft: left, AssignRight: right, Return: returnNode, ReturnValue: returnValue}, true, nil
+}
+
+func replayCoalesceAssignFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	source primitiveCoalesceAssignSource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if function.Name != "coalesceAssign" || len(function.Parameters) != 2 {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive logical-assignment replay requires exported coalesceAssign(value, fallback)")
+	}
+	value, ok := parameterValue(source.AssignLeft, parameterValues)
+	if !ok || value != 1 || parameterTypes[value] != bingo.TypeNullableNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("logical-assignment left operand %s is not the nullable value parameter", source.AssignLeft.ID)
+	}
+	fallback, ok := parameterValue(source.AssignRight, parameterValues)
+	if !ok || fallback != 2 || parameterTypes[fallback] != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("logical-assignment right operand %s is not the number fallback parameter", source.AssignRight.ID)
+	}
+	returnValue, ok := parameterValue(source.ReturnValue, parameterValues)
+	if !ok || returnValue != value {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("logical-assignment return does not read the assigned local exactly once")
+	}
+	leftType, leftErr := bingoType(nodeTypeID(source.AssignLeft), types)
+	rightType, rightErr := bingoType(nodeTypeID(source.AssignRight), types)
+	resultType, resultErr := bingoType(nodeTypeID(source.Assignment), types)
+	returnValueType, returnValueErr := bingoType(nodeTypeID(source.ReturnValue), types)
+	if leftErr != nil || rightErr != nil || resultErr != nil || returnValueErr != nil || leftType != bingo.TypeNullableNumber || rightType != bingo.TypeNumber || resultType != bingo.TypeNumber || returnValueType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("logical-assignment source types are not canonical nullable-number ??=")
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, returnErr := bingoType(returnTypeID, types)
+	if returnErr != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s return type is not canonical number", functionNode.ID)
+	}
+	function.ReturnType = bingo.TypeNumber
+	function.Blocks = []bingo.HIRBlock{
+		{ID: 1, Operations: []bingo.HIROp{{ID: 3, Kind: "is_nullish", Type: bingo.TypeBoolean, Operands: []bingo.ValueID{value}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Assignment)}}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: 3, Successors: []bingo.BlockID{2, 3}, Origin: originOf(source.Assignment)}},
+		{ID: 2, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{4}, Origin: originOf(source.AssignRight)}},
+		{ID: 3, Operations: []bingo.HIROp{{ID: 4, Kind: "unwrap_nullable", Type: bingo.TypeNumber, Operands: []bingo.ValueID{value}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.AssignLeft)}}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{4}, Origin: originOf(source.AssignLeft)}},
+		{ID: 4, Operations: []bingo.HIROp{{ID: 5, Kind: "phi", Type: bingo.TypeNumber, Operands: []bingo.ValueID{fallback, 4}, IncomingBlocks: []bingo.BlockID{2, 3}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Assignment)}}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 5, Origin: originOf(source.Return)}},
+	}
+	events = append(events,
+		LoweringEvent{Kind: "logical.assign.test", Node: source.Assignment.ID, Origin: source.Assignment.Origin, Type: nodeTypeID(source.AssignLeft), Operator: "??=", Inputs: []NodeID{source.AssignLeft.ID}},
+		LoweringEvent{Kind: "logical.assign.store", Node: source.Assignment.ID, Origin: source.Assignment.Origin, Type: nodeTypeID(source.AssignRight), Operator: "??=", Inputs: []NodeID{source.AssignLeft.ID, source.AssignRight.ID}},
+		LoweringEvent{Kind: "nullable.unwrap", Node: source.AssignLeft.ID, Origin: source.AssignLeft.Origin, Type: nodeTypeID(source.AssignLeft), Inputs: []NodeID{source.AssignLeft.ID}},
+		LoweringEvent{Kind: "phi", Node: source.Assignment.ID, Origin: source.Assignment.Origin, Type: nodeTypeID(source.Assignment), Inputs: []NodeID{source.AssignRight.ID, source.AssignLeft.ID}},
+		LoweringEvent{Kind: "return", Node: source.Return.ID, Origin: source.Return.Origin, Type: returnTypeID, Inputs: []NodeID{source.ReturnValue.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
+	return function, events, nil
+}
+
 func findPrimitiveCoalesce(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveCoalesceSource, bool, error) {
 	body, ok := nodes[bodyID]
 	if !ok || body.Kind != snapshotKindBlock {
@@ -1696,7 +1820,7 @@ func bingoType(id TypeID, types map[TypeID]TypeSnapshot) (bingo.TypeKind, error)
 			return bingo.TypeBoolean, nil
 		}
 	}
-	if typ.Kind == "union" && typ.Flags == 134217728 && typ.ObjectFlags == 32768 && typ.TypePayload.Tag == "union" && len(typ.ElementTypes) == 3 {
+	if typ.Kind == "union" && typ.Flags == 134217728 && (typ.ObjectFlags == 32768 || typ.ObjectFlags == 67141632) && typ.TypePayload.Tag == "union" && len(typ.ElementTypes) == 3 {
 		seen := map[string]bool{}
 		for _, elementID := range typ.ElementTypes {
 			element, ok := types[elementID]
