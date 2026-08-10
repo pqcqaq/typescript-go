@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "c6dde32fe7ba4905107d2d14d6926e685c71cbd258ec5da545802d98970b40fd"
-	LockedABISchemaHash                 = "e3a1ad216c254b183816607058e4f70a8764e03753fb34896f7167a124020a43"
-	LockedTargetManifestHash            = "fce14931ccff72e83178230be5a9214723525c5822fa19572ca87fd96bb6e6a6"
-	LockedRuntimeManifestHash           = "a7a0985185a80e8b122dffc5bc9b088a89d263381e67e67ac4a304a17adb6905"
+	LockedRuntimeSourceHash             = "029c5783148e6bee1a7f06a4f73dcd1b0321fdf409d6fca9ab6fb238e1c08382"
+	LockedABISchemaHash                 = "fcbb2533877bbc8121ae68bd0441d05c9dc51612e1fdce34b00c3d92a429a0ad"
+	LockedTargetManifestHash            = "a94fe616bfc15ba05fc8f8fd6cc1401fddd62e047341792b031f33138a44b09a"
+	LockedRuntimeManifestHash           = "4178757a790859cf621caf41dddb2b39c9b86950e7334b709b42d6cec93b183a"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -39,9 +39,10 @@ type RuntimeArtifact struct {
 	Bytes  uint64 `json:"bytes"`
 }
 
-// RuntimeArtifacts lists the first-slice startup and umbrella archive.
+// RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
 	StartupObject   RuntimeArtifact `json:"startupObject"`
+	HarnessObject   RuntimeArtifact `json:"harnessObject"`
 	UmbrellaArchive RuntimeArtifact `json:"umbrellaArchive"`
 }
 
@@ -130,6 +131,9 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	}
 	if err := validateRuntimeArtifact(manifest.Artifacts.StartupObject, "bingo_startup_empty.o"); err != nil {
 		return fmt.Errorf("startup object: %w", err)
+	}
+	if err := validateRuntimeArtifact(manifest.Artifacts.HarnessObject, "bingo_add_harness.o"); err != nil {
+		return fmt.Errorf("harness object: %w", err)
 	}
 	if len(manifest.Capabilities) != 1 {
 		return fmt.Errorf("runtime capability count is %d, want 1", len(manifest.Capabilities))

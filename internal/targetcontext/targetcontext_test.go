@@ -36,6 +36,7 @@ func TestRuntimeManifestStrictIdentityAndHashes(t *testing.T) {
 		"ABI schema hash":     func(value *RuntimeManifest) { value.ABISchemaHash = strings.Repeat("1", 64) },
 		"implementation hash": func(value *RuntimeManifest) { value.Capabilities[0].ImplementationHash = strings.Repeat("2", 64) },
 		"signature hash":      func(value *RuntimeManifest) { value.Capabilities[0].SignatureHash = strings.Repeat("3", 64) },
+		"harness hash":        func(value *RuntimeManifest) { value.Artifacts.HarnessObject.SHA256 = strings.Repeat("4", 64) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			candidate := *manifest

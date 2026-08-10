@@ -3,7 +3,31 @@ package llvmbackend
 import (
 	"strings"
 	"testing"
+
+	"github.com/microsoft/typescript-go/internal/bingo"
 )
+
+func TestFirstSliceEmissionBindsLLVMAndObjectBytes(t *testing.T) {
+	t.Parallel()
+	layout := newDataLayout(FirstSliceTriple, FirstSliceDataLayout, 64, 64, 8, true)
+	manifest := newToolchainManifest(layout)
+	emission, err := newFirstSliceEmission(
+		bingo.FirstSliceMIRArtifact{ContentHash: strings.Repeat("a", 64)},
+		manifest,
+		[]byte("verified llvm"),
+		[]byte("elf object"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := emission.CanonicalBytes(); err != nil {
+		t.Fatal(err)
+	}
+	emission.Object[0] ^= 0xff
+	if err := VerifyFirstSliceEmission(emission); err == nil || !strings.Contains(err.Error(), "object bytes") {
+		t.Fatalf("tampered object error = %v", err)
+	}
+}
 
 func TestFirstSliceManifestRejectsTampering(t *testing.T) {
 	t.Parallel()

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/microsoft/typescript-go/internal/bingo"
 	llvm "tinygo.org/x/go-llvm"
 )
 
@@ -45,7 +46,10 @@ func openFirstSliceTargetMachine() (*TargetMachine, error) {
 	return &TargetMachine{
 		manifest: manifest,
 		emit:     func() ([]byte, error) { return emitProbeObject(targetMachine, manifest) },
-		dispose:  targetMachine.Dispose,
+		emitFirstSlice: func(module bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error) {
+			return emitFirstSliceObject(targetMachine, manifest, module)
+		},
+		dispose: targetMachine.Dispose,
 	}, nil
 }
 
@@ -72,4 +76,38 @@ func emitProbeObject(targetMachine llvm.TargetMachine, manifest ToolchainManifes
 	}
 	defer buffer.Dispose()
 	return buffer.Bytes(), nil
+}
+
+func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainManifest, mir bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error) {
+	ctx := llvm.NewContext()
+	defer ctx.Dispose()
+	module := ctx.NewModule("ts2bin-first-slice")
+	defer module.Dispose()
+	module.SetTarget(manifest.TargetTriple)
+	module.SetDataLayout(manifest.DataLayout.LayoutString)
+
+	double := ctx.DoubleType()
+	function := llvm.AddFunction(module, "add", llvm.FunctionType(double, []llvm.Type{double, double}, false))
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	function.Param(0).SetName(mir.Functions[0].Parameters[0].Name)
+	function.Param(1).SetName(mir.Functions[0].Parameters[1].Name)
+
+	block := llvm.AddBasicBlock(function, "entry")
+	builder := ctx.NewBuilder()
+	defer builder.Dispose()
+	builder.SetInsertPointAtEnd(block)
+	result := builder.CreateFAdd(function.Param(0), function.Param(1), "sum")
+	builder.CreateRet(result)
+
+	if err := llvm.VerifyModule(module, llvm.ReturnStatusAction); err != nil {
+		return FirstSliceEmission{}, fmt.Errorf("verify first-slice LLVM module: %w", err)
+	}
+	llvmIR := []byte(module.String())
+	buffer, err := targetMachine.EmitToMemoryBuffer(module, llvm.ObjectFile)
+	if err != nil {
+		return FirstSliceEmission{}, fmt.Errorf("emit first-slice object: %w", err)
+	}
+	defer buffer.Dispose()
+	return newFirstSliceEmission(mir, manifest, llvmIR, buffer.Bytes())
 }

@@ -92,6 +92,30 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 		!slices.Contains(firstExecution.State.Facts, "bound-capability-closure") {
 		t.Fatalf("final MIR state = %#v", firstExecution.State)
 	}
+	firstEmission, err := machine.EmitFirstSliceObject(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondEmission, err := machine.EmitFirstSliceObject(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(firstEmission.LLVMIR, secondEmission.LLVMIR) || !bytes.Equal(firstEmission.Object, secondEmission.Object) ||
+		firstEmission.ContentHash != secondEmission.ContentHash {
+		t.Fatal("identical verified MIR produced different LLVM/object artifacts")
+	}
+	llvmText := string(firstEmission.LLVMIR)
+	for _, expected := range []string{"define double @add(double %left, double %right)", "fadd double %left, %right", "nounwind"} {
+		if !strings.Contains(llvmText, expected) {
+			t.Fatalf("LLVM output missing %q:\n%s", expected, llvmText)
+		}
+	}
+	if strings.Contains(llvmText, "fadd fast") {
+		t.Fatalf("first-slice LLVM enabled fast-math:\n%s", llvmText)
+	}
+	if _, err := firstEmission.CanonicalBytes(); err != nil {
+		t.Fatalf("canonical emission manifest: %v", err)
+	}
 
 	resolverIndex := slices.IndexFunc(firstExecution.Dumps, func(dump bingo.PassDump) bool { return dump.Pass == bingo.PassResolveTarget })
 	if resolverIndex < 0 {

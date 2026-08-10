@@ -11,17 +11,19 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/microsoft/typescript-go/internal/bingo"
 	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
 const (
-	ToolchainManifestSchemaVersion uint32 = 1
-	DataLayoutSchemaVersion        uint32 = 1
-	LockedLLVMMajor                       = 20
-	LockedLLVMVersion                     = "20.1.8"
-	FirstSliceTriple                      = "x86_64-unknown-linux-gnu"
-	FirstSliceCPU                         = "generic"
-	FirstSliceDataLayout                  = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+	ToolchainManifestSchemaVersion  uint32 = 1
+	DataLayoutSchemaVersion         uint32 = 1
+	FirstSliceEmissionSchemaVersion uint32 = 1
+	LockedLLVMMajor                        = 20
+	LockedLLVMVersion                      = "20.1.8"
+	FirstSliceTriple                       = "x86_64-unknown-linux-gnu"
+	FirstSliceCPU                          = "generic"
+	FirstSliceDataLayout                   = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 )
 
 var ErrLLVMUnavailable = errors.New("LLVM 20 target machine is unavailable; build with -tags=llvm20 on Linux with LLVM 20")
@@ -213,9 +215,25 @@ func hashManifest(value any) (string, error) {
 // TargetMachine is the only backend handle capable of emitting a first-slice
 // object. It is intentionally opaque to the rest of the compiler.
 type TargetMachine struct {
-	manifest ToolchainManifest
-	emit     func() ([]byte, error)
-	dispose  func()
+	manifest       ToolchainManifest
+	emit           func() ([]byte, error)
+	emitFirstSlice func(bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error)
+	dispose        func()
+}
+
+// FirstSliceEmission binds verified MIR and the observed target machine to
+// the exact LLVM text and object bytes produced by BE-002a.
+type FirstSliceEmission struct {
+	SchemaVersion         uint32 `json:"schemaVersion"`
+	MIRContentHash        string `json:"mirContentHash"`
+	ToolchainManifestHash string `json:"toolchainManifestHash"`
+	TargetTriple          string `json:"targetTriple"`
+	DataLayoutHash        string `json:"dataLayoutHash"`
+	LLVMIRHash            string `json:"llvmIRHash"`
+	ObjectHash            string `json:"objectHash"`
+	ContentHash           string `json:"contentHash"`
+	LLVMIR                []byte `json:"-"`
+	Object                []byte `json:"-"`
 }
 
 func (m *TargetMachine) Manifest() ToolchainManifest {
@@ -234,11 +252,141 @@ func (m *TargetMachine) EmitProbeObject() ([]byte, error) {
 	return m.emit()
 }
 
+// EmitFirstSliceObject accepts only final verified, capability-bound MIR and
+// rejects any target/toolchain provenance that does not match this machine.
+func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error) {
+	if m == nil || m.emitFirstSlice == nil {
+		return FirstSliceEmission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyBoundFirstSliceMIR(module); err != nil {
+		return FirstSliceEmission{}, fmt.Errorf("verify final MIR before LLVM lowering: %w", err)
+	}
+	if module.Provenance.ToolchainManifestHash != m.manifest.ContentHash ||
+		module.Provenance.DataLayoutHash != m.manifest.DataLayout.ContentHash {
+		return FirstSliceEmission{}, fmt.Errorf("MIR target provenance does not match observed TargetMachine")
+	}
+	if len(module.Functions) != 1 || module.Functions[0].Name != "add" {
+		return FirstSliceEmission{}, fmt.Errorf("first-slice C ABI requires exactly one function named add")
+	}
+	emission, err := m.emitFirstSlice(module)
+	if err != nil {
+		return FirstSliceEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return FirstSliceEmission{}, err
+	}
+	return emission, nil
+}
+
+func (emission FirstSliceEmission) CanonicalBytes() ([]byte, error) {
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		SchemaVersion         uint32 `json:"schemaVersion"`
+		MIRContentHash        string `json:"mirContentHash"`
+		ToolchainManifestHash string `json:"toolchainManifestHash"`
+		TargetTriple          string `json:"targetTriple"`
+		DataLayoutHash        string `json:"dataLayoutHash"`
+		LLVMIRHash            string `json:"llvmIRHash"`
+		ObjectHash            string `json:"objectHash"`
+		ContentHash           string `json:"contentHash"`
+	}{emission.SchemaVersion, emission.MIRContentHash, emission.ToolchainManifestHash, emission.TargetTriple, emission.DataLayoutHash, emission.LLVMIRHash, emission.ObjectHash, emission.ContentHash})
+}
+
+func VerifyFirstSliceEmission(emission FirstSliceEmission) error {
+	if emission.SchemaVersion != FirstSliceEmissionSchemaVersion || emission.TargetTriple != FirstSliceTriple {
+		return fmt.Errorf("unsupported first-slice emission identity")
+	}
+	for _, item := range []struct {
+		name   string
+		digest string
+	}{
+		{name: "MIR", digest: emission.MIRContentHash},
+		{name: "toolchain", digest: emission.ToolchainManifestHash},
+		{name: "data layout", digest: emission.DataLayoutHash},
+		{name: "LLVM IR", digest: emission.LLVMIRHash},
+		{name: "object", digest: emission.ObjectHash},
+		{name: "content", digest: emission.ContentHash},
+	} {
+		if !validDigest(item.digest) {
+			return fmt.Errorf("invalid %s digest %q", item.name, item.digest)
+		}
+	}
+	if len(emission.LLVMIR) == 0 || hashBytes(emission.LLVMIR) != emission.LLVMIRHash {
+		return fmt.Errorf("LLVM IR bytes do not match emission identity")
+	}
+	if len(emission.Object) == 0 || hashBytes(emission.Object) != emission.ObjectHash {
+		return fmt.Errorf("object bytes do not match emission identity")
+	}
+	want, err := firstSliceEmissionContentHash(emission)
+	if err != nil {
+		return err
+	}
+	if emission.ContentHash != want {
+		return fmt.Errorf("first-slice emission content hash mismatch: got %s want %s", emission.ContentHash, want)
+	}
+	return nil
+}
+
+func newFirstSliceEmission(module bingo.FirstSliceMIRArtifact, manifest ToolchainManifest, llvmIR, object []byte) (FirstSliceEmission, error) {
+	emission := FirstSliceEmission{
+		SchemaVersion:         FirstSliceEmissionSchemaVersion,
+		MIRContentHash:        module.ContentHash,
+		ToolchainManifestHash: manifest.ContentHash,
+		TargetTriple:          manifest.TargetTriple,
+		DataLayoutHash:        manifest.DataLayout.ContentHash,
+		LLVMIRHash:            hashBytes(llvmIR),
+		ObjectHash:            hashBytes(object),
+		LLVMIR:                slices.Clone(llvmIR),
+		Object:                slices.Clone(object),
+	}
+	var err error
+	emission.ContentHash, err = firstSliceEmissionContentHash(emission)
+	if err != nil {
+		return FirstSliceEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return FirstSliceEmission{}, err
+	}
+	return emission, nil
+}
+
+func firstSliceEmissionContentHash(emission FirstSliceEmission) (string, error) {
+	return hashManifest(struct {
+		SchemaVersion         uint32 `json:"schemaVersion"`
+		MIRContentHash        string `json:"mirContentHash"`
+		ToolchainManifestHash string `json:"toolchainManifestHash"`
+		TargetTriple          string `json:"targetTriple"`
+		DataLayoutHash        string `json:"dataLayoutHash"`
+		LLVMIRHash            string `json:"llvmIRHash"`
+		ObjectHash            string `json:"objectHash"`
+	}{emission.SchemaVersion, emission.MIRContentHash, emission.ToolchainManifestHash, emission.TargetTriple, emission.DataLayoutHash, emission.LLVMIRHash, emission.ObjectHash})
+}
+
+func hashBytes(data []byte) string {
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
+}
+
+func validDigest(value string) bool {
+	if len(value) != sha256.Size*2 {
+		return false
+	}
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *TargetMachine) Close() {
 	if m != nil && m.dispose != nil {
 		m.dispose()
 		m.dispose = nil
 		m.emit = nil
+		m.emitFirstSlice = nil
 	}
 }
 
