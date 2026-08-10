@@ -32,14 +32,20 @@ func TestRuntimeManifestStrictIdentityAndHashes(t *testing.T) {
 		t.Fatalf("runtime manifest canonical bytes changed: %s", canonical)
 	}
 	for name, mutate := range map[string]func(*RuntimeManifest){
-		"source hash":         func(value *RuntimeManifest) { value.SourceHash = strings.Repeat("0", 64) },
-		"ABI schema hash":     func(value *RuntimeManifest) { value.ABISchemaHash = strings.Repeat("1", 64) },
-		"implementation hash": func(value *RuntimeManifest) { value.Capabilities[0].ImplementationHash = strings.Repeat("2", 64) },
-		"signature hash":      func(value *RuntimeManifest) { value.Capabilities[0].SignatureHash = strings.Repeat("3", 64) },
-		"harness hash":        func(value *RuntimeManifest) { value.Artifacts.HarnessObject.SHA256 = strings.Repeat("4", 64) },
+		"source hash":          func(value *RuntimeManifest) { value.SourceHash = strings.Repeat("0", 64) },
+		"ABI schema hash":      func(value *RuntimeManifest) { value.ABISchemaHash = strings.Repeat("1", 64) },
+		"implementation hash":  func(value *RuntimeManifest) { value.Capabilities[0].ImplementationHash = strings.Repeat("2", 64) },
+		"signature hash":       func(value *RuntimeManifest) { value.Capabilities[0].SignatureHash = strings.Repeat("3", 64) },
+		"harness hash":         func(value *RuntimeManifest) { value.Artifacts.HarnessObject.SHA256 = strings.Repeat("4", 64) },
+		"compute harness hash": func(value *RuntimeManifest) { value.Artifacts.ComputeHarnessObject.SHA256 = strings.Repeat("4", 64) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			candidate := *manifest
+			candidate.Artifacts = manifest.Artifacts
+			if manifest.Artifacts.ComputeHarnessObject != nil {
+				computeHarness := *manifest.Artifacts.ComputeHarnessObject
+				candidate.Artifacts.ComputeHarnessObject = &computeHarness
+			}
 			candidate.Capabilities = append([]RuntimeCapability(nil), manifest.Capabilities...)
 			candidate.Capabilities[0] = manifest.Capabilities[0]
 			mutate(&candidate)
@@ -123,7 +129,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v2", []byte(`{"logicalCapabilityRequirements":[]}`))
+	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v3", []byte(`{"logicalCapabilityRequirements":[]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +166,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 		t.Fatal("resolver claimed a MIR-derived bound capability closure")
 	}
 
-	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v2", []byte(`{"tamperedButOpaque":true}`))
+	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v3", []byte(`{"tamperedButOpaque":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}

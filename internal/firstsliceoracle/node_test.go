@@ -28,3 +28,9 @@ func TestNodeChooseScriptIdentityIsDistinctAndBooleanBound(t *testing.T) {
 		t.Fatalf("choose Node script identity is not distinct or boolean-bound: %s", ChooseScriptHash())
 	}
 }
+
+func TestNodeComputeScriptBindsLocalAssignmentAndDirectCall(t *testing.T) {
+	if ComputeScriptHash() == ScriptHash() || ComputeScriptHash() == ChooseScriptHash() || !strings.Contains(nodeComputeScript, "value=add(left,right)") || !strings.Contains(nodeComputeScript, "value=value+right") {
+		t.Fatalf("compute Node script does not bind source semantics: %s", ComputeScriptHash())
+	}
+}

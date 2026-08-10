@@ -265,8 +265,8 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 		module.Provenance.DataLayoutHash != m.manifest.DataLayout.ContentHash {
 		return FirstSliceEmission{}, fmt.Errorf("MIR target provenance does not match observed TargetMachine")
 	}
-	if len(module.Functions) != 1 || (module.Functions[0].Name != "add" && module.Functions[0].Name != "choose") {
-		return FirstSliceEmission{}, fmt.Errorf("primitive C ABI requires exactly one supported function")
+	if !supportedPrimitiveFunctionSet(module.Functions) {
+		return FirstSliceEmission{}, fmt.Errorf("primitive C ABI requires a supported verified function set")
 	}
 	emission, err := m.emitFirstSlice(module)
 	if err != nil {
@@ -276,6 +276,13 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 		return FirstSliceEmission{}, err
 	}
 	return emission, nil
+}
+
+func supportedPrimitiveFunctionSet(functions []bingo.FirstSliceMIRFunction) bool {
+	if len(functions) == 1 {
+		return functions[0].Name == "add" || functions[0].Name == "choose"
+	}
+	return len(functions) == 2 && functions[0].Name == "add" && functions[1].Name == "compute" && !functions[0].Exported && functions[1].Exported
 }
 
 func (emission FirstSliceEmission) CanonicalBytes() ([]byte, error) {

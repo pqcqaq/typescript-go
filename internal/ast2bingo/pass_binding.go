@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	primitiveSourceTypePlanSchemaVersion uint32 = 1
-	primitiveTypedHIRSchemaVersion       uint32 = 2
+	primitiveSourceTypePlanSchemaVersion uint32 = 2
+	primitiveTypedHIRSchemaVersion       uint32 = 3
 )
 
 // PrimitiveTypedHIRSchemaVersion is the wire version consumed by target-aware
@@ -36,7 +36,7 @@ var primitiveHIRPassPrefix = []bingo.PassID{
 type primitiveSourceTypePlan struct {
 	SchemaVersion       uint32          `json:"schemaVersion"`
 	SnapshotContentHash string          `json:"snapshotContentHash"`
-	Function            NodeID          `json:"function"`
+	Functions           []NodeID        `json:"functions"`
 	Snapshot            ProgramSnapshot `json:"snapshot"`
 }
 
@@ -78,7 +78,7 @@ func executePrimitiveHIRPasses(ctx context.Context, snapshot ProgramSnapshot, id
 	if err != nil {
 		return primitiveTypedHIRArtifact{}, execution, err
 	}
-	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v2" {
+	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v3" {
 		return primitiveTypedHIRArtifact{}, execution, fmt.Errorf(
 			"primitive pass prefix ended with %d dumps and schema %q",
 			len(execution.Dumps), execution.State.Schema,
@@ -126,7 +126,7 @@ func PrimitiveHIRPassHandlers(identity bingo.CompilerBuildIdentity) map[bingo.Pa
 }
 
 func preVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v1"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v2"); err != nil {
 		return err
 	}
 	snapshot, err := frontendwire.DecodeProgramSnapshot(state.Artifact)
@@ -137,7 +137,7 @@ func preVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iter
 }
 
 func runPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassResult, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v1"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v2"); err != nil {
 		return bingo.PassResult{}, err
 	}
 	snapshot, err := frontendwire.DecodeProgramSnapshot(state.Artifact)
@@ -159,7 +159,7 @@ func runPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iteration 
 }
 
 func postVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, iteration int, input, output bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassVerification, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v1"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassValidateSnapshot, "snapshot-v2", "source-type-plan-v2"); err != nil {
 		return bingo.PassVerification{}, err
 	}
 	snapshot, err := frontendwire.DecodeProgramSnapshot(input.Artifact)
@@ -180,7 +180,7 @@ func postVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, ite
 }
 
 func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v1", "hir-v2"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
 		return err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -191,7 +191,7 @@ func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iter
 }
 
 func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassResult, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v1", "hir-v2"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
 		return bingo.PassResult{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -213,7 +213,7 @@ func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration 
 }
 
 func postVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, input, output bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassVerification, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v1", "hir-v2"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v3"); err != nil {
 		return bingo.PassVerification{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(input.Artifact)
@@ -266,19 +266,38 @@ func buildPrimitiveSourceTypePlan(snapshot ProgramSnapshot) (primitiveSourceType
 	if err := preflightSnapshotLowerers(snapshot, indexes); err != nil {
 		return primitiveSourceTypePlan{}, err
 	}
-	functions := make([]NodeID, 0, 1)
+	functions := make([]NodeID, 0, 2)
 	for _, node := range snapshot.Nodes {
 		if node.SyntaxPayload.Tag == snapshotKindFunctionDeclaration {
 			functions = append(functions, node.ID)
 		}
 	}
-	if len(functions) != 1 {
-		return primitiveSourceTypePlan{}, fmt.Errorf("primitive replay requires exactly one lowerable function, got %d", len(functions))
+	if len(functions) == 0 || len(functions) > 2 {
+		return primitiveSourceTypePlan{}, fmt.Errorf("primitive replay requires one or two lowerable functions, got %d", len(functions))
+	}
+	slices.SortFunc(functions, func(left, right NodeID) int {
+		leftNode, rightNode := indexes.Nodes[left], indexes.Nodes[right]
+		if leftNode.Span.Start < rightNode.Span.Start {
+			return -1
+		}
+		if leftNode.Span.Start > rightNode.Span.Start {
+			return 1
+		}
+		return strings.Compare(string(left), string(right))
+	})
+	exported := 0
+	for _, id := range functions {
+		if indexes.Nodes[id].ModifierBits == snapshotModifierExport {
+			exported++
+		}
+	}
+	if exported != 1 {
+		return primitiveSourceTypePlan{}, fmt.Errorf("primitive replay requires exactly one exported function, got %d", exported)
 	}
 	return primitiveSourceTypePlan{
 		SchemaVersion:       primitiveSourceTypePlanSchemaVersion,
 		SnapshotContentHash: snapshot.ContentHash,
-		Function:            functions[0],
+		Functions:           functions,
 		Snapshot:            snapshot,
 	}, nil
 }
@@ -305,8 +324,8 @@ func verifyPrimitiveSourceTypePlan(input ProgramSnapshot, plan primitiveSourceTy
 	if err != nil {
 		return err
 	}
-	if plan.Function != expected.Function {
-		return fmt.Errorf("primitive source type plan function is %q, want %q", plan.Function, expected.Function)
+	if !slices.Equal(plan.Functions, expected.Functions) {
+		return fmt.Errorf("primitive source type plan functions are %v, want %v", plan.Functions, expected.Functions)
 	}
 	return nil
 }
@@ -319,13 +338,24 @@ func lowerPrimitiveSourceTypePlan(plan primitiveSourceTypePlan, identity bingo.C
 		return primitiveTypedHIRArtifact{}, err
 	}
 	indexes := indexPrimitiveSnapshot(plan.Snapshot)
-	functionNode, ok := indexes.Nodes[plan.Function]
-	if !ok {
-		return primitiveTypedHIRArtifact{}, fmt.Errorf("primitive source type plan references missing function %q", plan.Function)
+	functionIDs := make(map[NodeID]bingo.FunctionID, len(plan.Functions))
+	for index, id := range plan.Functions {
+		functionIDs[id] = bingo.FunctionID(index + 1)
 	}
-	function, events, err := replayFunction(1, functionNode, indexes.Nodes, indexes.Types, indexes.Symbols, indexes.Signatures)
-	if err != nil {
-		return primitiveTypedHIRArtifact{}, err
+	functions := make([]bingo.HIRFunction, 0, len(plan.Functions))
+	events := make([]LoweringEvent, 0)
+	for index, id := range plan.Functions {
+		functionNode, ok := indexes.Nodes[id]
+		if !ok {
+			return primitiveTypedHIRArtifact{}, fmt.Errorf("primitive source type plan references missing function %q", id)
+		}
+		function, functionEvents, err := replayFunction(index+1, functionNode, indexes.Nodes, indexes.Types, indexes.Symbols, indexes.Signatures, functionIDs)
+		if err != nil {
+			return primitiveTypedHIRArtifact{}, err
+		}
+		function.Exported = functionNode.ModifierBits == snapshotModifierExport
+		functions = append(functions, function)
+		events = append(events, functionEvents...)
 	}
 	requirements := make([]bingo.RuntimeCapabilityID, 0)
 	requirementsDigest, err := bingo.LogicalCapabilityRequirementsDigest(requirements)
@@ -336,7 +366,7 @@ func lowerPrimitiveSourceTypePlan(plan primitiveSourceTypePlan, identity bingo.C
 		SchemaVersion:                 bingo.HIRSchemaVersion,
 		Provenance:                    primitiveHIRProvenance(plan.Snapshot, identity, requirementsDigest),
 		LogicalCapabilityRequirements: requirements,
-		Functions:                     []bingo.HIRFunction{function},
+		Functions:                     functions,
 	}
 	_, hirHash, err := canonicalPrimitiveHIR(hir)
 	if err != nil {
@@ -379,10 +409,25 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	if err := verifyCanonicalPrimitiveHIR(artifact.HIR); err != nil {
 		return fmt.Errorf("verify canonical primitive HIR: %w", err)
 	}
+	if len(plan.Functions) > 1 {
+		expected, err := lowerPrimitiveSourceTypePlan(plan, identity)
+		if err != nil {
+			return fmt.Errorf("rebuild multi-function HIR from source plan: %w", err)
+		}
+		expectedJSON, expectedErr := json.Marshal(expected)
+		actualJSON, actualErr := json.Marshal(artifact)
+		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) {
+			return fmt.Errorf("multi-function HIR or evaluation-order events do not match source plan")
+		}
+		return nil
+	}
 	indexes := indexPrimitiveSnapshot(plan.Snapshot)
-	functionNode, ok := indexes.Nodes[plan.Function]
+	if len(plan.Functions) != 1 {
+		return fmt.Errorf("primitive source type plan has no function")
+	}
+	functionNode, ok := indexes.Nodes[plan.Functions[0]]
 	if !ok {
-		return fmt.Errorf("primitive source type plan references missing function %q", plan.Function)
+		return fmt.Errorf("primitive source type plan references missing function %q", plan.Functions[0])
 	}
 	if len(artifact.HIR.Functions) != 1 {
 		return fmt.Errorf("primitive HIR has %d functions, want 1", len(artifact.HIR.Functions))
@@ -490,14 +535,14 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 }
 
 func canonicalPrimitiveHIR(hir bingo.HIRModule) ([]byte, string, error) {
-	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
 		return bingo.CanonicalPhase2HIR(hir)
 	}
 	return bingo.CanonicalHIR(hir)
 }
 
 func verifyCanonicalPrimitiveHIR(hir bingo.HIRModule) error {
-	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
 		return bingo.VerifyCanonicalPhase2HIR(hir)
 	}
 	return bingo.VerifyCanonicalHIR(hir)

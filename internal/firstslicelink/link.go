@@ -152,6 +152,11 @@ func RunFirstSlice(ctx context.Context, executable string, left, right string) (
 	return runHarness(ctx, executable, "add", "", left, right)
 }
 
+// RunCompute executes the local-binding/direct-call C ABI harness.
+func RunCompute(ctx context.Context, executable string, left, right string) (RunResult, error) {
+	return runHarness(ctx, executable, "compute", "", left, right)
+}
+
 // RunChoose executes the choose C ABI harness with a canonical boolean byte.
 func RunChoose(ctx context.Context, executable string, flag bool, left, right string) (RunResult, error) {
 	flagByte := "00"
@@ -179,6 +184,9 @@ func runHarness(ctx context.Context, executable, entryPoint, flag, left, right s
 	}
 	if strings.TrimSpace(executable) == "" {
 		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	if entryPoint != "add" && entryPoint != "compute" && entryPoint != "choose" {
+		return RunResult{}, fmt.Errorf("unsupported harness entry point %q", entryPoint)
 	}
 	arguments := []string{left, right}
 	if entryPoint == "choose" {
@@ -242,7 +250,7 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
 	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
@@ -258,6 +266,11 @@ func materializeLinkInputs(workspace string, request LinkRequest, entryPoint str
 			return fmt.Errorf("runtime manifest has no choose harness object")
 		}
 		harness = *request.Runtime.Artifacts.ChooseHarnessObject
+	} else if entryPoint == "compute" {
+		if request.Runtime.Artifacts.ComputeHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no compute harness object")
+		}
+		harness = *request.Runtime.Artifacts.ComputeHarnessObject
 	}
 	inputs := []struct {
 		artifact targetcontext.RuntimeArtifact
@@ -297,6 +310,8 @@ func responseFileBytes(entryPoints ...string) []byte {
 	harness := "bingo_add_harness.o"
 	if entryPoint == "choose" {
 		harness = "bingo_choose_harness.o"
+	} else if entryPoint == "compute" {
+		harness = "bingo_compute_harness.o"
 	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",

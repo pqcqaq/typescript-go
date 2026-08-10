@@ -15,6 +15,7 @@ import (
 const LockedNodeVersion = "v22.22.0"
 
 const nodeAddScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(a)+fromBits(b))+"\n");`
+const nodeComputeScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function add(left,right){return left+right}function compute(left,right){let value=add(left,right);value=value+right;return value}process.stdout.write(toBits(compute(fromBits(a),fromBits(b)))+"\n");`
 const nodeChooseScript = `const [flag,a,b]=process.argv.slice(1);if(flag!=="true"&&flag!=="false")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(flag==="true"?a:b))+"\n");`
 
 type NodeOracle struct {
@@ -66,6 +67,10 @@ func (oracle *NodeOracle) Add(ctx context.Context, left, right string) (Result, 
 	return oracle.run(ctx, nodeAddScript, left, right)
 }
 
+func (oracle *NodeOracle) Compute(ctx context.Context, left, right string) (Result, error) {
+	return oracle.run(ctx, nodeComputeScript, left, right)
+}
+
 // Choose evaluates the boolean branch using the locked Node oracle.
 func (oracle *NodeOracle) Choose(ctx context.Context, flag bool, left, right string) (Result, error) {
 	value := "false"
@@ -111,6 +116,8 @@ func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...s
 }
 
 func ScriptHash() string { return hashBytes([]byte(nodeAddScript)) }
+
+func ComputeScriptHash() string { return hashBytes([]byte(nodeComputeScript)) }
 
 // ChooseScriptHash returns the locked script identity for boolean choose.
 func ChooseScriptHash() string { return hashBytes([]byte(nodeChooseScript)) }

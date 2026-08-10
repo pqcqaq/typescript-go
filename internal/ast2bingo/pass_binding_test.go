@@ -25,7 +25,7 @@ func TestPrimitiveHIRProductionBindingExecutesOnlyCanonicalPhase15Prefix(t *test
 	if execution.Dumps[0].Pass != bingo.PassValidateSnapshot || execution.Dumps[1].Pass != bingo.PassTypedHIR {
 		t.Fatalf("production pass order = %#v", execution.Dumps)
 	}
-	if execution.State.Schema != "hir-v2" || !slices.Contains(execution.State.Facts, "typed-hir") {
+	if execution.State.Schema != "hir-v3" || !slices.Contains(execution.State.Facts, "typed-hir") {
 		t.Fatalf("production terminal state = %#v", execution.State)
 	}
 	for _, dump := range execution.Dumps {
@@ -191,7 +191,7 @@ func TestPrimitiveTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			candidate := clonePrimitiveTypedHIRTestArtifact(t, valid)
-			output := bingo.PassState{Schema: "hir-v2", Facts: []string{"source-type-plan", "typed-hir"}, Artifact: test.mutate(candidate)}
+			output := bingo.PassState{Schema: "hir-v3", Facts: []string{"source-type-plan", "typed-hir"}, Artifact: test.mutate(candidate)}
 			if _, err := handler.PostVerify(context.Background(), spec, 1, input, output); err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("post-verifier error = %v, want %q", err, test.want)
 			}
@@ -220,7 +220,7 @@ func TestPrimitiveChooseTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 	}
 	handler := primitiveHIRPassHandlers(identity)[bingo.PassTypedHIR]
 	spec := primitivePassSpec(t, bingo.PassTypedHIR)
-	input := bingo.PassState{Schema: "source-type-plan-v1", Facts: []string{"source-type-plan"}, Artifact: planJSON}
+	input := bingo.PassState{Schema: "source-type-plan-v2", Facts: []string{"source-type-plan"}, Artifact: planJSON}
 
 	tests := []struct {
 		name   string
@@ -251,7 +251,7 @@ func TestPrimitiveChooseTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 			test.mutate(&candidate)
 			rehashPrimitiveHIRTestArtifact(t, &candidate)
 			output := bingo.PassState{
-				Schema:   "hir-v2",
+				Schema:   "hir-v3",
 				Facts:    []string{"source-type-plan", "typed-hir"},
 				Artifact: marshalPrimitivePassTestArtifact(t, candidate),
 			}
@@ -282,7 +282,7 @@ func primitiveTypedHIRVerifierFixture(t *testing.T) (bingo.CompilerBuildIdentity
 	if err != nil {
 		t.Fatal(err)
 	}
-	input := bingo.PassState{Schema: "source-type-plan-v1", Facts: []string{"source-type-plan"}, Artifact: planJSON}
+	input := bingo.PassState{Schema: "source-type-plan-v2", Facts: []string{"source-type-plan"}, Artifact: planJSON}
 	return identity, plan, input, artifact
 }
 

@@ -88,13 +88,17 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 
 	builder := ctx.NewBuilder()
 	defer builder.Dispose()
-	switch mir.Functions[0].Name {
-	case "add":
+	switch {
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "add":
 		emitNumberAddLLVM(ctx, builder, module, mir.Functions[0])
-	case "choose":
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "choose":
 		emitBooleanChooseLLVM(ctx, builder, module, mir.Functions[0])
+	case len(mir.Functions) == 2 && mir.Functions[0].Name == "add" && mir.Functions[1].Name == "compute":
+		if err := emitLocalCallLLVM(ctx, builder, module, mir.Functions); err != nil {
+			return FirstSliceEmission{}, err
+		}
 	default:
-		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function %q", mir.Functions[0].Name)
+		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
 
 	if err := llvm.VerifyModule(module, llvm.ReturnStatusAction); err != nil {
@@ -107,6 +111,35 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 	}
 	defer buffer.Dispose()
 	return newFirstSliceEmission(mir, manifest, llvmIR, buffer.Bytes())
+}
+
+func emitLocalCallLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, functions []bingo.FirstSliceMIRFunction) error {
+	double := ctx.DoubleType()
+	functionType := llvm.FunctionType(double, []llvm.Type{double, double}, false)
+	helper := llvm.AddFunction(module, "add", functionType)
+	helper.SetLinkage(llvm.InternalLinkage)
+	helper.SetFunctionCallConv(llvm.CCallConv)
+	helper.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	for index, parameter := range functions[0].Parameters {
+		helper.Param(index).SetName(parameter.Name)
+	}
+	helperBlock := llvm.AddBasicBlock(helper, "entry")
+	builder.SetInsertPointAtEnd(helperBlock)
+	sum := builder.CreateFAdd(helper.Param(0), helper.Param(1), "sum")
+	builder.CreateRet(sum)
+
+	entry := llvm.AddFunction(module, "compute", functionType)
+	entry.SetFunctionCallConv(llvm.CCallConv)
+	entry.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	for index, parameter := range functions[1].Parameters {
+		entry.Param(index).SetName(parameter.Name)
+	}
+	block := llvm.AddBasicBlock(entry, "entry")
+	builder.SetInsertPointAtEnd(block)
+	call := builder.CreateCall(functionType, helper, []llvm.Value{entry.Param(0), entry.Param(1)}, "call.add")
+	result := builder.CreateFAdd(call, entry.Param(1), "sum")
+	builder.CreateRet(result)
+	return nil
 }
 
 func emitNumberAddLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {

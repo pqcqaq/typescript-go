@@ -33,6 +33,19 @@ func TestRunnerReportRequiresCanonicalExecutionOrder(t *testing.T) {
 	}
 }
 
+func TestRunnerReportAcceptsComputeOracleIdentity(t *testing.T) {
+	report := validReport(t)
+	report.CaseName = "local-assignment-direct-call"
+	report.EntryPoint = "compute"
+	report.NodeScriptHash = firstsliceoracle.ComputeScriptHash()
+	if err := finalizeReport(&report); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := report.CanonicalBytes(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func validReport(t *testing.T) Report {
 	t.Helper()
 	identity, err := ast2bingo.NewCompilerBuildIdentity(strings.Repeat("1", 40), strings.Repeat("2", 40))

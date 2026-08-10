@@ -13,9 +13,9 @@ import (
 
 const (
 	// HIRSchemaVersion is the serialized typed-HIR contract.
-	HIRSchemaVersion uint32 = 2
+	HIRSchemaVersion uint32 = 3
 	// HIRFrontendSnapshotSchemaVersion is the only frontend snapshot schema
-	// accepted by HIR v2. Supporting another major requires an explicit reader.
+	// accepted by HIR v3. Supporting another major requires an explicit reader.
 	HIRFrontendSnapshotSchemaVersion uint32 = 2
 	// MIRSchemaVersion is the serialized target-aware MIR contract.
 	MIRSchemaVersion uint32 = 1
@@ -92,6 +92,7 @@ type HIRModule struct {
 type HIRFunction struct {
 	ID         FunctionID     `json:"id"`
 	Name       string         `json:"name"`
+	Exported   bool           `json:"exported,omitempty"`
 	Parameters []HIRParameter `json:"parameters"`
 	Blocks     []HIRBlock     `json:"blocks"`
 	ReturnType TypeKind       `json:"returnType"`
@@ -117,6 +118,7 @@ type HIROp struct {
 	Type                          TypeKind              `json:"type"`
 	Operands                      []ValueID             `json:"operands,omitempty"`
 	Operator                      string                `json:"operator,omitempty"`
+	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
 	Origin                        Origin                `json:"origin"`
@@ -139,6 +141,7 @@ type MIRModule struct {
 type MIRFunction struct {
 	ID         FunctionID     `json:"id"`
 	Name       string         `json:"name"`
+	Exported   bool           `json:"exported,omitempty"`
 	Parameters []MIRParameter `json:"parameters"`
 	Blocks     []MIRBlock     `json:"blocks"`
 	ReturnType TypeKind       `json:"returnType"`
@@ -159,13 +162,14 @@ type MIRBlock struct {
 }
 
 type MIRInstruction struct {
-	ID       ValueID   `json:"id"`
-	Kind     string    `json:"kind"`
-	Type     TypeKind  `json:"type"`
-	Operands []ValueID `json:"operands,omitempty"`
-	Operator string    `json:"operator,omitempty"`
-	Effect   Effect    `json:"effect"`
-	Origin   Origin    `json:"origin"`
+	ID       ValueID    `json:"id"`
+	Kind     string     `json:"kind"`
+	Type     TypeKind   `json:"type"`
+	Operands []ValueID  `json:"operands,omitempty"`
+	Operator string     `json:"operator,omitempty"`
+	Callee   FunctionID `json:"callee,omitempty"`
+	Effect   Effect     `json:"effect"`
+	Origin   Origin     `json:"origin"`
 }
 
 type MIRTerminator struct {
@@ -650,7 +654,7 @@ func VerifyMIR(module MIRModule) error {
 }
 
 func verifyMIRFunction(function MIRFunction) error {
-	// MIR remains on its pre-release v1 schema while HIR v2 deliberately
+	// MIR remains on its pre-release v1 schema while HIR v3 deliberately
 	// accepts only the number-add first slice. Keep the v1 structural verifier
 	// independent so tightening HIR cannot silently change an unchanged MIR
 	// schema's accepted CFG, primitive-type, or instruction surface.

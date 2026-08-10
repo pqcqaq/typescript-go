@@ -200,6 +200,7 @@ type FirstSliceMIRArtifact struct {
 type FirstSliceMIRFunction struct {
 	ID         FunctionID               `json:"id"`
 	Name       string                   `json:"name"`
+	Exported   bool                     `json:"exported,omitempty"`
 	Parameters []FirstSliceMIRParameter `json:"parameters"`
 	Blocks     []FirstSliceMIRBlock     `json:"blocks"`
 	ReturnType RepType                  `json:"returnType"`
@@ -224,6 +225,7 @@ type FirstSliceMIRInstruction struct {
 	Kind                          string                `json:"kind"`
 	Type                          RepType               `json:"type"`
 	Operands                      []ValueID             `json:"operands"`
+	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
 	Origin                        Origin                `json:"origin"`
@@ -278,7 +280,7 @@ func NewRepresentationPlanForHIR(provenance TargetProvenance, hir HIRModule) (Re
 }
 
 func verifyPrimitiveHIRForMIR(hir HIRModule) error {
-	if len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1 {
+	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
 		if err := VerifyCanonicalPhase2HIR(hir); err != nil {
 			return fmt.Errorf("verify Phase 2B HIR before MIR lowering: %w", err)
 		}
@@ -308,38 +310,50 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 	if plan.ContentHash != expectedPlan.ContentHash || !slices.Equal(plan.Bindings, expectedPlan.Bindings) {
 		return FirstSliceMIRArtifact{}, fmt.Errorf("representation plan does not bind the exact HIR primitive types")
 	}
-	function := hir.Functions[0]
 	bindingByType := make(map[TypeKind]RepresentationBinding, len(plan.Bindings))
 	for _, binding := range plan.Bindings {
 		bindingByType[binding.SourceType] = binding
 	}
-	parameters := make([]FirstSliceMIRParameter, len(function.Parameters))
-	for index, parameter := range function.Parameters {
-		binding, ok := bindingByType[parameter.Type]
+	functions := make([]FirstSliceMIRFunction, len(hir.Functions))
+	for functionIndex, function := range hir.Functions {
+		parameters := make([]FirstSliceMIRParameter, len(function.Parameters))
+		for index, parameter := range function.Parameters {
+			binding, ok := bindingByType[parameter.Type]
+			if !ok {
+				return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for parameter type %q", parameter.Type)
+			}
+			parameters[index] = FirstSliceMIRParameter{Name: parameter.Name, Value: parameter.Value, Type: binding.RepType, Origin: parameter.Origin}
+		}
+		blocks := make([]FirstSliceMIRBlock, len(function.Blocks))
+		for blockIndex, hirBlock := range function.Blocks {
+			instructions := make([]FirstSliceMIRInstruction, len(hirBlock.Operations))
+			for operationIndex, operation := range hirBlock.Operations {
+				binding, ok := bindingByType[operation.Type]
+				if !ok {
+					return FirstSliceMIRArtifact{}, fmt.Errorf("operation %d has no representation binding", operation.ID)
+				}
+				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
+				switch operation.Kind {
+				case "binary":
+					if operation.Operator != "+" || binding.RepType != RepF64 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("binary operation %d has no f64 representation", operation.ID)
+					}
+					instruction.Kind = "fadd"
+				case "call":
+					instruction.Kind = "call"
+				default:
+					return FirstSliceMIRArtifact{}, fmt.Errorf("unsupported Phase 2B HIR operation %q", operation.Kind)
+				}
+				instructions[operationIndex] = instruction
+			}
+			terminator := FirstSliceMIRTerminator{Kind: hirBlock.Terminator.Kind, Value: hirBlock.Terminator.Value, Successors: slices.Clone(hirBlock.Terminator.Successors), Origin: hirBlock.Terminator.Origin}
+			blocks[blockIndex] = FirstSliceMIRBlock{ID: hirBlock.ID, Instructions: instructions, Terminator: terminator}
+		}
+		returnBinding, ok := bindingByType[function.ReturnType]
 		if !ok {
-			return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for parameter type %q", parameter.Type)
+			return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for return type %q", function.ReturnType)
 		}
-		parameters[index] = FirstSliceMIRParameter{Name: parameter.Name, Value: parameter.Value, Type: binding.RepType, Origin: parameter.Origin}
-	}
-	blocks := make([]FirstSliceMIRBlock, len(function.Blocks))
-	for blockIndex, hirBlock := range function.Blocks {
-		instructions := make([]FirstSliceMIRInstruction, len(hirBlock.Operations))
-		for operationIndex, operation := range hirBlock.Operations {
-			if operation.Kind != "binary" || operation.Operator != "+" {
-				return FirstSliceMIRArtifact{}, fmt.Errorf("unsupported Phase 2B HIR operation %q", operation.Kind)
-			}
-			binding, ok := bindingByType[operation.Type]
-			if !ok || binding.RepType != RepF64 {
-				return FirstSliceMIRArtifact{}, fmt.Errorf("binary operation %d has no f64 representation", operation.ID)
-			}
-			instructions[operationIndex] = FirstSliceMIRInstruction{ID: operation.ID, Kind: "fadd", Type: binding.RepType, Operands: slices.Clone(operation.Operands), Effect: EffectPure, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
-		}
-		terminator := FirstSliceMIRTerminator{Kind: hirBlock.Terminator.Kind, Value: hirBlock.Terminator.Value, Successors: slices.Clone(hirBlock.Terminator.Successors), Origin: hirBlock.Terminator.Origin}
-		blocks[blockIndex] = FirstSliceMIRBlock{ID: hirBlock.ID, Instructions: instructions, Terminator: terminator}
-	}
-	returnBinding, ok := bindingByType[function.ReturnType]
-	if !ok {
-		return FirstSliceMIRArtifact{}, fmt.Errorf("missing representation binding for return type %q", function.ReturnType)
+		functions[functionIndex] = FirstSliceMIRFunction{ID: function.ID, Name: function.Name, Exported: function.Exported, Parameters: parameters, Blocks: blocks, ReturnType: returnBinding.RepType, Origin: function.Origin}
 	}
 	module := FirstSliceMIRArtifact{
 		SchemaVersion: FirstSliceMIRSchemaVersion,
@@ -349,14 +363,7 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 			LogicalCapabilityRequirementsDigest: hir.Provenance.LogicalCapabilityRequirementsDigest,
 		},
 		LogicalCapabilityRequirements: slices.Clone(hir.LogicalCapabilityRequirements),
-		Functions: []FirstSliceMIRFunction{{
-			ID:         function.ID,
-			Name:       function.Name,
-			Parameters: parameters,
-			Blocks:     blocks,
-			ReturnType: returnBinding.RepType,
-			Origin:     function.Origin,
-		}},
+		Functions:                     functions,
 	}
 	digest, err := firstSliceMIRContentHash(module)
 	if err != nil {
@@ -468,21 +475,21 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 	if digest != module.Provenance.LogicalCapabilityRequirementsDigest || len(module.LogicalCapabilityRequirements) != 0 {
 		return fmt.Errorf("first-slice MIR logical capability requirements are invalid")
 	}
-	if len(module.Functions) != 1 {
-		return fmt.Errorf("first-slice MIR requires exactly one function, got %d", len(module.Functions))
-	}
-	function := module.Functions[0]
-	switch function.Name {
-	case "add":
-		if err := verifyNumberAddMIRFunction(function); err != nil {
+	switch {
+	case len(module.Functions) == 1 && module.Functions[0].Name == "add":
+		if err := verifyNumberAddMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
-	case "choose":
-		if err := verifyBooleanChooseMIRFunction(function); err != nil {
+	case len(module.Functions) == 1 && module.Functions[0].Name == "choose":
+		if err := verifyBooleanChooseMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
+	case len(module.Functions) == 2 && module.Functions[0].Name == "add" && module.Functions[1].Name == "compute":
+		if err := verifyLocalCallMIRFunctions(module.Functions); err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("first-slice MIR function is invalid")
+		return fmt.Errorf("first-slice MIR function set is invalid")
 	}
 	want, err := firstSliceMIRContentHash(module)
 	if err != nil {
@@ -547,6 +554,63 @@ func verifyBooleanChooseMIRFunction(function FirstSliceMIRFunction) error {
 		return fmt.Errorf("Phase 2B choose MIR false return is invalid")
 	}
 	return nil
+}
+
+func verifyLocalCallMIRFunctions(functions []FirstSliceMIRFunction) error {
+	if len(functions) != 2 {
+		return fmt.Errorf("Phase 2B local-call MIR function set is invalid")
+	}
+	add := functions[0]
+	if add.ID != 1 || add.Name != "add" || add.Exported || add.ReturnType != RepF64 || !validOrigin(add.Origin) || len(add.Parameters) != 2 || len(add.Blocks) != 1 {
+		return fmt.Errorf("Phase 2B local-call helper is invalid")
+	}
+	if err := verifyNumberFunctionParameters(add.Parameters); err != nil {
+		return fmt.Errorf("Phase 2B local-call helper: %w", err)
+	}
+	addBlock := add.Blocks[0]
+	if addBlock.ID != 1 || len(addBlock.Instructions) != 1 {
+		return fmt.Errorf("Phase 2B local-call helper block is invalid")
+	}
+	addInstruction := addBlock.Instructions[0]
+	if !validFAddInstruction(addInstruction, 3, []ValueID{1, 2}) || addBlock.Terminator.Kind != "return" || addBlock.Terminator.Value != 3 || len(addBlock.Terminator.Successors) != 0 || !validOrigin(addBlock.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B local-call helper instruction or return is invalid")
+	}
+
+	compute := functions[1]
+	if compute.ID != 2 || compute.Name != "compute" || !compute.Exported || compute.ReturnType != RepF64 || !validOrigin(compute.Origin) || len(compute.Parameters) != 2 || len(compute.Blocks) != 1 {
+		return fmt.Errorf("Phase 2B local-call entry is invalid")
+	}
+	if err := verifyNumberFunctionParameters(compute.Parameters); err != nil {
+		return fmt.Errorf("Phase 2B local-call entry: %w", err)
+	}
+	block := compute.Blocks[0]
+	if block.ID != 1 || len(block.Instructions) != 2 {
+		return fmt.Errorf("Phase 2B local-call entry block is invalid")
+	}
+	call := block.Instructions[0]
+	if call.ID != 3 || call.Kind != "call" || call.Type != RepF64 || !slices.Equal(call.Operands, []ValueID{1, 2}) || call.Callee != 1 || call.Effect != EffectCall || call.LogicalCapabilityRequirements == nil || len(call.LogicalCapabilityRequirements) != 0 || !validOrigin(call.Origin) {
+		return fmt.Errorf("Phase 2B local-call direct call is invalid")
+	}
+	if !validFAddInstruction(block.Instructions[1], 4, []ValueID{3, 2}) {
+		return fmt.Errorf("Phase 2B local-call assignment value is invalid")
+	}
+	if block.Terminator.Kind != "return" || block.Terminator.Value != 4 || len(block.Terminator.Successors) != 0 || !validOrigin(block.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B local-call return is invalid")
+	}
+	return nil
+}
+
+func verifyNumberFunctionParameters(parameters []FirstSliceMIRParameter) error {
+	for index, parameter := range parameters {
+		if parameter.Name == "" || parameter.Value != ValueID(index+1) || parameter.Type != RepF64 || !validOrigin(parameter.Origin) {
+			return fmt.Errorf("parameter %d is invalid", index)
+		}
+	}
+	return nil
+}
+
+func validFAddInstruction(instruction FirstSliceMIRInstruction, id ValueID, operands []ValueID) bool {
+	return instruction.ID == id && instruction.Kind == "fadd" && instruction.Type == RepF64 && slices.Equal(instruction.Operands, operands) && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
 }
 
 func verifyBoundCapabilityClosure(closure BoundCapabilityClosure, module FirstSliceMIRArtifact) error {

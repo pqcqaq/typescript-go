@@ -39,6 +39,6 @@ func TestVerifyMIRV1RemainsIndependentFromHIRV2FirstSlice(t *testing.T) {
 	}
 
 	if err := VerifyMIR(module); err != nil {
-		t.Fatalf("MIR v1 general CFG was coupled to the HIR v2 first-slice verifier: %v", err)
+		t.Fatalf("MIR v1 general CFG was coupled to the HIR v3 first-slice verifier: %v", err)
 	}
 }

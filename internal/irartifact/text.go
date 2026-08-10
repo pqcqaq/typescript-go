@@ -102,7 +102,7 @@ func RenderMIRText(module bingo.FirstSliceMIRArtifact) (string, error) {
 }
 
 func verifyCanonicalPrimitiveHIR(module bingo.HIRModule) error {
-	if len(module.Functions) == 1 && len(module.Functions[0].Blocks) > 1 {
+	if len(module.Functions) > 1 || (len(module.Functions) == 1 && len(module.Functions[0].Blocks) > 1) {
 		return bingo.VerifyCanonicalPhase2HIR(module)
 	}
 	return bingo.VerifyCanonicalHIR(module)

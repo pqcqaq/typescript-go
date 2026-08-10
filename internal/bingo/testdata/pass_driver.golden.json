@@ -3,105 +3,105 @@
     "sequence": 0,
     "pass": "validate-snapshot-source-type-plan",
     "iteration": 1,
-    "schema": "source-type-plan-v1",
-    "contentHash": "d86b673a5b25bdbdfe616453ee6752b9444862bcc85150d41ef9f11ff94cb401"
+    "schema": "source-type-plan-v2",
+    "contentHash": "ede0b8335789eaea78243df19f50755be4ee2053e5e1f8205c001db3128910f2"
   },
   {
     "sequence": 1,
     "pass": "typed-hir",
     "iteration": 1,
-    "schema": "hir-v2",
-    "contentHash": "cdabc755ef3f654f5f0c291a0a1a3536043b2ed17db701d2690ceaff85181120"
+    "schema": "hir-v3",
+    "contentHash": "3df9a50541cba2c83035329a0c6a4ff433a4eaf4e497449369e3f69a09a21cb2"
   },
   {
     "sequence": 2,
     "pass": "evaluation-order-and-semantic-sugar",
     "iteration": 1,
-    "schema": "hir-v2",
-    "contentHash": "53de9b7dbc2db787153d5bb15213fec9669b2438856bfd2f6e4bf7548e2b9110"
+    "schema": "hir-v3",
+    "contentHash": "36c5d42da5554b539c511ccbdc4477dc3fae77d9db13cdc5ad46cd083d4b8c7f"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 1,
-    "schema": "hir-v2",
-    "contentHash": "d7654ac4f687e2b69bb7df6affdedebff445699cc46e9c508a7dea83928b65b2"
+    "schema": "hir-v3",
+    "contentHash": "b248d30906ab5db0224a6794c4a45259eda6538b5f88bb3c2b7b88d12c7ba9ac"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 2,
-    "schema": "hir-v2",
-    "contentHash": "1f58871127a3babcff075e51f824eb80c4239eb436127394fac552ba41a890d6"
+    "schema": "hir-v3",
+    "contentHash": "0278ebc550eb0059c4407752c0f910b8116e8436636111abd8e34337b34398f5"
   },
   {
     "sequence": 4,
     "pass": "variance-aliasing-and-conversions",
     "iteration": 1,
-    "schema": "hir-v2",
-    "contentHash": "0c885d682d9c7631db0bb3d4035d1400ff94d298f80f05a4aaa4beb518767117"
+    "schema": "hir-v3",
+    "contentHash": "5fa25c76a55701098360be4e9471527af715af0d4c90dc2faad977aadff87458"
   },
   {
     "sequence": 5,
     "pass": "resolve-target-context",
     "iteration": 1,
     "schema": "target-context-v1",
-    "contentHash": "653c35da4979aebc95ea4630be7bc7a82b30a741b67316263bf610bc8b00b0d0"
+    "contentHash": "8e2be5582ade9a698429d19a1742aaa4956cec39ec9f95af8062239f1d665fa1"
   },
   {
     "sequence": 6,
     "pass": "target-representation-plan",
     "iteration": 1,
     "schema": "rep-plan-v1",
-    "contentHash": "d3b0ecc3dcf1382cdac9960af22a7237d2b013c65ccf2bbcc4f4508b97ec1176"
+    "contentHash": "3b5a446b37c34e7a68c692eb5ec3481cd698fda5a7820891fb14d5d945da5816"
   },
   {
     "sequence": 7,
     "pass": "mir-cfg-ssa",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "1854d0835759f85236e779fe710b7659f3c4cb7a66a20dac8c935b3b3c932e11"
+    "contentHash": "965d7378ae3584d4800402121c5c92631c2f3a3f5dee6bdef9a872a24e7dcd59"
   },
   {
     "sequence": 8,
     "pass": "cleanup-exception-async-state",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "db81e5f2fab585652072cc06b0d0bfede0dbc553f7562a2300e09d356c53922a"
+    "contentHash": "79ff28bf182ab04202ac61af5f19cbe176ec4e8be07cba891bd5a639b19eba9d"
   },
   {
     "sequence": 9,
     "pass": "structural-mir-verifier",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "2be34021bee1d5d54f17dae74cd4219ccb99df6699f198b29c752e3bd7a5bc01"
+    "contentHash": "8bc3d8d203241be238c40e818850c517830bf18d8e1ca05f3bd79dfd2afeb86c"
   },
   {
     "sequence": 10,
     "pass": "capability-binding-effect-freeze",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "4a893f9171e05c8bb00f5772922f113d6e78a205303c735335aa9ccc619fe0b5"
+    "contentHash": "97572c716c81aae591807abc4675fd653f4846d7e9e288825b3a4f2559befaa7"
   },
   {
     "sequence": 11,
     "pass": "optimize-proven-mir",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "ddd4d771a7f421516896aa56a24ba1013bbbb256b6121bcaa4720114fe9d21d7"
+    "contentHash": "1e5de291368f1a96f4f2f68b5a62e94c4029a11334fd64ca8398e1e88417da70"
   },
   {
     "sequence": 12,
     "pass": "place-gc-roots-freeze-cleanup",
     "iteration": 1,
     "schema": "mir-v1",
-    "contentHash": "c348a9d58a7cc15b462602ee2d119f1c0d4f2fc14e5bcc013d2cff387c097c27"
+    "contentHash": "934e0b4f1cc9aa507e28cc0c3d3de88feb46edc1aca6bc9cdcb85e44b8c51a61"
   },
   {
     "sequence": 13,
     "pass": "final-verifier",
     "iteration": 1,
     "schema": "verified-mir-v1",
-    "contentHash": "fe372d6f6d0765f9eb2891e283492e9a64bf0de2f8bd298bd610bdc87a1d6394"
+    "contentHash": "3ecfbc8641b7dacc25ccf3b31a1806d29c8712198a9e07eb224020a21010d665"
   }
 ]

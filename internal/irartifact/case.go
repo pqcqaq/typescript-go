@@ -149,7 +149,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -164,8 +164,8 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		if entryPoint == "choose" && execution.Flag == nil {
 			return fmt.Errorf("choose execution %q is missing boolean flag", execution.Name)
 		}
-		if entryPoint == "add" && execution.Flag != nil {
-			return fmt.Errorf("add execution %q must not contain boolean flag", execution.Name)
+		if entryPoint != "choose" && execution.Flag != nil {
+			return fmt.Errorf("number execution %q must not contain boolean flag", execution.Name)
 		}
 		for label, value := range map[string]string{
 			"leftBits": execution.LeftBits, "rightBits": execution.RightBits, "expectedBits": execution.ExpectedBits,
@@ -229,7 +229,7 @@ func LoadHIR(directory string, identity bingo.CompilerBuildIdentity) (bingo.HIRM
 	if _, err := result.CanonicalBytes(); err != nil {
 		return bingo.HIRModule{}, fmt.Errorf("verify replay artifact: %w", err)
 	}
-	if isPhase2ChooseHIR(result.HIR) {
+	if isPhase2HIR(result.HIR) {
 		if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
 			return bingo.HIRModule{}, fmt.Errorf("verify Phase 2B HIR artifact: %w", err)
 		}
@@ -239,8 +239,8 @@ func LoadHIR(directory string, identity bingo.CompilerBuildIdentity) (bingo.HIRM
 	return result.HIR, nil
 }
 
-func isPhase2ChooseHIR(module bingo.HIRModule) bool {
-	return len(module.Functions) == 1 && module.Functions[0].Name == "choose"
+func isPhase2HIR(module bingo.HIRModule) bool {
+	return len(module.Functions) > 1 || (len(module.Functions) == 1 && module.Functions[0].Name == "choose")
 }
 
 func LoadMIR(ctx context.Context, directory string, identity bingo.CompilerBuildIdentity, machine *llvmbackend.TargetMachine) (bingo.FirstSliceMIRArtifact, error) {
@@ -265,10 +265,16 @@ func LoadMIR(ctx context.Context, directory string, identity bingo.CompilerBuild
 }
 
 func CanonicalHIR(module bingo.HIRModule) ([]byte, error) {
-	if err := bingo.VerifyCanonicalHIR(module); err != nil {
+	if err := verifyCaseHIR(module); err != nil {
 		return nil, err
 	}
-	data, _, err := bingo.CanonicalHIR(module)
+	var data []byte
+	var err error
+	if isPhase2HIR(module) {
+		data, _, err = bingo.CanonicalPhase2HIR(module)
+	} else {
+		data, _, err = bingo.CanonicalHIR(module)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -280,10 +286,17 @@ func DecodeHIR(data []byte) (bingo.HIRModule, error) {
 	if err := jsonx.Unmarshal(data, &module, jsonx.RejectUnknownMembers(true)); err != nil {
 		return bingo.HIRModule{}, fmt.Errorf("decode HIR artifact: %w", err)
 	}
-	if err := bingo.VerifyCanonicalHIR(module); err != nil {
+	if err := verifyCaseHIR(module); err != nil {
 		return bingo.HIRModule{}, err
 	}
 	return module, nil
+}
+
+func verifyCaseHIR(module bingo.HIRModule) error {
+	if isPhase2HIR(module) {
+		return bingo.VerifyCanonicalPhase2HIR(module)
+	}
+	return bingo.VerifyCanonicalHIR(module)
 }
 
 func CanonicalMIR(module bingo.FirstSliceMIRArtifact) ([]byte, error) {

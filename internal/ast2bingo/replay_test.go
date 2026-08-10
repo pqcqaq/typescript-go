@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -96,6 +97,37 @@ func TestReplaySerializedAddProducesVerifiedHIR(t *testing.T) {
 	}
 	if !slices.Equal(gotEventKinds, wantEventKinds) {
 		t.Fatalf("lowering events are not in evaluation order: got %v, want %v", gotEventKinds, wantEventKinds)
+	}
+}
+
+func TestReplayCommittedLocalAssignmentAndDirectCallSnapshot(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/calllocal/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	result, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.HIR.Functions) != 2 || result.HIR.Functions[0].Name != "add" || result.HIR.Functions[0].Exported || result.HIR.Functions[1].Name != "compute" || !result.HIR.Functions[1].Exported {
+		t.Fatalf("local-call HIR functions = %#v", result.HIR.Functions)
+	}
+	operations := result.HIR.Functions[1].Blocks[0].Operations
+	if len(operations) != 2 || operations[0].Kind != "call" || operations[0].Callee != 1 || operations[0].Effect != bingo.EffectCall || operations[1].Kind != "binary" || !slices.Equal(operations[1].Operands, []bingo.ValueID{3, 2}) {
+		t.Fatalf("local-call HIR operations = %#v", operations)
+	}
+	wantEvents := []string{"function.begin", "parameter", "parameter", "binary.add", "return", "function.end", "function.begin", "parameter", "parameter", "call.direct", "local.bind", "binary.add", "local.assign", "return", "function.end"}
+	gotEvents := make([]string, len(result.Events))
+	for index, event := range result.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) || result.Events[9].Callee != 1 {
+		t.Fatalf("local-call evaluation events = %#v", result.Events)
 	}
 }
 
@@ -254,9 +286,9 @@ func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
 	if index < 0 {
 		t.Fatal("add snapshot has no plus token")
 	}
-	copy.Nodes[index].Kind = "KindVariableStatement"
-	copy.Nodes[index].KindValue = 244
-	copy.Nodes[index].SyntaxPayload.Tag = "KindVariableStatement"
+	copy.Nodes[index].Kind = "KindWhileStatement"
+	copy.Nodes[index].KindValue = 248
+	copy.Nodes[index].SyntaxPayload.Tag = "KindWhileStatement"
 	if err := finalizeTestSnapshot(&copy); err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +297,7 @@ func TestReplaySnapshotFailsClosedForUnboundKind(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := ReplaySerializedSnapshot(serialized, identity)
-	if err == nil || !strings.Contains(err.Error(), `lowerer for Kind "KindVariableStatement" is not bound`) {
+	if err == nil || !strings.Contains(err.Error(), `lowerer for Kind "KindWhileStatement" is not bound`) {
 		t.Fatalf("unbound lowerer result/error = %#v / %v", result, err)
 	}
 	if len(result.Events) != 0 || len(result.HIR.Functions) != 0 {
@@ -309,7 +341,7 @@ export function sum(left: number, right: number): number { return left + right; 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ReplaySerializedSnapshot(serialized, identity); err == nil || !strings.Contains(err.Error(), "primitive source file requires one function") {
+	if _, err := ReplaySerializedSnapshot(serialized, identity); err == nil || !strings.Contains(err.Error(), "exactly one exported function") {
 		t.Fatalf("multiple function replay error = %v", err)
 	}
 }

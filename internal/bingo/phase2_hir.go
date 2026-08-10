@@ -26,20 +26,38 @@ func VerifyPhase2HIR(module HIRModule) error {
 	if len(module.LogicalCapabilityRequirements) != 0 {
 		return fmt.Errorf("Phase 2B primitive HIR does not bind runtime capabilities")
 	}
-	if len(module.Functions) != 1 {
-		return fmt.Errorf("Phase 2B primitive HIR requires exactly one function, got %d", len(module.Functions))
+	if len(module.Functions) == 0 {
+		return fmt.Errorf("Phase 2B primitive HIR has no functions")
 	}
-	function := module.Functions[0]
-	if function.ID != 1 || function.Name == "" || !validPhase2HIRType(function.ReturnType) || !validOrigin(function.Origin) || len(function.Blocks) == 0 {
-		return fmt.Errorf("Phase 2B primitive function is incomplete")
+	functions := make(map[FunctionID]HIRFunction, len(module.Functions))
+	names := make(map[string]struct{}, len(module.Functions))
+	exported := 0
+	for index, function := range module.Functions {
+		wantID := FunctionID(index + 1)
+		if function.ID != wantID || function.Name == "" || !validPhase2HIRType(function.ReturnType) || !validOrigin(function.Origin) || len(function.Blocks) == 0 {
+			return fmt.Errorf("Phase 2B primitive function %d is incomplete or not canonical dense ID %d", function.ID, wantID)
+		}
+		if _, duplicate := names[function.Name]; duplicate {
+			return fmt.Errorf("Phase 2B primitive function name %q is duplicated", function.Name)
+		}
+		names[function.Name] = struct{}{}
+		functions[function.ID] = function
+		if function.Exported {
+			exported++
+		}
 	}
-	if err := verifyPhase2HIRFunction(function); err != nil {
-		return fmt.Errorf("function %s: %w", function.Name, err)
+	if exported != 1 {
+		return fmt.Errorf("Phase 2B primitive HIR requires exactly one exported function, got %d", exported)
+	}
+	for _, function := range module.Functions {
+		if err := verifyPhase2HIRFunction(function, functions); err != nil {
+			return fmt.Errorf("function %s: %w", function.Name, err)
+		}
 	}
 	return nil
 }
 
-func verifyPhase2HIRFunction(function HIRFunction) error {
+func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRFunction) error {
 	blocks := make(map[BlockID]int, len(function.Blocks))
 	values := make(map[ValueID]valueDefinition)
 	nextValue := ValueID(1)
@@ -112,10 +130,30 @@ func verifyPhase2HIRFunction(function HIRFunction) error {
 					return fmt.Errorf("operation %d: %w", operation.ID, err)
 				}
 			}
-			if operation.Kind == "binary" {
+			switch operation.Kind {
+			case "binary":
 				left, right := values[operation.Operands[0]], values[operation.Operands[1]]
 				if left.typ != TypeNumber || right.typ != TypeNumber || operation.Type != TypeNumber {
 					return fmt.Errorf("binary operation %d requires number operands and result", operation.ID)
+				}
+			case "call":
+				callee, ok := functions[operation.Callee]
+				if !ok {
+					return fmt.Errorf("call operation %d targets missing function %d", operation.ID, operation.Callee)
+				}
+				if callee.ID >= function.ID {
+					return fmt.Errorf("call operation %d must target an earlier non-recursive function", operation.ID)
+				}
+				if len(operation.Operands) != len(callee.Parameters) {
+					return fmt.Errorf("call operation %d has %d arguments, want %d", operation.ID, len(operation.Operands), len(callee.Parameters))
+				}
+				for index, operand := range operation.Operands {
+					if values[operand].typ != callee.Parameters[index].Type {
+						return fmt.Errorf("call operation %d argument %d has type %q, want %q", operation.ID, index, values[operand].typ, callee.Parameters[index].Type)
+					}
+				}
+				if operation.Type != callee.ReturnType {
+					return fmt.Errorf("call operation %d result type %q disagrees with callee return type %q", operation.ID, operation.Type, callee.ReturnType)
 				}
 			}
 		}
@@ -147,7 +185,19 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 	if err := validateLogicalCapabilityRequirements(operation.LogicalCapabilityRequirements); err != nil {
 		return fmt.Errorf("operation %d has invalid logical capability requirements: %w", operation.ID, err)
 	}
-	if operation.Kind != "binary" || len(operation.Operands) != 2 || operation.Operator != "+" || operation.Effect != EffectPure || len(operation.LogicalCapabilityRequirements) != 0 {
+	if len(operation.LogicalCapabilityRequirements) != 0 {
+		return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+	}
+	switch operation.Kind {
+	case "binary":
+		if len(operation.Operands) != 2 || operation.Operator != "+" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "call":
+		if len(operation.Operands) == 0 || operation.Operator != "" || operation.Callee == 0 || operation.Effect != EffectCall {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	default:
 		return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 	}
 	return nil

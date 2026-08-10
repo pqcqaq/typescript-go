@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "aeb3408f014f8be7185fc15b4e94da45677c520ae0d7e32964ade0c4509c0e63"
+	LockedRuntimeSourceHash             = "1d78ff6c21859bcb4218ef80af32eba4e5aac7a5e6f929bf364e80ac087a239e"
 	LockedABISchemaHash                 = "d690e45fd62f92393352e8a9267c0ff9adf86dbdd8db32f0b1bf6efe502fc36c"
-	LockedTargetManifestHash            = "fd3b94fe1a10cbd7e2c20d05ed230ef180e302144ea93a4c26da2cbdd44f7bcb"
-	LockedRuntimeManifestHash           = "7691941467d52bf2e5a857fa63eca965250147c72a1f199e3a83e0db0e17b657"
+	LockedTargetManifestHash            = "45479fdf1475d8cbb677c6fa9d8e3c13afade7e5d7b357a93445afde6f5cb8b2"
+	LockedRuntimeManifestHash           = "b3bd5f10dd88b59df48c84344effdd919ca13eb354493589f78da72ab657fb11"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -41,10 +41,11 @@ type RuntimeArtifact struct {
 
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
-	StartupObject       RuntimeArtifact  `json:"startupObject"`
-	HarnessObject       RuntimeArtifact  `json:"harnessObject"`
-	ChooseHarnessObject *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
-	UmbrellaArchive     RuntimeArtifact  `json:"umbrellaArchive"`
+	StartupObject        RuntimeArtifact  `json:"startupObject"`
+	HarnessObject        RuntimeArtifact  `json:"harnessObject"`
+	ComputeHarnessObject *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
+	ChooseHarnessObject  *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
+	UmbrellaArchive      RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
 // RuntimeCapability is one available versioned C ABI implementation.
@@ -139,6 +140,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	if manifest.Artifacts.ChooseHarnessObject != nil {
 		if err := validateRuntimeArtifact(*manifest.Artifacts.ChooseHarnessObject, "bingo_choose_harness.o"); err != nil {
 			return fmt.Errorf("choose harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.ComputeHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ComputeHarnessObject, "bingo_compute_harness.o"); err != nil {
+			return fmt.Errorf("compute harness object: %w", err)
 		}
 	}
 	if len(manifest.Capabilities) != 1 {

@@ -112,6 +112,79 @@ func TestPhase2ChooseRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 }
 
+func TestPhase2LocalAssignmentAndDirectCallMIRAreCanonical(t *testing.T) {
+	hir := validPhase2LocalCallHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(structural.Functions) != 2 || structural.Functions[0].Exported || !structural.Functions[1].Exported {
+		t.Fatalf("local-call MIR visibility = %#v", structural.Functions)
+	}
+	call := structural.Functions[1].Blocks[0].Instructions[0]
+	if call.Kind != "call" || call.Callee != 1 || call.Effect != EffectCall || !slices.Equal(call.Operands, []ValueID{1, 2}) {
+		t.Fatalf("direct call MIR = %#v", call)
+	}
+	bound, err := BindFirstSliceCapabilities(structural)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPhase2LocalCallMIRRejectsRehashedCallTampering(t *testing.T) {
+	hir := validPhase2LocalCallHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+		want   string
+	}{
+		{name: "helper exported", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Exported = true }, want: "helper is invalid"},
+		{name: "entry internal", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[1].Exported = false }, want: "entry is invalid"},
+		{name: "callee", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[1].Blocks[0].Instructions[0].Callee = 2 }, want: "direct call is invalid"},
+		{name: "effect", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[1].Blocks[0].Instructions[0].Effect = EffectPure }, want: "direct call is invalid"},
+		{name: "assignment value", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[1].Blocks[0].Instructions[1].Operands[0] = 1 }, want: "assignment value is invalid"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := base
+			candidate.Functions = cloneFirstSliceFunctions(base.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("local-call MIR tamper error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
 func TestPhase2ChooseMIRVerifierRejectsRehashedCFGTampering(t *testing.T) {
 	hir := validPhase2ChooseHIR()
 	_, hirHash, err := CanonicalPhase2HIR(hir)

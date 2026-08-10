@@ -160,6 +160,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var result firstslicelink.RunResult
 		if entryPoint == "choose" {
 			result, err = firstslicelink.RunChoose(caseContext, executable, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if entryPoint == "compute" {
+			result, err = firstslicelink.RunCompute(caseContext, executable, execution.LeftBits, execution.RightBits)
 		} else {
 			result, err = firstslicelink.RunFirstSlice(caseContext, executable, execution.LeftBits, execution.RightBits)
 		}
@@ -170,6 +172,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var nodeResult firstsliceoracle.Result
 		if entryPoint == "choose" {
 			nodeResult, err = nodeOracle.Choose(caseContext, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if entryPoint == "compute" {
+			nodeResult, err = nodeOracle.Compute(caseContext, execution.LeftBits, execution.RightBits)
 		} else {
 			nodeResult, err = nodeOracle.Add(caseContext, execution.LeftBits, execution.RightBits)
 		}
@@ -200,6 +204,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	nodeScriptHash := nodeOracle.ScriptHash()
 	if entryPoint == "choose" {
 		nodeScriptHash = firstsliceoracle.ChooseScriptHash()
+	} else if entryPoint == "compute" {
+		nodeScriptHash = firstsliceoracle.ComputeScriptHash()
 	}
 	report := Report{
 		SchemaVersion:         ReportSchemaVersion,
@@ -251,12 +257,14 @@ func VerifyReport(report Report) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose") {
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
 	if entryPoint == "choose" {
 		wantScriptHash = firstsliceoracle.ChooseScriptHash()
+	} else if entryPoint == "compute" {
+		wantScriptHash = firstsliceoracle.ComputeScriptHash()
 	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
 		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
@@ -265,8 +273,8 @@ func VerifyReport(report Report) error {
 	if report.NonCanonicalRejected != (entryPoint == "choose") {
 		return fmt.Errorf("noncanonical boolean rejection does not match entry point")
 	}
-	if entryPoint == "add" && len(report.BoundaryRejections) != 0 {
-		return fmt.Errorf("add report contains boolean boundary rejections")
+	if entryPoint != "choose" && len(report.BoundaryRejections) != 0 {
+		return fmt.Errorf("number report contains boolean boundary rejections")
 	}
 	if entryPoint == "choose" {
 		if len(report.BoundaryRejections) != 1 {

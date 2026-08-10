@@ -148,7 +148,7 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v2", typedBytes)
+	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v3", typedBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

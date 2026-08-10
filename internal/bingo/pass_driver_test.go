@@ -431,7 +431,7 @@ func TestPassExecutorRejectsUnknownFactsAndReturnsPartialDumps(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "broken HIR input") {
 		t.Fatalf("partial failure = %v", err)
 	}
-	if len(execution.Dumps) != 1 || execution.State.Schema != "source-type-plan-v1" {
+	if len(execution.Dumps) != 1 || execution.State.Schema != "source-type-plan-v2" {
 		t.Fatalf("partial execution = %#v", execution)
 	}
 
