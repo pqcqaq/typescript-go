@@ -36,6 +36,22 @@ func TestRunnableManifestRejectsAmbiguousExecutions(t *testing.T) {
 	}
 }
 
+func TestRunnableChooseManifestRequiresBooleanFlags(t *testing.T) {
+	valid := CaseManifest{EntryPoint: "choose", TimeoutMS: 2000, Oracle: "node", Executions: []CaseExecution{{
+		Name: "true-selects-left", Flag: boolPointer(true), LeftBits: "3ff0000000000000", RightBits: "4000000000000000", ExpectedBits: "3ff0000000000000",
+	}}}
+	if err := ValidateRunnableManifest(valid); err != nil {
+		t.Fatal(err)
+	}
+	invalid := valid
+	invalid.Executions = []CaseExecution{{Name: "missing-flag", LeftBits: valid.Executions[0].LeftBits, RightBits: valid.Executions[0].RightBits, ExpectedBits: valid.Executions[0].ExpectedBits}}
+	if err := ValidateRunnableManifest(invalid); err == nil || !strings.Contains(err.Error(), "missing boolean flag") {
+		t.Fatalf("missing choose flag error = %v", err)
+	}
+}
+
+func boolPointer(value bool) *bool { return &value }
+
 func TestLoadCaseRejectsUnknownRunFields(t *testing.T) {
 	data := `{"schemaVersion":1,"name":"case","frontendSnapshot":"frontend.json","timeoutMs":2000,"executions":[],"unknownRunField":true}`
 	var manifest CaseManifest

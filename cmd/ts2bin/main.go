@@ -593,12 +593,13 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	flags := flag.NewFlagSet("test", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	stage := flags.String("stage", "", "test stage: frontend or static-core")
+	casePath := flags.String("case", "", "static-core case directory (defaults to lowering)")
 	jsonOutput := flags.Bool("json", false, "print the test report as JSON")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 {
 		return exitUsage
 	}
 	if *stage == "static-core" {
-		return runStaticCoreTests(ctx, stdout, stderr, *jsonOutput, environment)
+		return runStaticCoreTests(ctx, stdout, stderr, *jsonOutput, *casePath, environment)
 	}
 	if *stage != "frontend" {
 		err := fmt.Errorf("unsupported or missing stage %q; expected frontend or static-core", *stage)
@@ -636,7 +637,7 @@ func runTests(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	return exitSuccess
 }
 
-func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutput bool, environment commandEnvironment) int {
+func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutput bool, casePath string, environment commandEnvironment) int {
 	repositoryRoot, err := resolveRepositoryRoot(environment)
 	if err != nil {
 		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, err, exitUsage)
@@ -670,6 +671,13 @@ func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutpu
 	runtimeDirectory := filepath.Join(repositoryRoot, "runtime", "bingo-rt", "target", "first-slice")
 	runtimeArchive := filepath.Join(runtimeDirectory, "cargo", llvmbackend.FirstSliceTriple, "release", "libbingo_runtime.a")
 	caseDirectory := filepath.Join(repositoryRoot, "typescript-go", "testdata", "ts2bin", "lowering")
+	if strings.TrimSpace(casePath) != "" {
+		if filepath.IsAbs(casePath) {
+			caseDirectory = filepath.Clean(casePath)
+		} else {
+			caseDirectory = filepath.Join(repositoryRoot, "typescript-go", filepath.Clean(casePath))
+		}
+	}
 	report, err := executeStaticCoreCase(ctx, caseDirectory, identity, machine, firstslicerunner.Options{
 		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
 		OutputDirectory: outputDirectory, Clang: clang, LLD: lld, Node: node,

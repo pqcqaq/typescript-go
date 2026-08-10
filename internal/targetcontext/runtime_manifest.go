@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "b374c9d1e99e63d5f09e9b795c391f99c758db84d410957c2e9095414b94c516"
-	LockedABISchemaHash                 = "fcbb2533877bbc8121ae68bd0441d05c9dc51612e1fdce34b00c3d92a429a0ad"
-	LockedTargetManifestHash            = "a94fe616bfc15ba05fc8f8fd6cc1401fddd62e047341792b031f33138a44b09a"
-	LockedRuntimeManifestHash           = "20f0de460672c5e51efdb2759a49206894d27dca9f043d07080d54ffc854e4b7"
+	LockedRuntimeSourceHash             = "aeb3408f014f8be7185fc15b4e94da45677c520ae0d7e32964ade0c4509c0e63"
+	LockedABISchemaHash                 = "d690e45fd62f92393352e8a9267c0ff9adf86dbdd8db32f0b1bf6efe502fc36c"
+	LockedTargetManifestHash            = "fd3b94fe1a10cbd7e2c20d05ed230ef180e302144ea93a4c26da2cbdd44f7bcb"
+	LockedRuntimeManifestHash           = "7691941467d52bf2e5a857fa63eca965250147c72a1f199e3a83e0db0e17b657"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -41,9 +41,10 @@ type RuntimeArtifact struct {
 
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
-	StartupObject   RuntimeArtifact `json:"startupObject"`
-	HarnessObject   RuntimeArtifact `json:"harnessObject"`
-	UmbrellaArchive RuntimeArtifact `json:"umbrellaArchive"`
+	StartupObject       RuntimeArtifact  `json:"startupObject"`
+	HarnessObject       RuntimeArtifact  `json:"harnessObject"`
+	ChooseHarnessObject *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
+	UmbrellaArchive     RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
 // RuntimeCapability is one available versioned C ABI implementation.
@@ -134,6 +135,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	}
 	if err := validateRuntimeArtifact(manifest.Artifacts.HarnessObject, "bingo_add_harness.o"); err != nil {
 		return fmt.Errorf("harness object: %w", err)
+	}
+	if manifest.Artifacts.ChooseHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ChooseHarnessObject, "bingo_choose_harness.o"); err != nil {
+			return fmt.Errorf("choose harness object: %w", err)
+		}
 	}
 	if len(manifest.Capabilities) != 1 {
 		return fmt.Errorf("runtime capability count is %d, want 1", len(manifest.Capabilities))

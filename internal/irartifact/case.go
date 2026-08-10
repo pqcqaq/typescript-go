@@ -27,6 +27,7 @@ const CaseManifestSchemaVersion uint32 = 1
 type CaseManifest struct {
 	SchemaVersion    uint32          `json:"schemaVersion"`
 	Name             string          `json:"name"`
+	EntryPoint       string          `json:"entryPoint,omitempty"`
 	FrontendSnapshot string          `json:"frontendSnapshot"`
 	BuildPlan        string          `json:"buildPlan,omitempty"`
 	RuntimeManifest  string          `json:"runtimeManifest,omitempty"`
@@ -38,6 +39,7 @@ type CaseManifest struct {
 // CaseExecution is one observable first-slice C ABI invocation.
 type CaseExecution struct {
 	Name         string `json:"name"`
+	Flag         *bool  `json:"flag,omitempty"`
 	LeftBits     string `json:"leftBits"`
 	RightBits    string `json:"rightBits"`
 	ExpectedBits string `json:"expectedBits"`
@@ -143,6 +145,13 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if len(manifest.Executions) == 0 {
 		return fmt.Errorf("runnable case has no executions")
 	}
+	entryPoint := manifest.EntryPoint
+	if entryPoint == "" {
+		entryPoint = "add"
+	}
+	if entryPoint != "add" && entryPoint != "choose" {
+		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
+	}
 	names := make(map[string]struct{}, len(manifest.Executions))
 	for _, execution := range manifest.Executions {
 		if strings.TrimSpace(execution.Name) == "" {
@@ -152,6 +161,12 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 			return fmt.Errorf("duplicate case execution name %q", execution.Name)
 		}
 		names[execution.Name] = struct{}{}
+		if entryPoint == "choose" && execution.Flag == nil {
+			return fmt.Errorf("choose execution %q is missing boolean flag", execution.Name)
+		}
+		if entryPoint == "add" && execution.Flag != nil {
+			return fmt.Errorf("add execution %q must not contain boolean flag", execution.Name)
+		}
 		for label, value := range map[string]string{
 			"leftBits": execution.LeftBits, "rightBits": execution.RightBits, "expectedBits": execution.ExpectedBits,
 		} {
@@ -214,10 +229,18 @@ func LoadHIR(directory string, identity bingo.CompilerBuildIdentity) (bingo.HIRM
 	if _, err := result.CanonicalBytes(); err != nil {
 		return bingo.HIRModule{}, fmt.Errorf("verify replay artifact: %w", err)
 	}
-	if err := bingo.VerifyCanonicalHIR(result.HIR); err != nil {
+	if isPhase2ChooseHIR(result.HIR) {
+		if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
+			return bingo.HIRModule{}, fmt.Errorf("verify Phase 2B HIR artifact: %w", err)
+		}
+	} else if err := bingo.VerifyCanonicalHIR(result.HIR); err != nil {
 		return bingo.HIRModule{}, fmt.Errorf("verify HIR artifact: %w", err)
 	}
 	return result.HIR, nil
+}
+
+func isPhase2ChooseHIR(module bingo.HIRModule) bool {
+	return len(module.Functions) == 1 && module.Functions[0].Name == "choose"
 }
 
 func LoadMIR(ctx context.Context, directory string, identity bingo.CompilerBuildIdentity, machine *llvmbackend.TargetMachine) (bingo.FirstSliceMIRArtifact, error) {

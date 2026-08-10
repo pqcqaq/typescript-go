@@ -16,15 +16,6 @@ import (
 )
 
 func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
-	caseDirectory := filepath.Join("..", "..", "testdata", "ts2bin", "lowering")
-	caseData, err := irartifact.LoadCase(caseDirectory, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	identity, err := ast2bingo.NewCompilerBuildIdentity(caseData.Frontend.Program.Provenance.TypeScriptGoCommit, strings.Repeat("a", 40))
-	if err != nil {
-		t.Fatal(err)
-	}
 	machine, err := llvmbackend.OpenFirstSliceTargetMachine()
 	if err != nil {
 		t.Fatal(err)
@@ -56,17 +47,39 @@ func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := RunCase(context.Background(), caseDirectory, identity, machine, Options{
-		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
-		OutputDirectory: t.TempDir(), Clang: clang, LLD: lld, Node: node,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !report.OK || len(report.Executions) != 3 || report.Executions[0].Name != "canonical-nan-plus-one" || report.Executions[1].Name != "negative-zero-plus-negative-zero" || report.Executions[2].Name != "one-plus-two" {
-		t.Fatalf("unexpected static-core report: %#v", report)
-	}
-	if _, err := report.CanonicalBytes(); err != nil {
-		t.Fatal(err)
+	for _, test := range []struct {
+		name        string
+		directory   string
+		entryPoint  string
+		executions  int
+		rejectsByte bool
+	}{
+		{name: "add", directory: "lowering", entryPoint: "add", executions: 3},
+		{name: "choose", directory: "choose", entryPoint: "choose", executions: 2, rejectsByte: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			caseDirectory := filepath.Join("..", "..", "testdata", "ts2bin", test.directory)
+			caseData, err := irartifact.LoadCase(caseDirectory, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			identity, err := ast2bingo.NewCompilerBuildIdentity(caseData.Frontend.Program.Provenance.TypeScriptGoCommit, strings.Repeat("a", 40))
+			if err != nil {
+				t.Fatal(err)
+			}
+			report, err := RunCase(context.Background(), caseDirectory, identity, machine, Options{
+				RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
+				OutputDirectory: t.TempDir(), Clang: clang, LLD: lld, Node: node,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !report.OK || report.EntryPoint != test.entryPoint || len(report.Executions) != test.executions || report.NonCanonicalRejected != test.rejectsByte {
+				t.Fatalf("unexpected static-core report: %#v", report)
+			}
+			if _, err := report.CanonicalBytes(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

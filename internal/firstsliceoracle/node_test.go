@@ -22,3 +22,9 @@ func TestNodeOracleRejectsNonCanonicalBitsBeforeExecution(t *testing.T) {
 		t.Fatal("short binary64 input was accepted")
 	}
 }
+
+func TestNodeChooseScriptIdentityIsDistinctAndBooleanBound(t *testing.T) {
+	if ChooseScriptHash() == ScriptHash() || !strings.Contains(nodeChooseScript, "flag===\"true\"") {
+		t.Fatalf("choose Node script identity is not distinct or boolean-bound: %s", ChooseScriptHash())
+	}
+}

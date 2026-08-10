@@ -58,17 +58,27 @@ type ExecutionReport struct {
 	OK             bool     `json:"ok"`
 }
 
+type BoundaryRejectionReport struct {
+	Name       string   `json:"name"`
+	Arguments  []string `json:"arguments"`
+	OutputHash string   `json:"outputHash"`
+	Rejected   bool     `json:"rejected"`
+}
+
 type Report struct {
 	SchemaVersion         uint32                      `json:"schemaVersion"`
 	Stage                 string                      `json:"stage"`
 	CaseName              string                      `json:"caseName"`
+	EntryPoint            string                      `json:"entryPoint"`
 	TargetTriple          string                      `json:"targetTriple"`
 	TimeoutMS             uint32                      `json:"timeoutMs"`
 	NodeVersion           string                      `json:"nodeVersion"`
 	NodeScriptHash        string                      `json:"nodeScriptHash"`
+	NonCanonicalRejected  bool                        `json:"nonCanonicalRejected,omitempty"`
 	CompilerBuildIdentity bingo.CompilerBuildIdentity `json:"compilerBuildIdentity"`
 	Artifacts             ArtifactProvenance          `json:"artifacts"`
 	Executions            []ExecutionReport           `json:"executions"`
+	BoundaryRejections    []BoundaryRejectionReport   `json:"boundaryRejections,omitempty"`
 	OK                    bool                        `json:"ok"`
 	ContentHash           string                      `json:"contentHash"`
 }
@@ -119,10 +129,15 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		return Report{}, fmt.Errorf("create case workspace: %w", err)
 	}
 	defer os.RemoveAll(workspace)
-	executable := filepath.Join(workspace, "add-harness")
+	entryPoint := caseData.Manifest.EntryPoint
+	if entryPoint == "" {
+		entryPoint = "add"
+	}
+	executable := filepath.Join(workspace, entryPoint+"-harness")
 	linkArtifact, err := firstslicelink.LinkFirstSlice(caseContext, firstslicelink.LinkRequest{
 		Emission:           emission,
 		Runtime:            *runtimeManifest,
+		EntryPoint:         entryPoint,
 		RuntimeDirectory:   options.RuntimeDirectory,
 		RuntimeArchivePath: options.RuntimeArchivePath,
 		OutputPath:         executable,
@@ -142,12 +157,22 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	executionReports := make([]ExecutionReport, 0, len(executions))
 	allOK := true
 	for _, execution := range executions {
-		result, err := firstslicelink.RunFirstSlice(caseContext, executable, execution.LeftBits, execution.RightBits)
+		var result firstslicelink.RunResult
+		if entryPoint == "choose" {
+			result, err = firstslicelink.RunChoose(caseContext, executable, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else {
+			result, err = firstslicelink.RunFirstSlice(caseContext, executable, execution.LeftBits, execution.RightBits)
+		}
 		if err != nil {
 			return Report{}, fmt.Errorf("case %s execution %s: %w", caseData.Manifest.Name, execution.Name, err)
 		}
 		actual := strings.TrimSuffix(string(result.Output), "\n")
-		nodeResult, err := nodeOracle.Add(caseContext, execution.LeftBits, execution.RightBits)
+		var nodeResult firstsliceoracle.Result
+		if entryPoint == "choose" {
+			nodeResult, err = nodeOracle.Choose(caseContext, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else {
+			nodeResult, err = nodeOracle.Add(caseContext, execution.LeftBits, execution.RightBits)
+		}
 		if err != nil {
 			return Report{}, fmt.Errorf("case %s execution %s Node oracle: %w", caseData.Manifest.Name, execution.Name, err)
 		}
@@ -159,14 +184,33 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			ActualBits: actual, OutputHash: result.OutputHash, NodeBits: nodeBits, NodeOutputHash: nodeResult.OutputHash, OK: ok,
 		})
 	}
+	nonCanonicalRejected := false
+	var boundaryRejections []BoundaryRejectionReport
+	if entryPoint == "choose" {
+		result, err := firstslicelink.RejectNonCanonicalChoose(caseContext, executable, executions[0].LeftBits, executions[0].RightBits)
+		if err != nil {
+			return Report{}, fmt.Errorf("case %s noncanonical boolean rejection: %w", caseData.Manifest.Name, err)
+		}
+		nonCanonicalRejected = true
+		boundaryRejections = []BoundaryRejectionReport{{
+			Name: "reject-noncanonical-boolean-byte", Arguments: slices.Clone(result.Arguments),
+			OutputHash: result.OutputHash, Rejected: true,
+		}}
+	}
+	nodeScriptHash := nodeOracle.ScriptHash()
+	if entryPoint == "choose" {
+		nodeScriptHash = firstsliceoracle.ChooseScriptHash()
+	}
 	report := Report{
 		SchemaVersion:         ReportSchemaVersion,
 		Stage:                 "static-core",
 		CaseName:              caseData.Manifest.Name,
+		EntryPoint:            entryPoint,
 		TargetTriple:          runtimeManifest.Target.Triple,
 		TimeoutMS:             caseData.Manifest.TimeoutMS,
 		NodeVersion:           nodeOracle.Version(),
-		NodeScriptHash:        nodeOracle.ScriptHash(),
+		NodeScriptHash:        nodeScriptHash,
+		NonCanonicalRejected:  nonCanonicalRejected,
 		CompilerBuildIdentity: identity,
 		Artifacts: ArtifactProvenance{
 			FrontendSnapshotHash: caseData.Frontend.ContentHash,
@@ -182,8 +226,9 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			ExecutableHash:       linkArtifact.ExecutableHash,
 			LinkContentHash:      linkArtifact.ContentHash,
 		},
-		Executions: executionReports,
-		OK:         allOK,
+		Executions:         executionReports,
+		BoundaryRejections: boundaryRejections,
+		OK:                 allOK,
 	}
 	if err := finalizeReport(&report); err != nil {
 		return Report{}, err
@@ -202,12 +247,35 @@ func (report Report) CanonicalBytes() ([]byte, error) {
 }
 
 func VerifyReport(report Report) error {
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" {
+	entryPoint := report.EntryPoint
+	if entryPoint == "" {
+		entryPoint = "add"
+	}
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
+	wantScriptHash := firstsliceoracle.ScriptHash()
+	if entryPoint == "choose" {
+		wantScriptHash = firstsliceoracle.ChooseScriptHash()
+	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
-		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != firstsliceoracle.ScriptHash() {
+		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
 		return fmt.Errorf("invalid first-slice runner target or timeout")
+	}
+	if report.NonCanonicalRejected != (entryPoint == "choose") {
+		return fmt.Errorf("noncanonical boolean rejection does not match entry point")
+	}
+	if entryPoint == "add" && len(report.BoundaryRejections) != 0 {
+		return fmt.Errorf("add report contains boolean boundary rejections")
+	}
+	if entryPoint == "choose" {
+		if len(report.BoundaryRejections) != 1 {
+			return fmt.Errorf("choose report must contain one boolean boundary rejection")
+		}
+		rejection := report.BoundaryRejections[0]
+		if rejection.Name != "reject-noncanonical-boolean-byte" || len(rejection.Arguments) != 3 || rejection.Arguments[0] != "02" || !isBits(rejection.Arguments[1]) || !isBits(rejection.Arguments[2]) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
+			return fmt.Errorf("invalid noncanonical boolean rejection report")
+		}
 	}
 	if err := bingo.ValidateCompilerBuildIdentity(report.CompilerBuildIdentity); err != nil {
 		return err
@@ -236,7 +304,11 @@ func VerifyReport(report Report) error {
 	}
 	allOK := true
 	for index, execution := range report.Executions {
-		if strings.TrimSpace(execution.Name) == "" || len(execution.Arguments) != 2 || !isBits(execution.ExpectedBits) || !isBits(execution.ActualBits) || !isBits(execution.NodeBits) {
+		wantArguments := 2
+		if entryPoint == "choose" {
+			wantArguments = 3
+		}
+		if strings.TrimSpace(execution.Name) == "" || len(execution.Arguments) != wantArguments || !isBits(execution.ExpectedBits) || !isBits(execution.ActualBits) || !isBits(execution.NodeBits) {
 			return fmt.Errorf("invalid execution report at index %d", index)
 		}
 		if index > 0 && report.Executions[index-1].Name >= execution.Name {
@@ -296,15 +368,18 @@ func reportContentHash(report Report) (string, error) {
 		SchemaVersion         uint32                      `json:"schemaVersion"`
 		Stage                 string                      `json:"stage"`
 		CaseName              string                      `json:"caseName"`
+		EntryPoint            string                      `json:"entryPoint"`
 		TargetTriple          string                      `json:"targetTriple"`
 		TimeoutMS             uint32                      `json:"timeoutMs"`
 		NodeVersion           string                      `json:"nodeVersion"`
 		NodeScriptHash        string                      `json:"nodeScriptHash"`
+		NonCanonicalRejected  bool                        `json:"nonCanonicalRejected,omitempty"`
 		CompilerBuildIdentity bingo.CompilerBuildIdentity `json:"compilerBuildIdentity"`
 		Artifacts             ArtifactProvenance          `json:"artifacts"`
 		Executions            []ExecutionReport           `json:"executions"`
+		BoundaryRejections    []BoundaryRejectionReport   `json:"boundaryRejections,omitempty"`
 		OK                    bool                        `json:"ok"`
-	}{report.SchemaVersion, report.Stage, report.CaseName, report.TargetTriple, report.TimeoutMS, report.NodeVersion, report.NodeScriptHash, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.OK})
+	}{report.SchemaVersion, report.Stage, report.CaseName, report.EntryPoint, report.TargetTriple, report.TimeoutMS, report.NodeVersion, report.NodeScriptHash, report.NonCanonicalRejected, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.BoundaryRejections, report.OK})
 	if err != nil {
 		return "", err
 	}

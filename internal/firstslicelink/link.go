@@ -27,8 +27,12 @@ const LinkArtifactSchemaVersion uint32 = 1
 var ErrLinkUnavailable = errors.New("first-slice linker requires Linux x86-64 LLVM 20 tools")
 
 type LinkRequest struct {
-	Emission         llvmbackend.FirstSliceEmission
-	Runtime          targetcontext.RuntimeManifest
+	Emission llvmbackend.FirstSliceEmission
+	Runtime  targetcontext.RuntimeManifest
+	// EntryPoint selects the ABI harness and must match the sole function in
+	// the verified LLVM emission. The empty value is retained for the legacy
+	// add path and is normalized to "add".
+	EntryPoint       string
 	RuntimeDirectory string
 	// RuntimeArchivePath is explicit because Cargo keeps the archive under its
 	// target/profile directory while startup/harness objects stay at the root.
@@ -70,6 +74,7 @@ func LinkFirstSlice(ctx context.Context, request LinkRequest) (LinkArtifact, err
 	if err := validateRequest(request); err != nil {
 		return LinkArtifact{}, err
 	}
+	entryPoint := normalizedEntryPoint(request.EntryPoint)
 	if err := llvmbackend.VerifyFirstSliceEmission(request.Emission); err != nil {
 		return LinkArtifact{}, fmt.Errorf("verify LLVM emission: %w", err)
 	}
@@ -88,10 +93,10 @@ func LinkFirstSlice(ctx context.Context, request LinkRequest) (LinkArtifact, err
 		return LinkArtifact{}, fmt.Errorf("create link workspace: %w", err)
 	}
 	defer os.RemoveAll(workspace)
-	if err := materializeLinkInputs(workspace, request); err != nil {
+	if err := materializeLinkInputs(workspace, request, entryPoint); err != nil {
 		return LinkArtifact{}, err
 	}
-	responseFile := responseFileBytes()
+	responseFile := responseFileBytes(entryPoint)
 	responsePath := filepath.Join(workspace, "ts2bin-first-slice.rsp")
 	if err := os.WriteFile(responsePath, responseFile, 0o600); err != nil {
 		return LinkArtifact{}, fmt.Errorf("write linker response file: %w", err)
@@ -144,6 +149,25 @@ func LinkFirstSlice(ctx context.Context, request LinkRequest) (LinkArtifact, err
 // RunFirstSlice executes the fixed C ABI harness and accepts only one
 // canonical IEEE-754 binary64 output line.
 func RunFirstSlice(ctx context.Context, executable string, left, right string) (RunResult, error) {
+	return runHarness(ctx, executable, "add", "", left, right)
+}
+
+// RunChoose executes the choose C ABI harness with a canonical boolean byte.
+func RunChoose(ctx context.Context, executable string, flag bool, left, right string) (RunResult, error) {
+	flagByte := "00"
+	if flag {
+		flagByte = "01"
+	}
+	return runHarness(ctx, executable, "choose", flagByte, left, right)
+}
+
+// RejectNonCanonicalChoose executes choose with an invalid ABI byte and
+// requires the strict entry-point trap to reject the process.
+func RejectNonCanonicalChoose(ctx context.Context, executable, left, right string) (RunResult, error) {
+	return runHarnessExpectFailure(ctx, executable, "choose", "02", left, right)
+}
+
+func runHarness(ctx context.Context, executable, entryPoint, flag, left, right string) (RunResult, error) {
 	if ctx == nil {
 		return RunResult{}, fmt.Errorf("run context is nil")
 	}
@@ -156,7 +180,14 @@ func RunFirstSlice(ctx context.Context, executable string, left, right string) (
 	if strings.TrimSpace(executable) == "" {
 		return RunResult{}, fmt.Errorf("executable path is empty")
 	}
-	command := exec.CommandContext(ctx, executable, left, right)
+	arguments := []string{left, right}
+	if entryPoint == "choose" {
+		if flag != "00" && flag != "01" {
+			return RunResult{}, fmt.Errorf("choose flag must be canonical 00 or 01")
+		}
+		arguments = []string{flag, left, right}
+	}
+	command := exec.CommandContext(ctx, executable, arguments...)
 	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
 	output, err := command.CombinedOutput()
 	if err != nil {
@@ -166,7 +197,32 @@ func RunFirstSlice(ctx context.Context, executable string, left, right string) (
 	if strings.Contains(trimmed, "\n") || len(trimmed) != 16 || validateBits(trimmed) != nil {
 		return RunResult{}, fmt.Errorf("first-slice output is not one binary64 hex line: %q", string(output))
 	}
-	return RunResult{Arguments: []string{left, right}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+	return RunResult{Arguments: slices.Clone(arguments), Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+func runHarnessExpectFailure(ctx context.Context, executable, entryPoint, flag, left, right string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if entryPoint != "choose" || flag == "00" || flag == "01" {
+		return RunResult{}, fmt.Errorf("invalid noncanonical choose invocation")
+	}
+	if err := validateBits(left); err != nil {
+		return RunResult{}, fmt.Errorf("left argument: %w", err)
+	}
+	if err := validateBits(right); err != nil {
+		return RunResult{}, fmt.Errorf("right argument: %w", err)
+	}
+	command := exec.CommandContext(ctx, executable, flag, left, right)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err == nil {
+		return RunResult{}, fmt.Errorf("noncanonical choose byte was accepted")
+	}
+	if len(output) != 0 {
+		return RunResult{}, fmt.Errorf("noncanonical choose emitted output: %q", output)
+	}
+	return RunResult{Arguments: []string{flag, left, right}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
 }
 
 func validateRequest(request LinkRequest) error {
@@ -185,17 +241,31 @@ func validateRequest(request LinkRequest) error {
 	if request.Runtime.Target.Triple != llvmbackend.FirstSliceTriple || request.Runtime.Target.CPU != llvmbackend.FirstSliceCPU || request.Runtime.Target.ObjectFormat != "elf" {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
+	entryPoint := normalizedEntryPoint(request.EntryPoint)
+	if entryPoint != "add" && entryPoint != "choose" {
+		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
+	}
+	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
+		return fmt.Errorf("LLVM emission does not contain entry point %q", entryPoint)
+	}
 	return nil
 }
 
-func materializeLinkInputs(workspace string, request LinkRequest) error {
+func materializeLinkInputs(workspace string, request LinkRequest, entryPoint string) error {
+	harness := request.Runtime.Artifacts.HarnessObject
+	if entryPoint == "choose" {
+		if request.Runtime.Artifacts.ChooseHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no choose harness object")
+		}
+		harness = *request.Runtime.Artifacts.ChooseHarnessObject
+	}
 	inputs := []struct {
 		artifact targetcontext.RuntimeArtifact
 		name     string
 	}{
 		{request.Runtime.Artifacts.UmbrellaArchive, "libbingo_runtime.a"},
 		{request.Runtime.Artifacts.StartupObject, "bingo_startup_empty.o"},
-		{request.Runtime.Artifacts.HarnessObject, "bingo_add_harness.o"},
+		{harness, harness.File},
 	}
 	for _, input := range inputs {
 		path := filepath.Join(request.RuntimeDirectory, input.artifact.File)
@@ -219,7 +289,15 @@ func materializeLinkInputs(workspace string, request LinkRequest) error {
 	return nil
 }
 
-func responseFileBytes() []byte {
+func responseFileBytes(entryPoints ...string) []byte {
+	entryPoint := "add"
+	if len(entryPoints) != 0 {
+		entryPoint = normalizedEntryPoint(entryPoints[0])
+	}
+	harness := "bingo_add_harness.o"
+	if entryPoint == "choose" {
+		harness = "bingo_choose_harness.o"
+	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",
 		"-fuse-ld=lld",
@@ -232,12 +310,19 @@ func responseFileBytes() []byte {
 		"ts2bin-first-slice",
 		"ts2bin-first-slice.o",
 		"bingo_startup_empty.o",
-		"bingo_add_harness.o",
+		harness,
 		"libbingo_runtime.a",
 		"-ldl",
 		"-lpthread",
 		"-lm",
 	}, "\n") + "\n")
+}
+
+func normalizedEntryPoint(entryPoint string) string {
+	if strings.TrimSpace(entryPoint) == "" {
+		return "add"
+	}
+	return entryPoint
 }
 
 func verifyLinkMap(responseFile, data []byte) error {

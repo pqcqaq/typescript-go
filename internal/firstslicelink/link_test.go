@@ -26,6 +26,13 @@ func TestResponseFileIsStableAndPathFree(t *testing.T) {
 	}
 }
 
+func TestChooseResponseFileSelectsChooseHarness(t *testing.T) {
+	text := string(responseFileBytes("choose"))
+	if !strings.Contains(text, "bingo_choose_harness.o") || strings.Contains(text, "bingo_add_harness.o") {
+		t.Fatalf("choose response file selected wrong harness: %s", text)
+	}
+}
+
 func TestLinkArtifactRejectsTamperedBytes(t *testing.T) {
 	artifact, err := newLinkArtifact(
 		LinkRequest{

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "name": "choose-boolean-number",
+  "entryPoint": "choose",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {
+      "name": "false-selects-right",
+      "flag": false,
+      "leftBits": "3ff0000000000000",
+      "rightBits": "4000000000000000",
+      "expectedBits": "4000000000000000"
+    },
+    {
+      "name": "true-selects-left",
+      "flag": true,
+      "leftBits": "8000000000000000",
+      "rightBits": "7ff8000000000000",
+      "expectedBits": "8000000000000000"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "add-number-number",
+  "entryPoint": "add",
   "frontendSnapshot": "frontend-snapshot.json",
   "buildPlan": "build-plan.json",
   "runtimeManifest": "runtime-manifest.json",
