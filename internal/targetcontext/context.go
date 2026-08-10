@@ -6,9 +6,10 @@ import (
 	"slices"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/buildplan"
+	"github.com/microsoft/typescript-go/internal/frontendwire"
 	jsonx "github.com/microsoft/typescript-go/internal/json"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
-	"github.com/microsoft/typescript-go/internal/tsfrontend"
 )
 
 const (
@@ -90,7 +91,7 @@ type Resolution struct {
 
 // ResolveTargetContext binds an unresolved BuildPlan to an observed LLVM
 // TargetMachine and one locked runtime manifest.
-func ResolveTargetContext(plan tsfrontend.BuildPlan, machine *llvmbackend.TargetMachine, runtimeManifest []byte) (Resolution, error) {
+func ResolveTargetContext(plan buildplan.Plan, machine *llvmbackend.TargetMachine, runtimeManifest []byte) (Resolution, error) {
 	if machine == nil {
 		return Resolution{}, fmt.Errorf("target machine is nil")
 	}
@@ -101,8 +102,8 @@ func ResolveTargetContext(plan tsfrontend.BuildPlan, machine *llvmbackend.Target
 	return resolveTargetContext(plan, manifest, runtimeManifest)
 }
 
-func resolveTargetContext(plan tsfrontend.BuildPlan, toolchain llvmbackend.ToolchainManifest, runtimeBytes []byte) (Resolution, error) {
-	if err := tsfrontend.ValidateBuildPlan(plan); err != nil {
+func resolveTargetContext(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtimeBytes []byte) (Resolution, error) {
+	if err := buildplan.Validate(plan); err != nil {
 		return Resolution{}, fmt.Errorf("validate build plan: %w", err)
 	}
 	if err := llvmbackend.ValidateToolchainManifest(toolchain); err != nil {
@@ -126,12 +127,12 @@ func resolveTargetContext(plan tsfrontend.BuildPlan, toolchain llvmbackend.Toolc
 	return Resolution{Context: context, DataLayout: toolchain.DataLayout, Catalog: catalog, Toolchain: toolchain, Runtime: *runtimeManifest}, nil
 }
 
-func validateRequestedImplementation(plan tsfrontend.BuildPlan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest) error {
+func validateRequestedImplementation(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest) error {
 	request := plan.Backend
-	if plan.Profile != tsfrontend.ProfileStatic || request.Target != llvmbackend.FirstSliceTriple || request.CPU != llvmbackend.FirstSliceCPU ||
+	if plan.Profile != frontendwire.ProfileStatic || request.Target != llvmbackend.FirstSliceTriple || request.CPU != llvmbackend.FirstSliceCPU ||
 		len(request.Features) != 0 || request.Runtime != LockedRuntimeName ||
-		request.GC != tsfrontend.GCTracing || request.Exceptions != tsfrontend.ExceptionsNone ||
-		request.Overflow != tsfrontend.OverflowJSNumber || request.BoundsCheck != tsfrontend.BoundsCheckOn ||
+		request.GC != frontendwire.GCTracing || request.Exceptions != frontendwire.ExceptionsNone ||
+		request.Overflow != frontendwire.OverflowJSNumber || request.BoundsCheck != frontendwire.BoundsCheckOn ||
 		request.LLVMMajor != llvmbackend.LockedLLVMMajor {
 		return fmt.Errorf("build plan is unavailable for the first-slice target: profile=%s target=%s cpu=%s features=%v runtime=%s gc=%s exceptions=%s overflow=%s bounds=%s llvm=%d", plan.Profile, request.Target, request.CPU, request.Features, request.Runtime, request.GC, request.Exceptions, request.Overflow, request.BoundsCheck, request.LLVMMajor)
 	}
@@ -149,7 +150,7 @@ func validateRequestedImplementation(plan tsfrontend.BuildPlan, toolchain llvmba
 	return nil
 }
 
-func newAvailableCapabilityCatalog(plan tsfrontend.BuildPlan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest) (AvailableCapabilityCatalog, error) {
+func newAvailableCapabilityCatalog(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest) (AvailableCapabilityCatalog, error) {
 	capabilities := make([]AvailableCapability, len(runtime.Capabilities))
 	for index, capability := range runtime.Capabilities {
 		capabilities[index] = AvailableCapability{
@@ -183,7 +184,7 @@ func newAvailableCapabilityCatalog(plan tsfrontend.BuildPlan, toolchain llvmback
 	return catalog, nil
 }
 
-func newTargetContext(plan tsfrontend.BuildPlan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest, catalog AvailableCapabilityCatalog) (TargetContext, error) {
+func newTargetContext(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest, catalog AvailableCapabilityCatalog) (TargetContext, error) {
 	context := TargetContext{
 		SchemaVersion:                  TargetContextSchemaVersion,
 		RequestHash:                    plan.ContentHash,

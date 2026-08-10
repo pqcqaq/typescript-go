@@ -13,8 +13,9 @@ import (
 	"testing"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/buildplan"
+	"github.com/microsoft/typescript-go/internal/frontendwire"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
-	"github.com/microsoft/typescript-go/internal/tsfrontend"
 )
 
 func TestRuntimeManifestStrictIdentityAndHashes(t *testing.T) {
@@ -92,14 +93,14 @@ func TestResolveTargetContextRejectsUnsupportedRequests(t *testing.T) {
 	runtime := runtimeManifestFixture(t)
 	tests := []struct {
 		name   string
-		mutate func(*tsfrontend.BuildPlan)
+		mutate func(*buildplan.Plan)
 	}{
-		{name: "target", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.Target = "x86_64-pc-windows-msvc" }},
-		{name: "cpu", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.CPU = "znver4" }},
-		{name: "feature", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.Features = []string{"+avx2"} }},
-		{name: "runtime", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.Runtime = "core-esnext" }},
-		{name: "gc", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.GC = tsfrontend.GCArc }},
-		{name: "bounds", mutate: func(plan *tsfrontend.BuildPlan) { plan.Backend.BoundsCheck = tsfrontend.BoundsCheckOff }},
+		{name: "target", mutate: func(plan *buildplan.Plan) { plan.Backend.Target = "x86_64-pc-windows-msvc" }},
+		{name: "cpu", mutate: func(plan *buildplan.Plan) { plan.Backend.CPU = "znver4" }},
+		{name: "feature", mutate: func(plan *buildplan.Plan) { plan.Backend.Features = []string{"+avx2"} }},
+		{name: "runtime", mutate: func(plan *buildplan.Plan) { plan.Backend.Runtime = "core-esnext" }},
+		{name: "gc", mutate: func(plan *buildplan.Plan) { plan.Backend.GC = frontendwire.GCArc }},
+		{name: "bounds", mutate: func(plan *buildplan.Plan) { plan.Backend.BoundsCheck = frontendwire.BoundsCheckOff }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -259,21 +260,21 @@ func runtimeManifestFixture(t *testing.T) []byte {
 	return data
 }
 
-func validBuildPlan() tsfrontend.BuildPlan {
-	plan := tsfrontend.BuildPlan{
-		SchemaVersion: tsfrontend.BuildPlanSchemaVersion,
+func validBuildPlan() buildplan.Plan {
+	plan := buildplan.Plan{
+		SchemaVersion: buildplan.SchemaVersion,
 		FrontendHash:  strings.Repeat("a", 64),
-		Profile:       tsfrontend.ProfileStatic,
-		Backend: tsfrontend.BackendRequest{
+		Profile:       frontendwire.ProfileStatic,
+		Backend: buildplan.BackendRequest{
 			Target:      llvmbackend.FirstSliceTriple,
 			CPU:         llvmbackend.FirstSliceCPU,
 			Features:    []string{},
 			Runtime:     LockedRuntimeName,
-			GC:          tsfrontend.GCTracing,
-			Exceptions:  tsfrontend.ExceptionsNone,
-			Overflow:    tsfrontend.OverflowJSNumber,
-			BoundsCheck: tsfrontend.BoundsCheckOn,
-			Emit:        []tsfrontend.EmitArtifact{tsfrontend.EmitHIR},
+			GC:          frontendwire.GCTracing,
+			Exceptions:  frontendwire.ExceptionsNone,
+			Overflow:    frontendwire.OverflowJSNumber,
+			BoundsCheck: frontendwire.BoundsCheckOn,
+			Emit:        []frontendwire.EmitArtifact{frontendwire.EmitHIR},
 			LLVMMajor:   llvmbackend.LockedLLVMMajor,
 		},
 	}
@@ -281,12 +282,12 @@ func validBuildPlan() tsfrontend.BuildPlan {
 	return plan
 }
 
-func rehashBuildPlan(plan *tsfrontend.BuildPlan) {
+func rehashBuildPlan(plan *buildplan.Plan) {
 	input := struct {
-		SchemaVersion uint32                    `json:"schemaVersion"`
-		FrontendHash  string                    `json:"frontendHash"`
-		Profile       tsfrontend.Profile        `json:"profile"`
-		Backend       tsfrontend.BackendRequest `json:"backend"`
+		SchemaVersion uint32                   `json:"schemaVersion"`
+		FrontendHash  string                   `json:"frontendHash"`
+		Profile       frontendwire.Profile     `json:"profile"`
+		Backend       buildplan.BackendRequest `json:"backend"`
 	}{plan.SchemaVersion, plan.FrontendHash, plan.Profile, plan.Backend}
 	plan.ContentHash = sha256JSON(input)
 }

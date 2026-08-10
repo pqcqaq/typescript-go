@@ -7,13 +7,13 @@ import (
 	"slices"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/buildplan"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
-	"github.com/microsoft/typescript-go/internal/tsfrontend"
 )
 
 // NewResolverInputArtifacts creates the three typed, immutable inputs consumed
 // by PassResolveTarget from a real TargetMachine and locked runtime manifest.
-func NewResolverInputArtifacts(plan tsfrontend.BuildPlan, machine *llvmbackend.TargetMachine, runtimeManifest []byte) ([]bingo.PassArtifact, error) {
+func NewResolverInputArtifacts(plan buildplan.Plan, machine *llvmbackend.TargetMachine, runtimeManifest []byte) ([]bingo.PassArtifact, error) {
 	if machine == nil {
 		return nil, fmt.Errorf("target machine is nil")
 	}
@@ -24,7 +24,7 @@ func NewResolverInputArtifacts(plan tsfrontend.BuildPlan, machine *llvmbackend.T
 	return newResolverInputArtifacts(plan, manifest, runtimeManifest)
 }
 
-func newResolverInputArtifacts(plan tsfrontend.BuildPlan, toolchain llvmbackend.ToolchainManifest, runtimeManifest []byte) ([]bingo.PassArtifact, error) {
+func newResolverInputArtifacts(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtimeManifest []byte) ([]bingo.PassArtifact, error) {
 	resolution, err := resolveTargetContext(plan, toolchain, runtimeManifest)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func resolvePassInput(input bingo.PassState, observed llvmbackend.ToolchainManif
 	if err != nil {
 		return Resolution{}, err
 	}
-	plan, err := tsfrontend.DecodeBuildPlan(planArtifact.Payload)
+	plan, err := buildplan.Decode(planArtifact.Payload)
 	if err != nil {
 		return Resolution{}, err
 	}

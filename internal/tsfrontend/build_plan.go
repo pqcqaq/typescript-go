@@ -1,18 +1,17 @@
 package tsfrontend
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 
+	"github.com/microsoft/typescript-go/internal/buildplan"
 	"github.com/microsoft/typescript-go/internal/frontendwire"
-	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
 // BuildPlanSchemaVersion is the wire/hash version for target-dependent plans.
 // A schema bump invalidates all plans even when their individual fields are
 // unchanged.
-const BuildPlanSchemaVersion uint32 = 1
+const BuildPlanSchemaVersion = buildplan.SchemaVersion
 
 // FrontendSnapshot is the target-independent handoff used by cache clients.
 // Program contains the serialized checker facts; ContentHash is derived only
@@ -31,62 +30,19 @@ func DecodeFrontendSnapshot(data []byte) (*FrontendSnapshot, error) {
 // BackendRequest contains canonical target/runtime choices that must not
 // affect frontend capture or its cache key. It is an unresolved request, not
 // proof that a matching toolchain or runtime capability is installed.
-type BackendRequest struct {
-	Target      string          `json:"target"`
-	CPU         string          `json:"cpu"`
-	Features    []string        `json:"features,omitempty"`
-	Runtime     string          `json:"runtime"`
-	GC          GCMode          `json:"gc"`
-	Exceptions  ExceptionMode   `json:"exceptions"`
-	Overflow    OverflowMode    `json:"overflow"`
-	BoundsCheck BoundsCheckMode `json:"boundsCheck"`
-	Emit        []EmitArtifact  `json:"emit"`
-	LLVMMajor   int             `json:"llvmMajor"`
-}
+type BackendRequest = buildplan.BackendRequest
 
 // BuildPlan is an immutable target-dependent request. FrontendHash links the
 // request to the exact serialized frontend snapshot it consumes. A backend
 // must bind it to a validated TargetContext before representation planning or
 // MIR lowering; BuildPlan validation alone does not make it executable.
-type BuildPlan struct {
-	SchemaVersion uint32 `json:"schemaVersion"`
-	FrontendHash  string `json:"frontendHash"`
-	// Profile is repeated as plan provenance because profile-specific lowering
-	// and runtime capability choices are target-dependent, while the same value
-	// is also retained in the target-independent frontend projection.
-	Profile     Profile        `json:"profile"`
-	Backend     BackendRequest `json:"backend"`
-	ContentHash string         `json:"contentHash"`
-}
-
-type buildPlanHashInput struct {
-	SchemaVersion uint32         `json:"schemaVersion"`
-	FrontendHash  string         `json:"frontendHash"`
-	Profile       Profile        `json:"profile"`
-	Backend       BackendRequest `json:"backend"`
-}
-
-// CanonicalBytes returns the validated deterministic disk representation of a
-// target-dependent plan.
-func (p BuildPlan) CanonicalBytes() ([]byte, error) {
-	if err := ValidateBuildPlan(p); err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(p, "", "  ")
-}
+type BuildPlan = buildplan.Plan
 
 // DecodeBuildPlan strictly decodes and validates a target-dependent plan.
 // Unknown fields are rejected so future or misspelled backend choices cannot
 // be silently discarded before artifact-key validation.
 func DecodeBuildPlan(data []byte) (*BuildPlan, error) {
-	var plan BuildPlan
-	if err := jsonx.Unmarshal(data, &plan, jsonx.RejectUnknownMembers(true)); err != nil {
-		return nil, fmt.Errorf("decode build plan: %w", err)
-	}
-	if err := ValidateBuildPlan(plan); err != nil {
-		return nil, err
-	}
-	return &plan, nil
+	return buildplan.Decode(data)
 }
 
 // NewFrontendSnapshot wraps an already target-independent ProgramSnapshot.
@@ -131,21 +87,9 @@ func ResolveBuildPlan(frontend FrontendSnapshot, options BingoOptions) (BuildPla
 		)
 	}
 	backend := backendRequestFromOptions(normalized)
-	contentHash, err := buildPlanContentHash(BuildPlan{
-		SchemaVersion: BuildPlanSchemaVersion,
-		FrontendHash:  frontend.ContentHash,
-		Profile:       normalized.Profile,
-		Backend:       backend,
-	})
+	plan, err := buildplan.New(frontend.ContentHash, normalized.Profile, backend)
 	if err != nil {
-		return BuildPlan{}, fmt.Errorf("hash build plan key: %w", err)
-	}
-	plan := BuildPlan{
-		SchemaVersion: BuildPlanSchemaVersion,
-		FrontendHash:  frontend.ContentHash,
-		Profile:       normalized.Profile,
-		Backend:       backend,
-		ContentHash:   contentHash,
+		return BuildPlan{}, fmt.Errorf("construct build plan: %w", err)
 	}
 	if err := ValidateBuildPlan(plan); err != nil {
 		return BuildPlan{}, fmt.Errorf("validate resolved build plan: %w", err)
@@ -157,42 +101,19 @@ func ResolveBuildPlan(frontend FrontendSnapshot, options BingoOptions) (BuildPla
 // hash. It proves the plan is internally intact; a consumer must additionally
 // compare FrontendHash with the validated FrontendSnapshot it is lowering.
 func ValidateBuildPlan(plan BuildPlan) error {
-	if plan.SchemaVersion != BuildPlanSchemaVersion {
-		return fmt.Errorf("unsupported build plan schema %d", plan.SchemaVersion)
-	}
-	if !isDigest(plan.FrontendHash) {
-		return fmt.Errorf("invalid build plan frontend hash %q", plan.FrontendHash)
-	}
-	if !isDigest(plan.ContentHash) {
-		return fmt.Errorf("invalid build plan content hash %q", plan.ContentHash)
-	}
-
-	options := buildPlanOptions(plan)
-	if err := validateBuildPlanOptions(options); err != nil {
+	if err := buildplan.Validate(plan); err != nil {
 		return err
 	}
+	options := buildPlanOptions(plan)
 	canonical := normalizeBingoOptions(options)
-	if canonical.Profile != plan.Profile || !equalBackendRequest(backendRequestFromOptions(canonical), plan.Backend) {
+	if canonical.Profile != plan.Profile || !buildplan.EqualBackendRequest(backendRequestFromOptions(canonical), plan.Backend) {
 		return fmt.Errorf("build plan backend request is not canonical")
 	}
-
-	want, err := buildPlanContentHash(plan)
-	if err != nil {
-		return fmt.Errorf("hash build plan key: %w", err)
-	}
-	if plan.ContentHash != want {
-		return fmt.Errorf("build plan content hash mismatch: got %s, want %s", plan.ContentHash, want)
-	}
-	return nil
+	return validateBuildPlanOptions(canonical)
 }
 
 func buildPlanContentHash(plan BuildPlan) (string, error) {
-	return hashCanonical(buildPlanHashInput{
-		SchemaVersion: plan.SchemaVersion,
-		FrontendHash:  plan.FrontendHash,
-		Profile:       plan.Profile,
-		Backend:       plan.Backend,
-	})
+	return buildplan.ContentHash(plan)
 }
 
 func backendRequestFromOptions(options BingoOptions) BackendRequest {
@@ -227,16 +148,7 @@ func buildPlanOptions(plan BuildPlan) BingoOptions {
 }
 
 func equalBackendRequest(left, right BackendRequest) bool {
-	return left.Target == right.Target &&
-		left.CPU == right.CPU &&
-		slices.Equal(left.Features, right.Features) &&
-		left.Runtime == right.Runtime &&
-		left.GC == right.GC &&
-		left.Exceptions == right.Exceptions &&
-		left.Overflow == right.Overflow &&
-		left.BoundsCheck == right.BoundsCheck &&
-		slices.Equal(left.Emit, right.Emit) &&
-		left.LLVMMajor == right.LLVMMajor
+	return buildplan.EqualBackendRequest(left, right)
 }
 
 func validateBuildPlanOptions(options BingoOptions) error {
