@@ -14,6 +14,7 @@ require (
 	golang.org/x/term v0.44.0
 	golang.org/x/text v0.38.0
 	gotest.tools/v3 v3.5.2
+	tinygo.org/x/go-llvm v0.0.0-20260721072906-185673ef46a5
 )
 
 require (

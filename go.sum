@@ -32,3 +32,5 @@ golang.org/x/tools v0.47.0 h1:7Kn5x/d1svx/PzryTsqeoZN4TZwqeH5pGWjefhLi/1Q=
 golang.org/x/tools v0.47.0/go.mod h1:dFHnyTvFWY212G+h7ZY4Vsp/K3U4/7W9TyVaAul8uCA=
 gotest.tools/v3 v3.5.2 h1:7koQfIKdy+I8UTetycgUqXWSDwpgv193Ka+qRsmBY8Q=
 gotest.tools/v3 v3.5.2/go.mod h1:LtdLGcnqToBH83WByAAi/wiwSFCArdFIUV/xxN4pcjA=
+tinygo.org/x/go-llvm v0.0.0-20260721072906-185673ef46a5 h1:0PKRhM1INWAi7PdIng1BHMPTDaRcOmv1UymdTgZ76Jo=
+tinygo.org/x/go-llvm v0.0.0-20260721072906-185673ef46a5/go.mod h1:GFbusT2VTA4I+l4j80b17KFK+6whv69Wtny5U+T8RR0=
