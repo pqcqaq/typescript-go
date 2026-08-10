@@ -5,17 +5,19 @@ package bingo
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 )
 
 const (
 	// HIRSchemaVersion is the serialized typed-HIR contract.
-	HIRSchemaVersion uint32 = 5
+	HIRSchemaVersion uint32 = 6
 	// HIRFrontendSnapshotSchemaVersion is the only frontend snapshot schema
-	// accepted by HIR v5. Supporting another major requires an explicit reader.
+	// accepted by HIR v6. Supporting another major requires an explicit reader.
 	HIRFrontendSnapshotSchemaVersion uint32 = 2
 	// MIRSchemaVersion is the serialized target-aware MIR contract.
 	MIRSchemaVersion uint32 = 3
@@ -122,6 +124,7 @@ type HIROp struct {
 	Operands                      []ValueID             `json:"operands,omitempty"`
 	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
 	Operator                      string                `json:"operator,omitempty"`
+	NumberBits                    string                `json:"numberBits,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
@@ -400,7 +403,7 @@ func validateHIROperationShape(op HIROp) error {
 	}
 	switch op.Kind {
 	case "binary":
-		if len(op.Operands) != 2 || op.Operator == "" {
+		if len(op.Operands) != 2 || op.Operator == "" || op.NumberBits != "" {
 			return fmt.Errorf("binary operation %d has invalid arity/operator", op.ID)
 		}
 		if op.Effect != EffectPure || op.Operator != "+" {
@@ -639,6 +642,18 @@ func isLowerHex(value string) bool {
 		}
 	}
 	return true
+}
+
+func validCanonicalNumberBits(value string) bool {
+	if len(value) != 16 || !isLowerHex(value) {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	if err != nil || len(decoded) != 8 {
+		return false
+	}
+	bits := binary.BigEndian.Uint64(decoded)
+	return !math.IsNaN(math.Float64frombits(bits)) || NumberABIBits(bits) == CanonicalNumberNaNBits
 }
 
 // VerifyMIR applies the same structural checks to the target-aware form.

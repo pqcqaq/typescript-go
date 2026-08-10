@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 
@@ -136,8 +137,10 @@ const (
 	snapshotKindLiteralType                 = "KindLiteralType"
 	snapshotKindNullKeyword                 = "KindNullKeyword"
 	snapshotKindNumberKeyword               = "KindNumberKeyword"
+	snapshotKindNumericLiteral              = "KindNumericLiteral"
 	snapshotKindParameter                   = "KindParameter"
 	snapshotKindPlusToken                   = "KindPlusToken"
+	snapshotKindPrefixUnaryExpression       = "KindPrefixUnaryExpression"
 	snapshotKindQuestionQuestionEqualsToken = "KindQuestionQuestionEqualsToken"
 	snapshotKindQuestionQuestionToken       = "KindQuestionQuestionToken"
 	snapshotKindReturnStatement             = "KindReturnStatement"
@@ -175,8 +178,10 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindLiteralType, PayloadTag: snapshotKindLiteralType, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateLiteralTypeLowerer},
 	{Kind: snapshotKindNullKeyword, PayloadTag: snapshotKindNullKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindNumericLiteral, PayloadTag: snapshotKindNumericLiteral, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateNumericLiteralLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindPrefixUnaryExpression, PayloadTag: snapshotKindPrefixUnaryExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validatePrefixUnaryLowerer},
 	{Kind: snapshotKindQuestionQuestionEqualsToken, PayloadTag: snapshotKindQuestionQuestionEqualsToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindQuestionQuestionToken, PayloadTag: snapshotKindQuestionQuestionToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindReturnStatement, PayloadTag: snapshotKindReturnStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateReturnLowerer},
@@ -482,8 +487,8 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 }
 
 func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
-	if len(node.NamedChildren) < 5 || len(node.NamedChildren) > 7 || len(node.Children) != len(node.NamedChildren) {
-		return fmt.Errorf("primitive function requires an optional export, name, two or three parameters, number return type, and body")
+	if len(node.NamedChildren) < 4 || len(node.NamedChildren) > 7 || len(node.Children) != len(node.NamedChildren) {
+		return fmt.Errorf("primitive function requires an optional export, name, one to three parameters, number return type, and body")
 	}
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
@@ -495,8 +500,8 @@ func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) e
 		return err
 	}
 	parameters := namedChildren(node, "parameter[")
-	if len(parameters) < 2 || len(parameters) > 3 {
-		return fmt.Errorf("primitive function requires two or three parameters")
+	if len(parameters) < 1 || len(parameters) > 3 {
+		return fmt.Errorf("primitive function requires one to three parameters")
 	}
 	for _, parameter := range parameters {
 		if _, err := requireChildKind(node, parameter, snapshotKindParameter, nodes); err != nil {
@@ -552,8 +557,8 @@ func validateReturnLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) err
 	}
 	expressionID := childByRole(node, "expression")
 	expression, ok := nodes[expressionID]
-	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier) {
-		return fmt.Errorf("primitive return expression must be an identifier or binary expression")
+	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier && expression.Kind != snapshotKindNumericLiteral && expression.Kind != snapshotKindPrefixUnaryExpression) {
+		return fmt.Errorf("primitive return expression must be an identifier, numeric literal, prefix unary expression, or binary expression")
 	}
 	return nil
 }
@@ -562,8 +567,10 @@ func validateIfLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
 	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
 		return fmt.Errorf("primitive if requires condition and then block")
 	}
-	if _, err := requireRoleKind(node, "child[0]", snapshotKindIdentifier, nodes); err != nil {
-		return err
+	conditionID := childByRole(node, "child[0]")
+	condition, ok := nodes[conditionID]
+	if !ok || condition.Parent != node.ID || (condition.Kind != snapshotKindIdentifier && condition.Kind != snapshotKindBinaryExpression) {
+		return fmt.Errorf("primitive if condition must be an identifier or binary expression")
 	}
 	if _, err := requireRoleKind(node, "child[1]", snapshotKindBlock, nodes); err != nil {
 		return err
@@ -612,8 +619,10 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 		if _, err := requireRoleKind(node, "operator", snapshotKindLessThanToken, nodes); err != nil {
 			return err
 		}
-		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
-			return err
+		rightID := childByRole(node, "right")
+		right, ok := nodes[rightID]
+		if !ok || right.Parent != node.ID || (right.Kind != snapshotKindIdentifier && right.Kind != snapshotKindNumericLiteral) {
+			return fmt.Errorf("primitive less-than right operand must be an identifier or numeric literal")
 		}
 	case snapshotKindQuestionQuestionToken:
 		if _, err := requireRoleKind(node, "operator", snapshotKindQuestionQuestionToken, nodes); err != nil {
@@ -633,6 +642,24 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 		return fmt.Errorf("operator %q is outside primitive replay", node.SyntaxPayload.Operator)
 	}
 	return nil
+}
+
+func validateNumericLiteralLowerer(node NodeSnapshot, _ map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 0 || len(node.Children) != 0 || node.Constant.Kind != "number" || node.Constant.Text != node.SyntaxPayload.Text {
+		return fmt.Errorf("primitive numeric literal must carry one canonical number constant")
+	}
+	if node.SyntaxPayload.Text != "0" && node.SyntaxPayload.Text != "1" {
+		return fmt.Errorf("numeric literal %q is outside the primitive classify contract", node.SyntaxPayload.Text)
+	}
+	return nil
+}
+
+func validatePrefixUnaryLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if node.SyntaxPayload.Operator != "KindMinusToken" || len(node.NamedChildren) != 1 || len(node.Children) != 1 {
+		return fmt.Errorf("primitive prefix unary expression must be numeric negation")
+	}
+	_, err := requireRoleKind(node, "operand", snapshotKindNumericLiteral, nodes)
+	return err
 }
 
 func validateLiteralTypeLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
@@ -820,6 +847,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	}
 	if localCall, ok := findPrimitiveLocalCall(bodyID, nodes); ok {
 		return replayLocalCallFunction(function, events, localCall, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures, functionIDs)
+	}
+	classify, isClassify, err := findPrimitiveClassify(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isClassify {
+		return replayClassifyFunction(function, events, classify, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
 	}
 	loop, isLoop, err := findPrimitiveLoop(bodyID, nodes)
 	if err != nil {
@@ -1138,6 +1172,227 @@ func replayLocalCallFunction(
 		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
 	)
 	return function, events, nil
+}
+
+type primitiveClassifySource struct {
+	FirstIf           NodeSnapshot
+	FirstCondition    NodeSnapshot
+	FirstValue        NodeSnapshot
+	FirstThreshold    NodeSnapshot
+	NegativeReturn    NodeSnapshot
+	NegativeUnary     NodeSnapshot
+	NegativeLiteral   NodeSnapshot
+	SecondIf          NodeSnapshot
+	SecondCondition   NodeSnapshot
+	SecondValue       NodeSnapshot
+	SecondThreshold   NodeSnapshot
+	ZeroReturn        NodeSnapshot
+	ZeroLiteral       NodeSnapshot
+	PositiveReturn    NodeSnapshot
+	PositiveLiteral   NodeSnapshot
+}
+
+func findPrimitiveClassify(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveClassifySource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveClassifySource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 3 {
+		return primitiveClassifySource{}, false, nil
+	}
+	firstIf, ok := nodes[statements[0]]
+	if !ok || firstIf.Kind != snapshotKindIfStatement {
+		return primitiveClassifySource{}, false, nil
+	}
+	secondIf, ok := nodes[statements[1]]
+	if !ok || secondIf.Kind != snapshotKindIfStatement {
+		return primitiveClassifySource{}, false, nil
+	}
+	positiveReturn, ok := nodes[statements[2]]
+	if !ok || positiveReturn.Kind != snapshotKindReturnStatement {
+		return primitiveClassifySource{}, false, nil
+	}
+	firstCondition, firstValue, firstThreshold, negativeReturn, err := parsePrimitiveClassifyIf(firstIf, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	negativeUnary, err := requireRoleKind(negativeReturn, "expression", snapshotKindPrefixUnaryExpression, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	negativeLiteral, err := requireRoleKind(negativeUnary, "operand", snapshotKindNumericLiteral, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	secondCondition, secondValue, secondThreshold, zeroReturn, err := parsePrimitiveClassifyIf(secondIf, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	zeroLiteral, err := requireRoleKind(zeroReturn, "expression", snapshotKindNumericLiteral, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	positiveLiteral, err := requireRoleKind(positiveReturn, "expression", snapshotKindNumericLiteral, nodes)
+	if err != nil {
+		return primitiveClassifySource{}, false, err
+	}
+	return primitiveClassifySource{
+		FirstIf: firstIf, FirstCondition: firstCondition, FirstValue: firstValue, FirstThreshold: firstThreshold,
+		NegativeReturn: negativeReturn, NegativeUnary: negativeUnary, NegativeLiteral: negativeLiteral,
+		SecondIf: secondIf, SecondCondition: secondCondition, SecondValue: secondValue, SecondThreshold: secondThreshold,
+		ZeroReturn: zeroReturn, ZeroLiteral: zeroLiteral, PositiveReturn: positiveReturn, PositiveLiteral: positiveLiteral,
+	}, true, nil
+}
+
+func parsePrimitiveClassifyIf(ifNode NodeSnapshot, nodes map[NodeID]NodeSnapshot) (NodeSnapshot, NodeSnapshot, NodeSnapshot, NodeSnapshot, error) {
+	condition, err := requireRoleKind(ifNode, "child[0]", snapshotKindBinaryExpression, nodes)
+	if err != nil {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, err
+	}
+	if condition.SyntaxPayload.Operator != snapshotKindLessThanToken {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, fmt.Errorf("classify condition %s does not use <", condition.ID)
+	}
+	value, err := requireRoleKind(condition, "left", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, err
+	}
+	threshold, err := requireRoleKind(condition, "right", snapshotKindNumericLiteral, nodes)
+	if err != nil {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, err
+	}
+	thenBlock, err := requireRoleKind(ifNode, "child[1]", snapshotKindBlock, nodes)
+	if err != nil {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, err
+	}
+	statements := namedChildren(thenBlock, "statement[")
+	if len(statements) != 1 {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, fmt.Errorf("classify then block %s must contain one return", thenBlock.ID)
+	}
+	returnNode, err := requireChildKind(thenBlock, statements[0], snapshotKindReturnStatement, nodes)
+	if err != nil {
+		return NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, NodeSnapshot{}, err
+	}
+	return condition, value, threshold, returnNode, nil
+}
+
+func replayClassifyFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	source primitiveClassifySource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if function.Name != "classify" || len(function.Parameters) != 1 || parameterTypes[1] != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive classify replay requires exported classify(value: number)")
+	}
+	for _, valueNode := range []NodeSnapshot{source.FirstValue, source.SecondValue} {
+		value, ok := parameterValue(valueNode, parameterValues)
+		if !ok || value != 1 {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("classify condition %s does not read the value parameter", valueNode.ID)
+		}
+		valueType, typeErr := bingoType(nodeTypeID(valueNode), types)
+		if typeErr != nil || valueType != bingo.TypeNumber {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("classify condition %s is not canonical number", valueNode.ID)
+		}
+	}
+	zeroThresholdBits, err := classifyLiteralBits(source.FirstThreshold, "0", types)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, err
+	}
+	negativeOperandBits, err := classifyLiteralBits(source.NegativeLiteral, "1", types)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, err
+	}
+	oneThresholdBits, err := classifyLiteralBits(source.SecondThreshold, "1", types)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, err
+	}
+	zeroReturnBits, err := classifyLiteralBits(source.ZeroLiteral, "0", types)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, err
+	}
+	positiveReturnBits, err := classifyLiteralBits(source.PositiveLiteral, "1", types)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, err
+	}
+	if source.NegativeUnary.SyntaxPayload.Operator != "KindMinusToken" {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("classify negative return does not use prefix minus")
+	}
+	negativeType, negativeTypeErr := bingoType(nodeTypeID(source.NegativeUnary), types)
+	if negativeTypeErr != nil || negativeType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("classify negative return is not canonical number")
+	}
+	for _, condition := range []NodeSnapshot{source.FirstCondition, source.SecondCondition} {
+		conditionType, conditionErr := bingoType(nodeTypeID(condition), types)
+		if conditionErr != nil || conditionType != bingo.TypeBoolean {
+			return bingo.HIRFunction{}, nil, fmt.Errorf("classify condition %s is not canonical boolean", condition.ID)
+		}
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, returnErr := bingoType(returnTypeID, types)
+	if returnErr != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("classify function return type is not canonical number")
+	}
+	emptyRequirements := func() []bingo.RuntimeCapabilityID { return []bingo.RuntimeCapabilityID{} }
+	function.ReturnType = bingo.TypeNumber
+	function.Blocks = []bingo.HIRBlock{
+		{ID: 1, Operations: []bingo.HIROp{
+			{ID: 2, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: zeroThresholdBits, Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.FirstThreshold)},
+			{ID: 3, Kind: "compare", Type: bingo.TypeBoolean, Operands: []bingo.ValueID{1, 2}, Operator: "<", Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.FirstCondition)},
+		}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: 3, Successors: []bingo.BlockID{2, 3}, Origin: originOf(source.FirstIf)}},
+		{ID: 2, Operations: []bingo.HIROp{
+			{ID: 4, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: negativeOperandBits, Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.NegativeLiteral)},
+			{ID: 5, Kind: "unary", Type: bingo.TypeNumber, Operands: []bingo.ValueID{4}, Operator: "-", Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.NegativeUnary)},
+		}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 5, Origin: originOf(source.NegativeReturn)}},
+		{ID: 3, Operations: []bingo.HIROp{
+			{ID: 6, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: oneThresholdBits, Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.SecondThreshold)},
+			{ID: 7, Kind: "compare", Type: bingo.TypeBoolean, Operands: []bingo.ValueID{1, 6}, Operator: "<", Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.SecondCondition)},
+		}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: 7, Successors: []bingo.BlockID{4, 5}, Origin: originOf(source.SecondIf)}},
+		{ID: 4, Operations: []bingo.HIROp{{ID: 8, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: zeroReturnBits, Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.ZeroLiteral)}}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 8, Origin: originOf(source.ZeroReturn)}},
+		{ID: 5, Operations: []bingo.HIROp{{ID: 9, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: positiveReturnBits, Effect: bingo.EffectPure, LogicalCapabilityRequirements: emptyRequirements(), Origin: originOf(source.PositiveLiteral)}}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 9, Origin: originOf(source.PositiveReturn)}},
+	}
+	events = append(events,
+		LoweringEvent{Kind: "literal.number", Node: source.FirstThreshold.ID, Origin: source.FirstThreshold.Origin, Type: nodeTypeID(source.FirstThreshold)},
+		LoweringEvent{Kind: "if.condition", Node: source.FirstCondition.ID, Origin: source.FirstCondition.Origin, Type: nodeTypeID(source.FirstCondition), Operator: "<", Inputs: []NodeID{source.FirstValue.ID, source.FirstThreshold.ID}},
+		LoweringEvent{Kind: "literal.number", Node: source.NegativeLiteral.ID, Origin: source.NegativeLiteral.Origin, Type: nodeTypeID(source.NegativeLiteral)},
+		LoweringEvent{Kind: "unary.negate", Node: source.NegativeUnary.ID, Origin: source.NegativeUnary.Origin, Type: nodeTypeID(source.NegativeUnary), Operator: "-", Inputs: []NodeID{source.NegativeLiteral.ID}},
+		LoweringEvent{Kind: "return", Node: source.NegativeReturn.ID, Origin: source.NegativeReturn.Origin, Type: returnTypeID, Inputs: []NodeID{source.NegativeUnary.ID}},
+		LoweringEvent{Kind: "literal.number", Node: source.SecondThreshold.ID, Origin: source.SecondThreshold.Origin, Type: nodeTypeID(source.SecondThreshold)},
+		LoweringEvent{Kind: "if.condition", Node: source.SecondCondition.ID, Origin: source.SecondCondition.Origin, Type: nodeTypeID(source.SecondCondition), Operator: "<", Inputs: []NodeID{source.SecondValue.ID, source.SecondThreshold.ID}},
+		LoweringEvent{Kind: "literal.number", Node: source.ZeroLiteral.ID, Origin: source.ZeroLiteral.Origin, Type: nodeTypeID(source.ZeroLiteral)},
+		LoweringEvent{Kind: "return", Node: source.ZeroReturn.ID, Origin: source.ZeroReturn.Origin, Type: returnTypeID, Inputs: []NodeID{source.ZeroLiteral.ID}},
+		LoweringEvent{Kind: "literal.number", Node: source.PositiveLiteral.ID, Origin: source.PositiveLiteral.Origin, Type: nodeTypeID(source.PositiveLiteral)},
+		LoweringEvent{Kind: "return", Node: source.PositiveReturn.ID, Origin: source.PositiveReturn.Origin, Type: returnTypeID, Inputs: []NodeID{source.PositiveLiteral.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
+	return function, events, nil
+}
+
+func classifyLiteralBits(node NodeSnapshot, expectedText string, types map[TypeID]TypeSnapshot) (string, error) {
+	if node.Kind != snapshotKindNumericLiteral || node.SyntaxPayload.Text != expectedText || node.Constant.Kind != "number" || node.Constant.Text != expectedText {
+		return "", fmt.Errorf("classify literal %s is not canonical %s", node.ID, expectedText)
+	}
+	typ, err := bingoType(nodeTypeID(node), types)
+	if err != nil || typ != bingo.TypeNumber {
+		return "", fmt.Errorf("classify literal %s is not canonical number", node.ID)
+	}
+	want := 0.0
+	if expectedText == "1" {
+		want = 1
+	}
+	if node.Constant.Number != want {
+		return "", fmt.Errorf("classify literal %s constant does not match source text", node.ID)
+	}
+	return fmt.Sprintf("%016x", math.Float64bits(node.Constant.Number)), nil
 }
 
 type primitiveLoopSource struct {
@@ -1805,6 +2060,9 @@ func bingoType(id TypeID, types map[TypeID]TypeSnapshot) (bingo.TypeKind, error)
 		return "", fmt.Errorf("missing type %d", id)
 	}
 	if typ.Kind == "intrinsic" && typ.Flags == 64 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "intrinsic" && typ.TypePayload.Scalar == "intrinsic|64|0|||intrinsic:number" {
+		return bingo.TypeNumber, nil
+	}
+	if typ.Kind == "literal" && typ.Flags == 2048 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "literal" && strings.HasPrefix(typ.TypePayload.Scalar, "literal|2048|0|||literal:jsnum.Number:") {
 		return bingo.TypeNumber, nil
 	}
 	if typ.Kind == "union" && typ.TypePayload.Tag == "union" && len(typ.ElementTypes) == 2 {

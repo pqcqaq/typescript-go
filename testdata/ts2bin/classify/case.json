@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "name": "classify-number-control-flow",
+  "entryPoint": "classify",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {
+      "name": "negative",
+      "leftBits": "bff0000000000000",
+      "expectedBits": "bff0000000000000"
+    },
+    {
+      "name": "negative-zero",
+      "leftBits": "8000000000000000",
+      "expectedBits": "0000000000000000"
+    },
+    {
+      "name": "fraction",
+      "leftBits": "3fe0000000000000",
+      "expectedBits": "0000000000000000"
+    },
+    {
+      "name": "one",
+      "leftBits": "3ff0000000000000",
+      "expectedBits": "3ff0000000000000"
+    },
+    {
+      "name": "nan-condition-false",
+      "leftBits": "7ff8000000000000",
+      "expectedBits": "3ff0000000000000"
+    }
+  ]
+}

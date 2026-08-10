@@ -17,6 +17,7 @@ const LockedNodeVersion = "v22.22.0"
 const nodeAddScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(a)+fromBits(b))+"\n");`
 const nodeComputeScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function add(left,right){return left+right}function compute(left,right){let value=add(left,right);value=value+right;return value}process.stdout.write(toBits(compute(fromBits(a),fromBits(b)))+"\n");`
 const nodeLoopScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function compute(step,limit){let value=step;while(value<limit){value=value+step}return value}process.stdout.write(toBits(compute(fromBits(a),fromBits(b)))+"\n");`
+const nodeClassifyScript = `const [a]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function classify(value){if(value<0){return -1}if(value<1){return 0}return 1}process.stdout.write(toBits(classify(fromBits(a)))+"\n");`
 const nodeChooseScript = `const [flag,a,b]=process.argv.slice(1);if(flag!=="true"&&flag!=="false")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(flag==="true"?a:b))+"\n");`
 const nodeCoalesceScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};const value=tag==="number"?fromBits(a):tag==="null"?null:undefined;process.stdout.write(toBits(value??fromBits(b))+"\n");`
 const nodeCoalesceAssignScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};let value=tag==="number"?fromBits(a):tag==="null"?null:undefined;value??=fromBits(b);process.stdout.write(toBits(value)+"\n");`
@@ -78,6 +79,10 @@ func (oracle *NodeOracle) Loop(ctx context.Context, step, limit string) (Result,
 	return oracle.run(ctx, nodeLoopScript, step, limit)
 }
 
+func (oracle *NodeOracle) Classify(ctx context.Context, value string) (Result, error) {
+	return oracle.run(ctx, nodeClassifyScript, value)
+}
+
 // Choose evaluates the boolean branch using the locked Node oracle.
 func (oracle *NodeOracle) Choose(ctx context.Context, flag bool, left, right string) (Result, error) {
 	value := "false"
@@ -102,8 +107,8 @@ func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...s
 	if ctx == nil {
 		return Result{}, fmt.Errorf("oracle context is nil")
 	}
-	if len(arguments) < 2 {
-		return Result{}, fmt.Errorf("Node oracle requires at least two arguments")
+	if len(arguments) < 1 {
+		return Result{}, fmt.Errorf("Node oracle requires at least one argument")
 	}
 	for _, argument := range arguments {
 		if argument == "true" || argument == "false" || argument == "number" || argument == "null" || argument == "undefined" {
@@ -135,6 +140,8 @@ func ScriptHash() string { return hashBytes([]byte(nodeAddScript)) }
 func ComputeScriptHash() string { return hashBytes([]byte(nodeComputeScript)) }
 
 func LoopScriptHash() string { return hashBytes([]byte(nodeLoopScript)) }
+
+func ClassifyScriptHash() string { return hashBytes([]byte(nodeClassifyScript)) }
 
 // ChooseScriptHash returns the locked script identity for boolean choose.
 func ChooseScriptHash() string { return hashBytes([]byte(nodeChooseScript)) }

@@ -4,6 +4,8 @@ package llvmbackend
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"sync"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
@@ -93,6 +95,10 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		emitNumberAddLLVM(ctx, builder, module, mir.Functions[0])
 	case len(mir.Functions) == 1 && mir.Functions[0].Name == "choose":
 		emitBooleanChooseLLVM(ctx, builder, module, mir.Functions[0])
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "classify":
+		if err := emitClassifyLLVM(ctx, builder, module, mir.Functions[0]); err != nil {
+			return FirstSliceEmission{}, err
+		}
 	case len(mir.Functions) == 2 && mir.Functions[0].Name == "add" && mir.Functions[1].Name == "compute":
 		if err := emitLocalCallLLVM(ctx, builder, module, mir.Functions); err != nil {
 			return FirstSliceEmission{}, err
@@ -196,6 +202,64 @@ func emitBooleanChooseLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.M
 	builder.CreateRet(function.Param(1))
 	builder.SetInsertPointAtEnd(falseBlock)
 	builder.CreateRet(function.Param(2))
+}
+
+func emitClassifyLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) error {
+	double := ctx.DoubleType()
+	functionType := llvm.FunctionType(double, []llvm.Type{double}, false)
+	function := llvm.AddFunction(module, "classify", functionType)
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	function.Param(0).SetName(mir.Parameters[0].Name)
+
+	entry := llvm.AddBasicBlock(function, "entry")
+	negative := llvm.AddBasicBlock(function, "bb2.negative")
+	second := llvm.AddBasicBlock(function, "bb3.second")
+	zero := llvm.AddBasicBlock(function, "bb4.zero")
+	positive := llvm.AddBasicBlock(function, "bb5.positive")
+
+	zeroThreshold, err := llvmF64Constant(double, mir.Blocks[0].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("classify zero threshold: %w", err)
+	}
+	negativeOperand, err := llvmF64Constant(double, mir.Blocks[1].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("classify negative operand: %w", err)
+	}
+	oneThreshold, err := llvmF64Constant(double, mir.Blocks[2].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("classify one threshold: %w", err)
+	}
+	zeroResult, err := llvmF64Constant(double, mir.Blocks[3].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("classify zero result: %w", err)
+	}
+	positiveResult, err := llvmF64Constant(double, mir.Blocks[4].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("classify positive result: %w", err)
+	}
+
+	builder.SetInsertPointAtEnd(entry)
+	isNegative := builder.CreateFCmp(llvm.FloatOLT, function.Param(0), zeroThreshold, "value.lt.zero")
+	builder.CreateCondBr(isNegative, negative, second)
+	builder.SetInsertPointAtEnd(negative)
+	builder.CreateRet(builder.CreateFNeg(negativeOperand, "negative.one"))
+	builder.SetInsertPointAtEnd(second)
+	isZeroClass := builder.CreateFCmp(llvm.FloatOLT, function.Param(0), oneThreshold, "value.lt.one")
+	builder.CreateCondBr(isZeroClass, zero, positive)
+	builder.SetInsertPointAtEnd(zero)
+	builder.CreateRet(zeroResult)
+	builder.SetInsertPointAtEnd(positive)
+	builder.CreateRet(positiveResult)
+	return nil
+}
+
+func llvmF64Constant(double llvm.Type, bits string) (llvm.Value, error) {
+	value, err := strconv.ParseUint(bits, 16, 64)
+	if err != nil {
+		return llvm.Value{}, fmt.Errorf("decode binary64 bits %q: %w", bits, err)
+	}
+	return llvm.ConstFloat(double, math.Float64frombits(value)), nil
 }
 
 func emitLoopLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {

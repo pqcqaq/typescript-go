@@ -199,6 +199,53 @@ func TestReplayCommittedCoalesceAssignSnapshotProducesSingleEvaluationHIR(t *tes
 	}
 }
 
+func TestReplayCommittedClassifySnapshotProducesLiteralAndMultiReturnHIR(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/classify/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	first, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first, second) {
+		t.Fatal("classify replay is not deterministic")
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(first.HIR); err != nil {
+		t.Fatal(err)
+	}
+	function := first.HIR.Functions[0]
+	if function.Name != "classify" || !function.Exported || function.ReturnType != bingo.TypeNumber || len(function.Parameters) != 1 || function.Parameters[0].Name != "value" || len(function.Blocks) != 5 {
+		t.Fatalf("classify HIR function = %#v", function)
+	}
+	if function.Blocks[0].Operations[0].Kind != "number.constant" || function.Blocks[0].Operations[0].NumberBits != "0000000000000000" || function.Blocks[0].Operations[1].Kind != "compare" || !slices.Equal(function.Blocks[0].Terminator.Successors, []bingo.BlockID{2, 3}) {
+		t.Fatalf("classify first branch = %#v", function.Blocks[0])
+	}
+	if function.Blocks[1].Operations[0].NumberBits != "3ff0000000000000" || function.Blocks[1].Operations[1].Kind != "unary" || function.Blocks[1].Operations[1].Operator != "-" || function.Blocks[1].Terminator.Value != 5 {
+		t.Fatalf("classify negative return = %#v", function.Blocks[1])
+	}
+	if function.Blocks[2].Operations[0].NumberBits != "3ff0000000000000" || function.Blocks[2].Operations[1].Kind != "compare" || !slices.Equal(function.Blocks[2].Terminator.Successors, []bingo.BlockID{4, 5}) || function.Blocks[3].Terminator.Value != 8 || function.Blocks[4].Terminator.Value != 9 {
+		t.Fatalf("classify second branch = %#v", function.Blocks[2:])
+	}
+	wantEvents := []string{"function.begin", "parameter", "literal.number", "if.condition", "literal.number", "unary.negate", "return", "literal.number", "if.condition", "literal.number", "return", "literal.number", "return", "function.end"}
+	gotEvents := make([]string, len(first.Events))
+	for index, event := range first.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("classify events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
 func TestReplayCoalesceAssignRejectsRehashedReturnBindingTampering(t *testing.T) {
 	base := buildReplayCoalesceAssignSnapshot(t)
 	identity := testCompilerIdentity(t, *base)

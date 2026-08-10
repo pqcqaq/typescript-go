@@ -50,6 +50,21 @@ func TestRunnableChooseManifestRequiresBooleanFlags(t *testing.T) {
 	}
 }
 
+func TestRunnableClassifyManifestRequiresOneBinary64Argument(t *testing.T) {
+	valid := CaseManifest{EntryPoint: "classify", TimeoutMS: 2000, Oracle: "node", Executions: []CaseExecution{{
+		Name: "negative", LeftBits: "bff0000000000000", ExpectedBits: "bff0000000000000",
+	}}}
+	if err := ValidateRunnableManifest(valid); err != nil {
+		t.Fatal(err)
+	}
+	invalid := valid
+	invalid.Executions = append([]CaseExecution(nil), valid.Executions...)
+	invalid.Executions[0].RightBits = "0000000000000000"
+	if err := ValidateRunnableManifest(invalid); err == nil || !strings.Contains(err.Error(), "must not contain rightBits") {
+		t.Fatalf("classify extra argument error = %v", err)
+	}
+}
+
 func TestRunnableNullableCoalesceManifestRequiresCanonicalTagsAndPayloads(t *testing.T) {
 	for _, entryPoint := range []string{"coalesce", "coalesceAssign"} {
 		t.Run(entryPoint, func(t *testing.T) {

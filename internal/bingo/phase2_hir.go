@@ -139,6 +139,17 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 		}
 		for operationIndex, operation := range block.Operations {
 			switch operation.Kind {
+			case "number.constant":
+				if operation.Type != TypeNumber || !validCanonicalNumberBits(operation.NumberBits) {
+					return fmt.Errorf("number constant operation %d is not canonical binary64", operation.ID)
+				}
+			case "unary":
+				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
+					return fmt.Errorf("operation %d: %w", operation.ID, err)
+				}
+				if values[operation.Operands[0]].typ != TypeNumber || operation.Type != TypeNumber {
+					return fmt.Errorf("unary operation %d requires number operand and result", operation.ID)
+				}
 			case "binary":
 				for _, operand := range operation.Operands {
 					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
@@ -247,28 +258,36 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 		return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 	}
 	switch operation.Kind {
+	case "number.constant":
+		if len(operation.Operands) != 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || !validCanonicalNumberBits(operation.NumberBits) || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "unary":
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "-" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
 	case "binary":
-		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "+" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "+" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "compare":
-		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "<" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) != 2 || len(operation.IncomingBlocks) != 0 || operation.Operator != "<" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "phi":
-		if len(operation.Operands) < 2 || len(operation.Operands) != len(operation.IncomingBlocks) || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) < 2 || len(operation.Operands) != len(operation.IncomingBlocks) || operation.Operator != "" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "call":
-		if len(operation.Operands) == 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee == 0 || operation.Effect != EffectCall {
+		if len(operation.Operands) == 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.Callee == 0 || operation.Effect != EffectCall {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "is_nullish":
-		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	case "unwrap_nullable":
-		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	default:

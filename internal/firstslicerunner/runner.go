@@ -165,6 +165,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var result firstslicelink.RunResult
 		if entryPoint == "choose" {
 			result, err = firstslicelink.RunChoose(caseContext, executable, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if entryPoint == "classify" {
+			result, err = firstslicelink.RunClassify(caseContext, executable, execution.LeftBits)
 		} else if entryPoint == "coalesce" {
 			result, err = firstslicelink.RunCoalesce(caseContext, executable, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "coalesceAssign" {
@@ -181,6 +183,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var nodeResult firstsliceoracle.Result
 		if entryPoint == "choose" {
 			nodeResult, err = nodeOracle.Choose(caseContext, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if oracleProgram == "classify" {
+			nodeResult, err = nodeOracle.Classify(caseContext, execution.LeftBits)
 		} else if oracleProgram == "coalesce" {
 			nodeResult, err = nodeOracle.Coalesce(caseContext, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if oracleProgram == "coalesceassign" {
@@ -239,6 +243,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	nodeScriptHash := nodeOracle.ScriptHash()
 	if entryPoint == "choose" {
 		nodeScriptHash = firstsliceoracle.ChooseScriptHash()
+	} else if oracleProgram == "classify" {
+		nodeScriptHash = firstsliceoracle.ClassifyScriptHash()
 	} else if oracleProgram == "loop" {
 		nodeScriptHash = firstsliceoracle.LoopScriptHash()
 	} else if oracleProgram == "coalesce" {
@@ -299,12 +305,13 @@ func VerifyReport(report Report) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign") {
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
 	if entryPoint == "add" && report.OracleProgram != "add" ||
 		entryPoint == "choose" && report.OracleProgram != "choose" ||
+		entryPoint == "classify" && report.OracleProgram != "classify" ||
 		entryPoint == "compute" && report.OracleProgram != "calllocal" && report.OracleProgram != "loop" ||
 		entryPoint == "coalesce" && report.OracleProgram != "coalesce" ||
 		entryPoint == "coalesceAssign" && report.OracleProgram != "coalesceassign" {
@@ -312,6 +319,8 @@ func VerifyReport(report Report) error {
 	}
 	if report.OracleProgram == "choose" {
 		wantScriptHash = firstsliceoracle.ChooseScriptHash()
+	} else if report.OracleProgram == "classify" {
+		wantScriptHash = firstsliceoracle.ClassifyScriptHash()
 	} else if report.OracleProgram == "calllocal" {
 		wantScriptHash = firstsliceoracle.ComputeScriptHash()
 	} else if report.OracleProgram == "loop" {
@@ -384,6 +393,9 @@ func VerifyReport(report Report) error {
 	allOK := true
 	for index, execution := range report.Executions {
 		wantArguments := 2
+		if entryPoint == "classify" {
+			wantArguments = 1
+		}
 		if entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
 			wantArguments = 3
 		}
@@ -393,7 +405,7 @@ func VerifyReport(report Report) error {
 		if index > 0 && report.Executions[index-1].Name >= execution.Name {
 			return fmt.Errorf("execution reports are not in canonical name order")
 		}
-		if execution.Arguments[0] == "" || execution.Arguments[1] == "" || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
+		if slices.Contains(execution.Arguments, "") || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
 			return fmt.Errorf("execution %q output identity is invalid", execution.Name)
 		}
 		if hashBytes([]byte(execution.NodeBits+"\n")) != execution.NodeOutputHash {
@@ -472,6 +484,8 @@ func oracleProgramForHIR(entryPoint string, hir bingo.HIRModule) (string, error)
 		return "add", nil
 	case entryPoint == "choose" && len(hir.Functions) == 1 && hir.Functions[0].Name == "choose":
 		return "choose", nil
+	case entryPoint == "classify" && len(hir.Functions) == 1 && hir.Functions[0].Name == "classify" && len(hir.Functions[0].Blocks) == 5:
+		return "classify", nil
 	case entryPoint == "compute" && len(hir.Functions) == 2 && hir.Functions[1].Name == "compute":
 		return "calllocal", nil
 	case entryPoint == "compute" && len(hir.Functions) == 1 && hir.Functions[0].Name == "compute" && len(hir.Functions[0].Blocks) == 4:

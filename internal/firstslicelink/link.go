@@ -152,6 +152,30 @@ func RunFirstSlice(ctx context.Context, executable string, left, right string) (
 	return runHarness(ctx, executable, "add", "", left, right)
 }
 
+// RunClassify executes the one-argument binary64 classify C ABI harness.
+func RunClassify(ctx context.Context, executable, value string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if err := validateBits(value); err != nil {
+		return RunResult{}, fmt.Errorf("value argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run classify executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || len(trimmed) != 16 || validateBits(trimmed) != nil {
+		return RunResult{}, fmt.Errorf("classify output is not one binary64 hex line: %q", string(output))
+	}
+	return RunResult{Arguments: []string{value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
 // RunCompute executes the local-binding/direct-call C ABI harness.
 func RunCompute(ctx context.Context, executable string, left, right string) (RunResult, error) {
 	return runHarness(ctx, executable, "compute", "", left, right)
@@ -297,7 +321,7 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
 	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
@@ -328,6 +352,12 @@ func materializeLinkInputs(workspace string, request LinkRequest, entryPoint str
 			return fmt.Errorf("runtime manifest has no coalesce assignment harness object")
 		}
 		harness = *request.Runtime.Artifacts.CoalesceAssignHarnessObject
+	}
+	if entryPoint == "classify" {
+		if request.Runtime.Artifacts.ClassifyHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no classify harness object")
+		}
+		harness = *request.Runtime.Artifacts.ClassifyHarnessObject
 	}
 	inputs := []struct {
 		artifact targetcontext.RuntimeArtifact
@@ -373,6 +403,8 @@ func responseFileBytes(entryPoints ...string) []byte {
 		harness = "bingo_coalesce_harness.o"
 	} else if entryPoint == "coalesceAssign" {
 		harness = "bingo_coalesce_assign_harness.o"
+	} else if entryPoint == "classify" {
+		harness = "bingo_classify_harness.o"
 	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",

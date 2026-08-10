@@ -14,7 +14,7 @@ func testCompilerBuildIdentity() CompilerBuildIdentity {
 	return CompilerBuildIdentity{
 		UpstreamCommit: strings.Repeat("1", 40),
 		ForkCommit:     strings.Repeat("2", 40),
-		LoweringSchema: "bingo-hir-lowering-v5",
+		LoweringSchema: "bingo-hir-lowering-v6",
 		LoweringHash:   strings.Repeat("4", 64),
 	}
 }
@@ -223,7 +223,7 @@ func TestPassContractRequiresResolvedTargetContext(t *testing.T) {
 		t.Fatalf("target/capability pass order = resolve %d, representation %d, capability %d", resolveIndex, representationIndex, capabilityIndex)
 	}
 	resolve := specs[resolveIndex]
-	if resolve.InputSchema != "hir-v5" || slices.Contains(resolve.ReadsFacts, "conversion-plan") ||
+	if resolve.InputSchema != "hir-v6" || slices.Contains(resolve.ReadsFacts, "conversion-plan") ||
 		slices.ContainsFunc(resolve.ReadsArtifacts, func(requirement PassArtifactRequirement) bool {
 			return requirement.Name == PassArtifactTypedHIR
 		}) {

@@ -14,7 +14,7 @@ import (
 
 const (
 	RepresentationPlanSchemaVersion uint32 = 2
-	FirstSliceMIRSchemaVersion      uint32 = 3
+	FirstSliceMIRSchemaVersion      uint32 = 4
 	BoundCapabilitySchemaVersion    uint32 = 1
 )
 
@@ -232,6 +232,7 @@ type FirstSliceMIRInstruction struct {
 	Type                          RepType               `json:"type"`
 	Operands                      []ValueID             `json:"operands"`
 	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
+	NumberBits                    string                `json:"numberBits,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
@@ -339,8 +340,18 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 				if !ok {
 					return FirstSliceMIRArtifact{}, fmt.Errorf("operation %d has no representation binding", operation.ID)
 				}
-				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), IncomingBlocks: slices.Clone(operation.IncomingBlocks), Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
+				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), IncomingBlocks: slices.Clone(operation.IncomingBlocks), NumberBits: operation.NumberBits, Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
 				switch operation.Kind {
+				case "number.constant":
+					if operation.Type != TypeNumber || binding.RepType != RepF64 || !validCanonicalNumberBits(operation.NumberBits) {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("number constant operation %d has no canonical f64 representation", operation.ID)
+					}
+					instruction.Kind = "f64.const"
+				case "unary":
+					if operation.Operator != "-" || binding.RepType != RepF64 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("unary operation %d has no f64 representation", operation.ID)
+					}
+					instruction.Kind = "fneg"
 				case "binary":
 					if operation.Operator != "+" || binding.RepType != RepF64 {
 						return FirstSliceMIRArtifact{}, fmt.Errorf("binary operation %d has no f64 representation", operation.ID)
@@ -499,6 +510,19 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 	if digest != module.Provenance.LogicalCapabilityRequirementsDigest || len(module.LogicalCapabilityRequirements) != 0 {
 		return fmt.Errorf("first-slice MIR logical capability requirements are invalid")
 	}
+	for _, function := range module.Functions {
+		for _, block := range function.Blocks {
+			for _, instruction := range block.Instructions {
+				if instruction.Kind == "f64.const" {
+					if !validCanonicalNumberBits(instruction.NumberBits) {
+						return fmt.Errorf("f64 constant instruction %d has invalid number bits", instruction.ID)
+					}
+				} else if instruction.NumberBits != "" {
+					return fmt.Errorf("instruction %d carries unexpected number bits", instruction.ID)
+				}
+			}
+		}
+	}
 	switch {
 	case len(module.Functions) == 1 && module.Functions[0].Name == "add":
 		if err := verifyNumberAddMIRFunction(module.Functions[0]); err != nil {
@@ -506,6 +530,10 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		}
 	case len(module.Functions) == 1 && module.Functions[0].Name == "choose":
 		if err := verifyBooleanChooseMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
+	case len(module.Functions) == 1 && module.Functions[0].Name == "classify":
+		if err := verifyClassifyMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
 	case len(module.Functions) == 2 && module.Functions[0].Name == "add" && module.Functions[1].Name == "compute":
@@ -586,6 +614,59 @@ func verifyBooleanChooseMIRFunction(function FirstSliceMIRFunction) error {
 		return fmt.Errorf("Phase 2B choose MIR false return is invalid")
 	}
 	return nil
+}
+
+func verifyClassifyMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.Name != "classify" || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 1 || len(function.Blocks) != 5 {
+		return fmt.Errorf("Phase 2B classify MIR function is invalid")
+	}
+	parameter := function.Parameters[0]
+	if parameter.Name != "value" || parameter.Value != 1 || parameter.Type != RepF64 || !validOrigin(parameter.Origin) {
+		return fmt.Errorf("Phase 2B classify parameter is invalid")
+	}
+	for index, block := range function.Blocks {
+		if block.ID != BlockID(index+1) || block.Instructions == nil || !validOrigin(block.Terminator.Origin) {
+			return fmt.Errorf("Phase 2B classify block %d is invalid", index+1)
+		}
+	}
+	entry := function.Blocks[0]
+	if len(entry.Instructions) != 2 || !validF64ConstInstruction(entry.Instructions[0], 2, "0000000000000000") ||
+		!validFCmpOLTInstruction(entry.Instructions[1], 3, []ValueID{1, 2}) || entry.Terminator.Kind != "condbranch" || entry.Terminator.Value != 3 ||
+		!slices.Equal(entry.Terminator.Successors, []BlockID{2, 3}) {
+		return fmt.Errorf("Phase 2B classify negative branch is invalid")
+	}
+	negative := function.Blocks[1]
+	if len(negative.Instructions) != 2 || !validF64ConstInstruction(negative.Instructions[0], 4, "3ff0000000000000") ||
+		!validFNegInstruction(negative.Instructions[1], 5, 4) || negative.Terminator.Kind != "return" || negative.Terminator.Value != 5 || len(negative.Terminator.Successors) != 0 {
+		return fmt.Errorf("Phase 2B classify negative return is invalid")
+	}
+	second := function.Blocks[2]
+	if len(second.Instructions) != 2 || !validF64ConstInstruction(second.Instructions[0], 6, "3ff0000000000000") ||
+		!validFCmpOLTInstruction(second.Instructions[1], 7, []ValueID{1, 6}) || second.Terminator.Kind != "condbranch" || second.Terminator.Value != 7 ||
+		!slices.Equal(second.Terminator.Successors, []BlockID{4, 5}) {
+		return fmt.Errorf("Phase 2B classify zero branch is invalid")
+	}
+	zero := function.Blocks[3]
+	if len(zero.Instructions) != 1 || !validF64ConstInstruction(zero.Instructions[0], 8, "0000000000000000") || zero.Terminator.Kind != "return" || zero.Terminator.Value != 8 || len(zero.Terminator.Successors) != 0 {
+		return fmt.Errorf("Phase 2B classify zero return is invalid")
+	}
+	positive := function.Blocks[4]
+	if len(positive.Instructions) != 1 || !validF64ConstInstruction(positive.Instructions[0], 9, "3ff0000000000000") || positive.Terminator.Kind != "return" || positive.Terminator.Value != 9 || len(positive.Terminator.Successors) != 0 {
+		return fmt.Errorf("Phase 2B classify positive return is invalid")
+	}
+	return nil
+}
+
+func validF64ConstInstruction(instruction FirstSliceMIRInstruction, id ValueID, bits string) bool {
+	return instruction.ID == id && instruction.Kind == "f64.const" && instruction.Type == RepF64 && len(instruction.Operands) == 0 && len(instruction.IncomingBlocks) == 0 && instruction.NumberBits == bits && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
+}
+
+func validFNegInstruction(instruction FirstSliceMIRInstruction, id ValueID, operand ValueID) bool {
+	return instruction.ID == id && instruction.Kind == "fneg" && instruction.Type == RepF64 && slices.Equal(instruction.Operands, []ValueID{operand}) && len(instruction.IncomingBlocks) == 0 && instruction.NumberBits == "" && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
+}
+
+func validFCmpOLTInstruction(instruction FirstSliceMIRInstruction, id ValueID, operands []ValueID) bool {
+	return instruction.ID == id && instruction.Kind == "fcmp.olt" && instruction.Type == RepI1 && slices.Equal(instruction.Operands, operands) && len(instruction.IncomingBlocks) == 0 && instruction.NumberBits == "" && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil && len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
 }
 
 func verifyLocalCallMIRFunctions(functions []FirstSliceMIRFunction) error {

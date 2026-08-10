@@ -42,7 +42,7 @@ type CaseExecution struct {
 	Flag         *bool  `json:"flag,omitempty"`
 	NullableTag  string `json:"nullableTag,omitempty"`
 	LeftBits     string `json:"leftBits"`
-	RightBits    string `json:"rightBits"`
+	RightBits    string `json:"rightBits,omitempty"`
 	ExpectedBits string `json:"expectedBits"`
 }
 
@@ -150,7 +150,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -178,9 +178,13 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		} else if execution.NullableTag != "" {
 			return fmt.Errorf("non-coalesce execution %q must not contain nullableTag", execution.Name)
 		}
-		for label, value := range map[string]string{
-			"leftBits": execution.LeftBits, "rightBits": execution.RightBits, "expectedBits": execution.ExpectedBits,
-		} {
+		bits := map[string]string{"leftBits": execution.LeftBits, "expectedBits": execution.ExpectedBits}
+		if entryPoint != "classify" {
+			bits["rightBits"] = execution.RightBits
+		} else if execution.RightBits != "" {
+			return fmt.Errorf("classify execution %q must not contain rightBits", execution.Name)
+		}
+		for label, value := range bits {
 			if !isCanonicalBits(value) {
 				return fmt.Errorf("execution %q has invalid %s %q", execution.Name, label, value)
 			}

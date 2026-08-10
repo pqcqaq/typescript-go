@@ -179,6 +179,60 @@ func TestPhase2LoopRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 }
 
+func TestPhase2ClassifyRepresentationAndMIRAreCanonical(t *testing.T) {
+	hir := validPhase2ClassifyHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	function := structural.Functions[0]
+	if function.Name != "classify" || len(function.Parameters) != 1 || len(function.Blocks) != 5 || function.Blocks[0].Instructions[0].Kind != "f64.const" || function.Blocks[1].Instructions[1].Kind != "fneg" || function.Blocks[2].Instructions[1].Kind != "fcmp.olt" {
+		t.Fatalf("classify MIR = %#v", function)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+		want   string
+	}{
+		{name: "literal bits", mutate: func(candidate *FirstSliceMIRArtifact) {
+			candidate.Functions[0].Blocks[0].Instructions[0].NumberBits = "3ff0000000000000"
+		}, want: "negative branch is invalid"},
+		{name: "unary operand", mutate: func(candidate *FirstSliceMIRArtifact) {
+			candidate.Functions[0].Blocks[1].Instructions[1].Operands[0] = 2
+		}, want: "negative return is invalid"},
+		{name: "return value", mutate: func(candidate *FirstSliceMIRArtifact) { candidate.Functions[0].Blocks[4].Terminator.Value = 8 }, want: "positive return is invalid"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := structural
+			candidate.Functions = cloneFirstSliceFunctions(structural.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("classify MIR tamper error = %v, want %q", err, test.want)
+			}
+		})
+	}
+	bound, err := BindFirstSliceCapabilities(structural)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPhase2NullableCoalesceRepresentationAndMIRAreCanonical(t *testing.T) {
 	for _, functionName := range []string{"coalesce", "coalesceAssign"} {
 		t.Run(functionName, func(t *testing.T) {

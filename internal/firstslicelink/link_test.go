@@ -33,6 +33,13 @@ func TestChooseResponseFileSelectsChooseHarness(t *testing.T) {
 	}
 }
 
+func TestClassifyResponseFileSelectsClassifyHarness(t *testing.T) {
+	text := string(responseFileBytes("classify"))
+	if !strings.Contains(text, "bingo_classify_harness.o") || strings.Contains(text, "bingo_add_harness.o") {
+		t.Fatalf("classify response file selected wrong harness: %s", text)
+	}
+}
+
 func TestComputeResponseFileSelectsComputeHarness(t *testing.T) {
 	text := string(responseFileBytes("compute"))
 	if !strings.Contains(text, "bingo_compute_harness.o") || strings.Contains(text, "bingo_add_harness.o") || strings.Contains(text, "bingo_choose_harness.o") {

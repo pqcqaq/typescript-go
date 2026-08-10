@@ -107,6 +107,24 @@ func validPhase2CoalesceHIR() HIRModule {
 	}
 }
 
+func validPhase2ClassifyHIR() HIRModule {
+	requirements := make([]RuntimeCapabilityID, 0)
+	return HIRModule{
+		SchemaVersion: HIRSchemaVersion, Provenance: testHIRProvenance(requirements), LogicalCapabilityRequirements: requirements,
+		Functions: []HIRFunction{{
+			ID: 1, Name: "classify", Exported: true, ReturnType: TypeNumber, Origin: testOrigin(0, 120),
+			Parameters: []HIRParameter{{Name: "value", Value: 1, Type: TypeNumber, Origin: testOrigin(25, 30)}},
+			Blocks: []HIRBlock{
+				{ID: 1, Operations: []HIROp{{ID: 2, Kind: "number.constant", Type: TypeNumber, NumberBits: "0000000000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(40, 41)}, {ID: 3, Kind: "compare", Type: TypeBoolean, Operands: []ValueID{1, 2}, Operator: "<", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(35, 41)}}, Terminator: HIRTerminator{Kind: "condbranch", Value: 3, Successors: []BlockID{2, 3}, Origin: testOrigin(31, 42)}},
+				{ID: 2, Operations: []HIROp{{ID: 4, Kind: "number.constant", Type: TypeNumber, NumberBits: "3ff0000000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(50, 51)}, {ID: 5, Kind: "unary", Type: TypeNumber, Operands: []ValueID{4}, Operator: "-", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(49, 51)}}, Terminator: HIRTerminator{Kind: "return", Value: 5, Origin: testOrigin(45, 52)}},
+				{ID: 3, Operations: []HIROp{{ID: 6, Kind: "number.constant", Type: TypeNumber, NumberBits: "3ff0000000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(60, 61)}, {ID: 7, Kind: "compare", Type: TypeBoolean, Operands: []ValueID{1, 6}, Operator: "<", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(55, 61)}}, Terminator: HIRTerminator{Kind: "condbranch", Value: 7, Successors: []BlockID{4, 5}, Origin: testOrigin(53, 62)}},
+				{ID: 4, Operations: []HIROp{{ID: 8, Kind: "number.constant", Type: TypeNumber, NumberBits: "0000000000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(70, 71)}}, Terminator: HIRTerminator{Kind: "return", Value: 8, Origin: testOrigin(65, 72)}},
+				{ID: 5, Operations: []HIROp{{ID: 9, Kind: "number.constant", Type: TypeNumber, NumberBits: "3ff0000000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(80, 81)}}, Terminator: HIRTerminator{Kind: "return", Value: 9, Origin: testOrigin(75, 82)}},
+			},
+		}},
+	}
+}
+
 func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	module := validPhase2ChooseHIR()
 	encoded, hash, err := CanonicalPhase2HIR(module)
@@ -187,6 +205,35 @@ func TestPhase2NullableCoalesceHIRIsCanonicalAndRejectsUnguardedUnwrap(t *testin
 						t.Fatal("malformed nullable unwrap proof was accepted")
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestPhase2ClassifyHIRIsCanonicalAndRejectsLiteralOrCFGTampering(t *testing.T) {
+	module := validPhase2ClassifyHIR()
+	_, hash, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	if err := VerifyCanonicalPhase2HIR(module); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*HIRModule)
+		want   string
+	}{
+		{name: "malformed number bits", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Operations[0].NumberBits = "3ff" }, want: "outside"},
+		{name: "wrong unary operator", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[1].Operations[1].Operator = "+" }, want: "outside"},
+		{name: "wrong second successor", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[2].Terminator.Successors[1] = 4 }, want: "distinct successors"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := validPhase2ClassifyHIR()
+			test.mutate(&candidate)
+			if err := VerifyPhase2HIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("classify HIR tamper error = %v, want %q", err, test.want)
 			}
 		})
 	}
