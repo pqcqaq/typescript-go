@@ -4,11 +4,88 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/microsoft/typescript-go/internal/ast2bingo"
+	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/irartifact"
+	"github.com/microsoft/typescript-go/internal/llvmbackend"
 )
+
+func TestFirstSliceIRCommandsUseVerifiedArtifacts(t *testing.T) {
+	identity, err := ast2bingo.NewCompilerBuildIdentity(
+		"86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
+		"bb3e4f79b40539d507a607795d0805ebe31b5cec",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := loadCompilerBuildIdentity
+	loadCompilerBuildIdentity = func() (bingo.CompilerBuildIdentity, error) { return identity, nil }
+	t.Cleanup(func() { loadCompilerBuildIdentity = previous })
+
+	caseDirectory := filepath.Join("..", "..", "testdata", "ts2bin", "lowering")
+	var hirOutput, stderr bytes.Buffer
+	if code := runEmitHIR(context.Background(), []string{"--verify", caseDirectory}, &hirOutput, &stderr); code != exitSuccess {
+		t.Fatalf("emit-hir exit = %d, stderr = %s", code, &stderr)
+	}
+	hir, err := irartifact.DecodeHIR(bytes.TrimSpace(hirOutput.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hir.Functions[0].Name != "add" {
+		t.Fatalf("emitted HIR function = %#v", hir.Functions[0])
+	}
+
+	left := filepath.Join(t.TempDir(), "left.hir.json")
+	right := filepath.Join(t.TempDir(), "right.hir.json")
+	for _, path := range []string{left, right} {
+		if err := os.WriteFile(path, bytes.TrimSpace(hirOutput.Bytes()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var diffOutput bytes.Buffer
+	stderr.Reset()
+	if code := runIRDiff([]string{"--kind", "hir", left, right}, &diffOutput, &stderr); code != exitSuccess {
+		t.Fatalf("diff exit = %d, stderr = %s", code, &stderr)
+	}
+	if !strings.Contains(diffOutput.String(), `"compatible":true`) || !strings.Contains(diffOutput.String(), `"equal":true`) {
+		t.Fatalf("unexpected diff output: %s", &diffOutput)
+	}
+
+	stderr.Reset()
+	machine, machineErr := llvmbackend.OpenFirstSliceTargetMachine()
+	if machineErr == nil {
+		machine.Close()
+		var mirOutput bytes.Buffer
+		if code := runEmitMIR(context.Background(), []string{"--verify", caseDirectory}, &mirOutput, &stderr); code != exitSuccess {
+			t.Fatalf("LLVM-enabled emit-mir exit = %d, stderr = %s", code, &stderr)
+		}
+		if _, err := irartifact.DecodeMIR(bytes.TrimSpace(mirOutput.Bytes())); err != nil {
+			t.Fatalf("decode emitted MIR: %v", err)
+		}
+		mirPath := filepath.Join(t.TempDir(), "final.mir.json")
+		if err := os.WriteFile(mirPath, bytes.TrimSpace(mirOutput.Bytes()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		var mirDiff bytes.Buffer
+		stderr.Reset()
+		if code := runIRDiff([]string{"--kind", "mir", mirPath, mirPath}, &mirDiff, &stderr); code != exitSuccess {
+			t.Fatalf("MIR diff exit = %d, stderr = %s", code, &stderr)
+		}
+	} else {
+		if code := runEmitMIR(context.Background(), []string{"--verify", caseDirectory}, io.Discard, &stderr); code != exitDiagnostics {
+			t.Fatalf("LLVM-unavailable emit-mir exit = %d, stderr = %s", code, &stderr)
+		}
+		if !strings.Contains(stderr.String(), "LLVM 20 target machine is unavailable") {
+			t.Fatalf("emit-mir did not fail closed without llvm20 tag: %s", &stderr)
+		}
+	}
+}
 
 func TestVersionJSONContainsLockedProvenance(t *testing.T) {
 	t.Parallel()

@@ -16,7 +16,11 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/microsoft/typescript-go/internal/ast2bingo"
+	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/core"
+	"github.com/microsoft/typescript-go/internal/irartifact"
+	"github.com/microsoft/typescript-go/internal/llvmbackend"
 	"github.com/microsoft/typescript-go/internal/tsfrontend"
 )
 
@@ -27,6 +31,8 @@ const (
 )
 
 const commandReportSchemaVersion = 1
+
+var loadCompilerBuildIdentity = ast2bingo.InjectedCompilerBuildIdentity
 
 type processResult struct {
 	Output   []byte
@@ -88,6 +94,12 @@ func runWithEnvironment(ctx context.Context, args []string, stdout, stderr io.Wr
 		return runCheck(ctx, args[1:], stdout, stderr)
 	case "snapshot", "dump-snapshot":
 		return runSnapshot(ctx, args[0], args[1:], stdout, stderr)
+	case "emit-hir":
+		return runEmitHIR(ctx, args[1:], stdout, stderr)
+	case "emit-mir":
+		return runEmitMIR(ctx, args[1:], stdout, stderr)
+	case "diff":
+		return runIRDiff(args[1:], stdout, stderr)
 	case "doctor":
 		return runDoctor(ctx, args[1:], stdout, stderr, environment)
 	case "compatibility", "upstream-audit":
@@ -317,6 +329,195 @@ func writeSnapshotOutput(output string, data []byte, stdout io.Writer) error {
 		}
 		_, err := io.WriteString(stdout, "\n")
 		return err
+	}
+	return os.WriteFile(output, data, 0o644)
+}
+
+func runEmitHIR(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("emit-hir", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	output := flags.String("output", "", "write HIR to this file instead of stdout")
+	flags.StringVar(output, "o", "", "write HIR to this file instead of stdout")
+	format := flags.String("format", "json", "output format: json or text")
+	verify := flags.Bool("verify", false, "re-decode and verify the emitted HIR artifact")
+	if err := flags.Parse(args); err != nil || flags.NArg() != 1 {
+		fmt.Fprintln(stderr, "ts2bin emit-hir: expected exactly one case directory")
+		return exitUsage
+	}
+	identity, err := loadCompilerBuildIdentity()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-hir: compiler identity: %v\n", err)
+		return exitUsage
+	}
+	module, err := irartifact.LoadHIR(flags.Arg(0), identity)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-hir: %v\n", err)
+		return exitDiagnostics
+	}
+	canonical, err := irartifact.CanonicalHIR(module)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-hir: encode artifact: %v\n", err)
+		return exitDiagnostics
+	}
+	if *verify {
+		if _, err := irartifact.DecodeHIR(canonical); err != nil {
+			fmt.Fprintf(stderr, "ts2bin emit-hir: verify emitted artifact: %v\n", err)
+			return exitDiagnostics
+		}
+	}
+	data, err := formatHIRArtifact(*format, canonical, module)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-hir: %v\n", err)
+		return exitUsage
+	}
+	if err := writeIRArtifactOutput(*output, data, stdout); err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-hir: write output: %v\n", err)
+		return exitUsage
+	}
+	return exitSuccess
+}
+
+func formatHIRArtifact(format string, canonical []byte, module bingo.HIRModule) ([]byte, error) {
+	switch format {
+	case "json":
+		return canonical, nil
+	case "text":
+		rendered, err := irartifact.RenderHIRText(module)
+		return []byte(rendered), err
+	default:
+		return nil, fmt.Errorf("unsupported format %q", format)
+	}
+}
+
+func runEmitMIR(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("emit-mir", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	output := flags.String("output", "", "write MIR to this file instead of stdout")
+	flags.StringVar(output, "o", "", "write MIR to this file instead of stdout")
+	format := flags.String("format", "json", "output format: json or text")
+	verify := flags.Bool("verify", false, "re-decode and verify the emitted MIR artifact")
+	if err := flags.Parse(args); err != nil || flags.NArg() != 1 {
+		fmt.Fprintln(stderr, "ts2bin emit-mir: expected exactly one case directory")
+		return exitUsage
+	}
+	identity, err := loadCompilerBuildIdentity()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: compiler identity: %v\n", err)
+		return exitUsage
+	}
+	machine, err := llvmbackend.OpenFirstSliceTargetMachine()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: %v\n", err)
+		return exitDiagnostics
+	}
+	defer machine.Close()
+	module, err := irartifact.LoadMIR(ctx, flags.Arg(0), identity, machine)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: %v\n", err)
+		return exitDiagnostics
+	}
+	canonical, err := irartifact.CanonicalMIR(module)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: encode artifact: %v\n", err)
+		return exitDiagnostics
+	}
+	if *verify {
+		if _, err := irartifact.DecodeMIR(canonical); err != nil {
+			fmt.Fprintf(stderr, "ts2bin emit-mir: verify emitted artifact: %v\n", err)
+			return exitDiagnostics
+		}
+	}
+	data, err := formatMIRArtifact(*format, canonical, module)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: %v\n", err)
+		return exitUsage
+	}
+	if err := writeIRArtifactOutput(*output, data, stdout); err != nil {
+		fmt.Fprintf(stderr, "ts2bin emit-mir: write output: %v\n", err)
+		return exitUsage
+	}
+	return exitSuccess
+}
+
+func formatMIRArtifact(format string, canonical []byte, module bingo.FirstSliceMIRArtifact) ([]byte, error) {
+	switch format {
+	case "json":
+		return canonical, nil
+	case "text":
+		rendered, err := irartifact.RenderMIRText(module)
+		return []byte(rendered), err
+	default:
+		return nil, fmt.Errorf("unsupported format %q", format)
+	}
+}
+
+func runIRDiff(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("diff", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	kind := flags.String("kind", "", "IR kind: hir or mir")
+	output := flags.String("output", "", "write diff report to this file instead of stdout")
+	flags.StringVar(output, "o", "", "write diff report to this file instead of stdout")
+	format := flags.String("format", "json", "output format: json or text")
+	if err := flags.Parse(args); err != nil || flags.NArg() != 2 {
+		fmt.Fprintln(stderr, "ts2bin diff: expected --kind hir|mir and two artifact paths")
+		return exitUsage
+	}
+	if *kind != string(irartifact.KindHIR) && *kind != string(irartifact.KindMIR) {
+		fmt.Fprintf(stderr, "ts2bin diff: unsupported IR kind %q\n", *kind)
+		return exitUsage
+	}
+	left, err := os.ReadFile(flags.Arg(0))
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin diff: read left artifact: %v\n", err)
+		return exitUsage
+	}
+	right, err := os.ReadFile(flags.Arg(1))
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin diff: read right artifact: %v\n", err)
+		return exitUsage
+	}
+	report, err := irartifact.Diff(irartifact.Kind(*kind), left, right)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin diff: %v\n", err)
+		return exitDiagnostics
+	}
+	data, err := formatDiffReport(*format, report)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin diff: %v\n", err)
+		return exitUsage
+	}
+	if err := writeIRArtifactOutput(*output, data, stdout); err != nil {
+		fmt.Fprintf(stderr, "ts2bin diff: write output: %v\n", err)
+		return exitUsage
+	}
+	if !report.Equal {
+		return exitDiagnostics
+	}
+	return exitSuccess
+}
+
+func formatDiffReport(format string, report irartifact.DiffReport) ([]byte, error) {
+	switch format {
+	case "json":
+		return report.CanonicalBytes()
+	case "text":
+		rendered, err := irartifact.RenderDiffText(report)
+		return []byte(rendered), err
+	default:
+		return nil, fmt.Errorf("unsupported format %q", format)
+	}
+}
+
+func writeIRArtifactOutput(output string, data []byte, stdout io.Writer) error {
+	if output == "" || output == "-" {
+		if _, err := stdout.Write(data); err != nil {
+			return err
+		}
+		if len(data) == 0 || data[len(data)-1] != '\n' {
+			_, err := io.WriteString(stdout, "\n")
+			return err
+		}
+		return nil
 	}
 	return os.WriteFile(output, data, 0o644)
 }
@@ -643,5 +844,5 @@ func shortCommit(commit string) string {
 
 func writeUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "usage: ts2bin <command> [options]")
-	fmt.Fprintln(writer, "commands: check, snapshot, dump-snapshot, compatibility, upstream-audit, doctor, test, version")
+	fmt.Fprintln(writer, "commands: check, snapshot, dump-snapshot, emit-hir, emit-mir, diff, compatibility, upstream-audit, doctor, test, version")
 }
