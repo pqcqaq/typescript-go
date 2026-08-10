@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "029c5783148e6bee1a7f06a4f73dcd1b0321fdf409d6fca9ab6fb238e1c08382"
+	LockedRuntimeSourceHash             = "b374c9d1e99e63d5f09e9b795c391f99c758db84d410957c2e9095414b94c516"
 	LockedABISchemaHash                 = "fcbb2533877bbc8121ae68bd0441d05c9dc51612e1fdce34b00c3d92a429a0ad"
 	LockedTargetManifestHash            = "a94fe616bfc15ba05fc8f8fd6cc1401fddd62e047341792b031f33138a44b09a"
-	LockedRuntimeManifestHash           = "4178757a790859cf621caf41dddb2b39c9b86950e7334b709b42d6cec93b183a"
+	LockedRuntimeManifestHash           = "20f0de460672c5e51efdb2759a49206894d27dca9f043d07080d54ffc854e4b7"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
