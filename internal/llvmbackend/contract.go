@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+
+	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
 const (
@@ -37,6 +39,29 @@ type DataLayout struct {
 	ContentHash   string `json:"contentHash"`
 }
 
+// CanonicalBytes returns the validated serialized layout artifact.
+func (layout DataLayout) CanonicalBytes() ([]byte, error) {
+	if err := ValidateDataLayout(layout); err != nil {
+		return nil, err
+	}
+	return json.Marshal(layout)
+}
+
+// Digest returns the validated layout identity embedded in the manifest.
+func (layout DataLayout) Digest() string { return layout.ContentHash }
+
+// DecodeDataLayout strictly decodes and validates a serialized layout.
+func DecodeDataLayout(data []byte) (*DataLayout, error) {
+	var layout DataLayout
+	if err := jsonx.Unmarshal(data, &layout, jsonx.RejectUnknownMembers(true)); err != nil {
+		return nil, fmt.Errorf("decode data layout: %w", err)
+	}
+	if err := ValidateDataLayout(layout); err != nil {
+		return nil, err
+	}
+	return &layout, nil
+}
+
 // ToolchainManifest freezes the toolchain facts required by ResolveTargetContext.
 // It is an observed manifest, not a claim that runtime capabilities are bound.
 type ToolchainManifest struct {
@@ -62,6 +87,18 @@ func (m ToolchainManifest) CanonicalBytes() ([]byte, error) {
 }
 
 func (m ToolchainManifest) Digest() string { return m.ContentHash }
+
+// DecodeToolchainManifest strictly decodes and validates a serialized manifest.
+func DecodeToolchainManifest(data []byte) (*ToolchainManifest, error) {
+	var manifest ToolchainManifest
+	if err := jsonx.Unmarshal(data, &manifest, jsonx.RejectUnknownMembers(true)); err != nil {
+		return nil, fmt.Errorf("decode toolchain manifest: %w", err)
+	}
+	if err := ValidateToolchainManifest(manifest); err != nil {
+		return nil, err
+	}
+	return &manifest, nil
+}
 
 func ValidateToolchainManifest(m ToolchainManifest) error {
 	if m.SchemaVersion != ToolchainManifestSchemaVersion {
