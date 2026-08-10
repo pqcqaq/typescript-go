@@ -10,6 +10,7 @@ import (
 func TestRunnableManifestRejectsAmbiguousExecutions(t *testing.T) {
 	valid := CaseManifest{
 		TimeoutMS: 2000,
+		Oracle:    "node",
 		Executions: []CaseExecution{{
 			Name: "one-plus-two", LeftBits: "3ff0000000000000", RightBits: "4000000000000000", ExpectedBits: "4008000000000000",
 		}},
@@ -19,6 +20,7 @@ func TestRunnableManifestRejectsAmbiguousExecutions(t *testing.T) {
 	}
 	for name, mutate := range map[string]func(*CaseManifest){
 		"timeout":        func(value *CaseManifest) { value.TimeoutMS = 0 },
+		"oracle":         func(value *CaseManifest) { value.Oracle = "" },
 		"duplicate name": func(value *CaseManifest) { value.Executions = append(value.Executions, value.Executions[0]) },
 		"uppercase bits": func(value *CaseManifest) { value.Executions[0].ExpectedBits = "400800000000000A" },
 		"short bits":     func(value *CaseManifest) { value.Executions[0].LeftBits = "0" },

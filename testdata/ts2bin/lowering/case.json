@@ -5,7 +5,14 @@
   "buildPlan": "build-plan.json",
   "runtimeManifest": "runtime-manifest.json",
   "timeoutMs": 2000,
+  "oracle": "node",
   "executions": [
+    {
+      "name": "canonical-nan-plus-one",
+      "leftBits": "7ff8000000000000",
+      "rightBits": "3ff0000000000000",
+      "expectedBits": "7ff8000000000000"
+    },
     {
       "name": "negative-zero-plus-negative-zero",
       "leftBits": "8000000000000000",

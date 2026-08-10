@@ -6,6 +6,7 @@ import (
 
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/firstsliceoracle"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 )
 
@@ -23,8 +24,8 @@ func TestRunnerReportBindsArtifactsAndObservableOutput(t *testing.T) {
 func TestRunnerReportRequiresCanonicalExecutionOrder(t *testing.T) {
 	report := validReport(t)
 	report.Executions = []ExecutionReport{
-		{Name: "z", Arguments: []string{"0000000000000000", "0000000000000000"}, ExpectedBits: "0000000000000000", ActualBits: "0000000000000000", OutputHash: hashBytes([]byte("0000000000000000\n")), OK: true},
-		{Name: "a", Arguments: []string{"0000000000000000", "0000000000000000"}, ExpectedBits: "0000000000000000", ActualBits: "0000000000000000", OutputHash: hashBytes([]byte("0000000000000000\n")), OK: true},
+		{Name: "z", Arguments: []string{"0000000000000000", "0000000000000000"}, ExpectedBits: "0000000000000000", ActualBits: "0000000000000000", OutputHash: hashBytes([]byte("0000000000000000\n")), NodeBits: "0000000000000000", NodeOutputHash: hashBytes([]byte("0000000000000000\n")), OK: true},
+		{Name: "a", Arguments: []string{"0000000000000000", "0000000000000000"}, ExpectedBits: "0000000000000000", ActualBits: "0000000000000000", OutputHash: hashBytes([]byte("0000000000000000\n")), NodeBits: "0000000000000000", NodeOutputHash: hashBytes([]byte("0000000000000000\n")), OK: true},
 	}
 	report.ContentHash, _ = reportContentHash(report)
 	if err := VerifyReport(report); err == nil || !strings.Contains(err.Error(), "canonical name order") {
@@ -44,6 +45,8 @@ func validReport(t *testing.T) Report {
 		CaseName:              "add-number-number",
 		TargetTriple:          llvmbackend.FirstSliceTriple,
 		TimeoutMS:             2000,
+		NodeVersion:           firstsliceoracle.LockedNodeVersion,
+		NodeScriptHash:        firstsliceoracle.ScriptHash(),
 		CompilerBuildIdentity: identity,
 		Artifacts: ArtifactProvenance{
 			FrontendSnapshotHash: strings.Repeat("3", 64), HIRContentHash: strings.Repeat("4", 64),
@@ -54,7 +57,8 @@ func validReport(t *testing.T) Report {
 		},
 		Executions: []ExecutionReport{{
 			Name: "one-plus-two", Arguments: []string{"3ff0000000000000", "4000000000000000"},
-			ExpectedBits: "4008000000000000", ActualBits: "4008000000000000", OutputHash: hashBytes([]byte("4008000000000000\n")), OK: true,
+			ExpectedBits: "4008000000000000", ActualBits: "4008000000000000", OutputHash: hashBytes([]byte("4008000000000000\n")),
+			NodeBits: "4008000000000000", NodeOutputHash: hashBytes([]byte("4008000000000000\n")), OK: true,
 		}},
 		OK: true,
 	}

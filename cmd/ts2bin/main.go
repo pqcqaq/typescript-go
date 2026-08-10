@@ -658,6 +658,10 @@ func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutpu
 	if err != nil {
 		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, fmt.Errorf("LLD 20 not found: %w", err), exitDiagnostics)
 	}
+	node, err := firstAvailableTool(environment.lookPath, "node")
+	if err != nil {
+		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, fmt.Errorf("Node 22.22.0 not found: %w", err), exitDiagnostics)
+	}
 	outputDirectory, err := os.MkdirTemp("", "ts2bin-static-core-stage-")
 	if err != nil {
 		return writeStaticCoreFailure(stdout, stderr, jsonOutput, firstslicerunner.Report{}, err, exitUsage)
@@ -668,7 +672,7 @@ func runStaticCoreTests(ctx context.Context, stdout, stderr io.Writer, jsonOutpu
 	caseDirectory := filepath.Join(repositoryRoot, "typescript-go", "testdata", "ts2bin", "lowering")
 	report, err := executeStaticCoreCase(ctx, caseDirectory, identity, machine, firstslicerunner.Options{
 		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
-		OutputDirectory: outputDirectory, Clang: clang, LLD: lld,
+		OutputDirectory: outputDirectory, Clang: clang, LLD: lld, Node: node,
 	})
 	if err != nil {
 		return writeStaticCoreFailure(stdout, stderr, jsonOutput, report, err, exitDiagnostics)

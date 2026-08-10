@@ -52,14 +52,18 @@ func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Fatal(err)
+	}
 	report, err := RunCase(context.Background(), caseDirectory, identity, machine, Options{
 		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
-		OutputDirectory: t.TempDir(), Clang: clang, LLD: lld,
+		OutputDirectory: t.TempDir(), Clang: clang, LLD: lld, Node: node,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !report.OK || len(report.Executions) != 2 || report.Executions[0].Name != "negative-zero-plus-negative-zero" || report.Executions[1].Name != "one-plus-two" {
+	if !report.OK || len(report.Executions) != 3 || report.Executions[0].Name != "canonical-nan-plus-one" || report.Executions[1].Name != "negative-zero-plus-negative-zero" || report.Executions[2].Name != "one-plus-two" {
 		t.Fatalf("unexpected static-core report: %#v", report)
 	}
 	if _, err := report.CanonicalBytes(); err != nil {

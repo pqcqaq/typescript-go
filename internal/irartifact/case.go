@@ -31,6 +31,7 @@ type CaseManifest struct {
 	BuildPlan        string          `json:"buildPlan,omitempty"`
 	RuntimeManifest  string          `json:"runtimeManifest,omitempty"`
 	TimeoutMS        uint32          `json:"timeoutMs,omitempty"`
+	Oracle           string          `json:"oracle,omitempty"`
 	Executions       []CaseExecution `json:"executions,omitempty"`
 }
 
@@ -135,6 +136,9 @@ func validateManifest(manifest CaseManifest, requireBackend bool) error {
 func ValidateRunnableManifest(manifest CaseManifest) error {
 	if manifest.TimeoutMS == 0 || manifest.TimeoutMS > 60_000 {
 		return fmt.Errorf("case timeoutMs must be between 1 and 60000")
+	}
+	if manifest.Oracle != "node" {
+		return fmt.Errorf("runnable case oracle is %q, want node", manifest.Oracle)
 	}
 	if len(manifest.Executions) == 0 {
 		return fmt.Errorf("runnable case has no executions")

@@ -15,12 +15,13 @@ import (
 
 	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/firstslicelink"
+	"github.com/microsoft/typescript-go/internal/firstsliceoracle"
 	"github.com/microsoft/typescript-go/internal/irartifact"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 	"github.com/microsoft/typescript-go/internal/targetcontext"
 )
 
-const ReportSchemaVersion uint32 = 1
+const ReportSchemaVersion uint32 = 2
 
 type Options struct {
 	RuntimeDirectory   string
@@ -28,6 +29,7 @@ type Options struct {
 	OutputDirectory    string
 	Clang              string
 	LLD                string
+	Node               string
 }
 
 type ArtifactProvenance struct {
@@ -46,12 +48,14 @@ type ArtifactProvenance struct {
 }
 
 type ExecutionReport struct {
-	Name         string   `json:"name"`
-	Arguments    []string `json:"arguments"`
-	ExpectedBits string   `json:"expectedBits"`
-	ActualBits   string   `json:"actualBits"`
-	OutputHash   string   `json:"outputHash"`
-	OK           bool     `json:"ok"`
+	Name           string   `json:"name"`
+	Arguments      []string `json:"arguments"`
+	ExpectedBits   string   `json:"expectedBits"`
+	ActualBits     string   `json:"actualBits"`
+	OutputHash     string   `json:"outputHash"`
+	NodeBits       string   `json:"nodeBits"`
+	NodeOutputHash string   `json:"nodeOutputHash"`
+	OK             bool     `json:"ok"`
 }
 
 type Report struct {
@@ -60,6 +64,8 @@ type Report struct {
 	CaseName              string                      `json:"caseName"`
 	TargetTriple          string                      `json:"targetTriple"`
 	TimeoutMS             uint32                      `json:"timeoutMs"`
+	NodeVersion           string                      `json:"nodeVersion"`
+	NodeScriptHash        string                      `json:"nodeScriptHash"`
 	CompilerBuildIdentity bingo.CompilerBuildIdentity `json:"compilerBuildIdentity"`
 	Artifacts             ArtifactProvenance          `json:"artifacts"`
 	Executions            []ExecutionReport           `json:"executions"`
@@ -126,6 +132,10 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	if err != nil {
 		return Report{}, fmt.Errorf("case %s link: %w", caseData.Manifest.Name, err)
 	}
+	nodeOracle, err := firstsliceoracle.OpenNode(caseContext, options.Node)
+	if err != nil {
+		return Report{}, fmt.Errorf("case %s Node oracle: %w", caseData.Manifest.Name, err)
+	}
 
 	executions := slices.Clone(caseData.Manifest.Executions)
 	slices.SortFunc(executions, func(left, right irartifact.CaseExecution) int { return strings.Compare(left.Name, right.Name) })
@@ -137,11 +147,16 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			return Report{}, fmt.Errorf("case %s execution %s: %w", caseData.Manifest.Name, execution.Name, err)
 		}
 		actual := strings.TrimSuffix(string(result.Output), "\n")
-		ok := actual == execution.ExpectedBits
+		nodeResult, err := nodeOracle.Add(caseContext, execution.LeftBits, execution.RightBits)
+		if err != nil {
+			return Report{}, fmt.Errorf("case %s execution %s Node oracle: %w", caseData.Manifest.Name, execution.Name, err)
+		}
+		nodeBits := strings.TrimSuffix(string(nodeResult.Output), "\n")
+		ok := actual == execution.ExpectedBits && nodeBits == execution.ExpectedBits && actual == nodeBits
 		allOK = allOK && ok
 		executionReports = append(executionReports, ExecutionReport{
 			Name: execution.Name, Arguments: slices.Clone(result.Arguments), ExpectedBits: execution.ExpectedBits,
-			ActualBits: actual, OutputHash: result.OutputHash, OK: ok,
+			ActualBits: actual, OutputHash: result.OutputHash, NodeBits: nodeBits, NodeOutputHash: nodeResult.OutputHash, OK: ok,
 		})
 	}
 	report := Report{
@@ -150,6 +165,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		CaseName:              caseData.Manifest.Name,
 		TargetTriple:          runtimeManifest.Target.Triple,
 		TimeoutMS:             caseData.Manifest.TimeoutMS,
+		NodeVersion:           nodeOracle.Version(),
+		NodeScriptHash:        nodeOracle.ScriptHash(),
 		CompilerBuildIdentity: identity,
 		Artifacts: ArtifactProvenance{
 			FrontendSnapshotHash: caseData.Frontend.ContentHash,
@@ -188,7 +205,8 @@ func VerifyReport(report Report) error {
 	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
-	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 {
+	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
+		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != firstsliceoracle.ScriptHash() {
 		return fmt.Errorf("invalid first-slice runner target or timeout")
 	}
 	if err := bingo.ValidateCompilerBuildIdentity(report.CompilerBuildIdentity); err != nil {
@@ -218,7 +236,7 @@ func VerifyReport(report Report) error {
 	}
 	allOK := true
 	for index, execution := range report.Executions {
-		if strings.TrimSpace(execution.Name) == "" || len(execution.Arguments) != 2 || !isBits(execution.ExpectedBits) || !isBits(execution.ActualBits) {
+		if strings.TrimSpace(execution.Name) == "" || len(execution.Arguments) != 2 || !isBits(execution.ExpectedBits) || !isBits(execution.ActualBits) || !isBits(execution.NodeBits) {
 			return fmt.Errorf("invalid execution report at index %d", index)
 		}
 		if index > 0 && report.Executions[index-1].Name >= execution.Name {
@@ -227,7 +245,10 @@ func VerifyReport(report Report) error {
 		if execution.Arguments[0] == "" || execution.Arguments[1] == "" || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
 			return fmt.Errorf("execution %q output identity is invalid", execution.Name)
 		}
-		if execution.OK != (execution.ExpectedBits == execution.ActualBits) {
+		if hashBytes([]byte(execution.NodeBits+"\n")) != execution.NodeOutputHash {
+			return fmt.Errorf("execution %q Node output identity is invalid", execution.Name)
+		}
+		if execution.OK != (execution.ExpectedBits == execution.ActualBits && execution.ExpectedBits == execution.NodeBits) {
 			return fmt.Errorf("execution %q result flag is invalid", execution.Name)
 		}
 		allOK = allOK && execution.OK
@@ -255,7 +276,7 @@ func validateOptions(options Options) error {
 			return fmt.Errorf("%s must be an absolute path", name)
 		}
 	}
-	if strings.TrimSpace(options.Clang) == "" || strings.TrimSpace(options.LLD) == "" {
+	if strings.TrimSpace(options.Clang) == "" || strings.TrimSpace(options.LLD) == "" || strings.TrimSpace(options.Node) == "" {
 		return firstslicelink.ErrLinkUnavailable
 	}
 	return nil
@@ -277,11 +298,13 @@ func reportContentHash(report Report) (string, error) {
 		CaseName              string                      `json:"caseName"`
 		TargetTriple          string                      `json:"targetTriple"`
 		TimeoutMS             uint32                      `json:"timeoutMs"`
+		NodeVersion           string                      `json:"nodeVersion"`
+		NodeScriptHash        string                      `json:"nodeScriptHash"`
 		CompilerBuildIdentity bingo.CompilerBuildIdentity `json:"compilerBuildIdentity"`
 		Artifacts             ArtifactProvenance          `json:"artifacts"`
 		Executions            []ExecutionReport           `json:"executions"`
 		OK                    bool                        `json:"ok"`
-	}{report.SchemaVersion, report.Stage, report.CaseName, report.TargetTriple, report.TimeoutMS, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.OK})
+	}{report.SchemaVersion, report.Stage, report.CaseName, report.TargetTriple, report.TimeoutMS, report.NodeVersion, report.NodeScriptHash, report.CompilerBuildIdentity, report.Artifacts, report.Executions, report.OK})
 	if err != nil {
 		return "", err
 	}

@@ -1,0 +1,24 @@
+package firstsliceoracle
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestNodeOracleScriptIdentityIsStable(t *testing.T) {
+	first := ScriptHash()
+	second := ScriptHash()
+	if first != second || len(first) != 64 {
+		t.Fatalf("script hash = %q / %q", first, second)
+	}
+	if !strings.Contains(nodeAddScript, "setBigUint64") || !strings.Contains(nodeAddScript, "getFloat64") || !strings.Contains(nodeAddScript, "setFloat64") {
+		t.Fatal("Node oracle does not perform explicit binary64 conversion")
+	}
+}
+
+func TestNodeOracleRejectsNonCanonicalBitsBeforeExecution(t *testing.T) {
+	oracle := &NodeOracle{path: "must-not-run", version: LockedNodeVersion, scriptHash: ScriptHash()}
+	if _, err := oracle.Add(t.Context(), "0", "0000000000000000"); err == nil {
+		t.Fatal("short binary64 input was accepted")
+	}
+}
