@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "1d78ff6c21859bcb4218ef80af32eba4e5aac7a5e6f929bf364e80ac087a239e"
-	LockedABISchemaHash                 = "d690e45fd62f92393352e8a9267c0ff9adf86dbdd8db32f0b1bf6efe502fc36c"
-	LockedTargetManifestHash            = "45479fdf1475d8cbb677c6fa9d8e3c13afade7e5d7b357a93445afde6f5cb8b2"
-	LockedRuntimeManifestHash           = "b3bd5f10dd88b59df48c84344effdd919ca13eb354493589f78da72ab657fb11"
+	LockedRuntimeSourceHash             = "91f289c0d4a0435db1a4147d5497026fe785475068d6641cb759687a66c96f1a"
+	LockedABISchemaHash                 = "e3f41e041c51b57f818e95148217bfdf40e5df597fe061fbbaba1d551a2d2ff8"
+	LockedTargetManifestHash            = "494e7b5017488824e620d6867eef721028a5aaec750a9278587f2a1790f92929"
+	LockedRuntimeManifestHash           = "1750f08c024d597a1c234ab8b55639fa3e2d900e846cfc64f177a82bda4bec2c"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -41,11 +41,12 @@ type RuntimeArtifact struct {
 
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
-	StartupObject        RuntimeArtifact  `json:"startupObject"`
-	HarnessObject        RuntimeArtifact  `json:"harnessObject"`
-	ComputeHarnessObject *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
-	ChooseHarnessObject  *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
-	UmbrellaArchive      RuntimeArtifact  `json:"umbrellaArchive"`
+	StartupObject         RuntimeArtifact  `json:"startupObject"`
+	HarnessObject         RuntimeArtifact  `json:"harnessObject"`
+	ComputeHarnessObject  *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
+	ChooseHarnessObject   *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
+	CoalesceHarnessObject *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
+	UmbrellaArchive       RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
 // RuntimeCapability is one available versioned C ABI implementation.
@@ -145,6 +146,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	if manifest.Artifacts.ComputeHarnessObject != nil {
 		if err := validateRuntimeArtifact(*manifest.Artifacts.ComputeHarnessObject, "bingo_compute_harness.o"); err != nil {
 			return fmt.Errorf("compute harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.CoalesceHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.CoalesceHarnessObject, "bingo_coalesce_harness.o"); err != nil {
+			return fmt.Errorf("coalesce harness object: %w", err)
 		}
 	}
 	if len(manifest.Capabilities) != 1 {

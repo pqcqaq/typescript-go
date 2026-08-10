@@ -129,7 +129,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v4", []byte(`{"logicalCapabilityRequirements":[]}`))
+	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v5", []byte(`{"logicalCapabilityRequirements":[]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 		t.Fatal("resolver claimed a MIR-derived bound capability closure")
 	}
 
-	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v4", []byte(`{"tamperedButOpaque":true}`))
+	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v5", []byte(`{"tamperedButOpaque":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}

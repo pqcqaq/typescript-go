@@ -71,6 +71,13 @@ func TestPrimitiveRepresentationBindingsSeparateBooleanAndNumber(t *testing.T) {
 	if _, err := PrimitiveRepresentationBinding(TypeString); err == nil || !strings.Contains(err.Error(), "no representation binding") {
 		t.Fatalf("unsupported representation error = %v", err)
 	}
+	nullable, err := PrimitiveRepresentationBinding(TypeNullableNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nullable != (RepresentationBinding{SourceType: TypeNullableNumber, RepType: RepNullableF64, BitWidth: 128, ABIAlign: 8}) {
+		t.Fatalf("nullable-number representation binding = %#v", nullable)
+	}
 }
 
 func TestPhase2ChooseRepresentationAndMIRAreCanonical(t *testing.T) {
@@ -169,6 +176,57 @@ func TestPhase2LoopRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 	if err := VerifyBoundFirstSliceMIR(bound); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPhase2CoalesceRepresentationAndMIRAreCanonical(t *testing.T) {
+	hir := validPhase2CoalesceHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Bindings) != 3 || plan.Bindings[2].SourceType != TypeNullableNumber || plan.Bindings[2].RepType != RepNullableF64 || plan.Bindings[2].BitWidth != 128 || plan.Bindings[2].ABIAlign != 8 {
+		t.Fatalf("coalesce representation bindings = %#v", plan.Bindings)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	function := structural.Functions[0]
+	if function.Parameters[0].Type != RepNullableF64 || function.Blocks[0].Instructions[0].Kind != "nullable.is-nullish" || function.Blocks[2].Instructions[0].Kind != "nullable.unwrap" || function.Blocks[3].Instructions[0].Kind != "phi" {
+		t.Fatalf("coalesce MIR = %#v", function)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+	}{
+		{name: "tag test", mutate: func(candidate *FirstSliceMIRArtifact) {
+			candidate.Functions[0].Blocks[0].Instructions[0].Kind = "i1.copy"
+		}},
+		{name: "unwrap", mutate: func(candidate *FirstSliceMIRArtifact) {
+			candidate.Functions[0].Blocks[2].Instructions[0].Operands[0] = 2
+		}},
+		{name: "phi edge", mutate: func(candidate *FirstSliceMIRArtifact) {
+			candidate.Functions[0].Blocks[3].Instructions[0].IncomingBlocks[0] = 3
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := structural
+			candidate.Functions = cloneFirstSliceFunctions(structural.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil {
+				t.Fatal("malformed coalesce MIR was accepted")
+			}
+		})
 	}
 }
 
@@ -378,7 +436,7 @@ func TestRepresentationPlanAndMIRStrictDecodersRejectUnknownFields(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	unknownPlan := strings.Replace(string(planBytes), `"schemaVersion":1`, `"schemaVersion":1,"unknown":true`, 1)
+	unknownPlan := strings.Replace(string(planBytes), fmt.Sprintf(`"schemaVersion":%d`, RepresentationPlanSchemaVersion), fmt.Sprintf(`"schemaVersion":%d,"unknown":true`, RepresentationPlanSchemaVersion), 1)
 	if _, err := DecodeRepresentationPlan([]byte(unknownPlan)); err == nil || !strings.Contains(err.Error(), "unknown") {
 		t.Fatalf("unknown representation field error = %v", err)
 	}

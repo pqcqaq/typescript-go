@@ -11,7 +11,7 @@ import (
 )
 
 func TestCommittedCaseBuildPlansMatchSnapshots(t *testing.T) {
-	for _, name := range []string{"lowering", "choose", "calllocal"} {
+	for _, name := range []string{"lowering", "choose", "calllocal", "loop", "coalesce"} {
 		t.Run(name, func(t *testing.T) {
 			checkCommittedBuildPlan(t, filepath.Join("..", "..", "testdata", "ts2bin", name))
 		})

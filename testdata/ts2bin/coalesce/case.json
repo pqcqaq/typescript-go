@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "coalesce-nullable-number",
+  "entryPoint": "coalesce",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {"name":"number","nullableTag":"number","leftBits":"3ff0000000000000","rightBits":"4000000000000000","expectedBits":"3ff0000000000000"},
+    {"name":"negative-zero","nullableTag":"number","leftBits":"8000000000000000","rightBits":"3ff0000000000000","expectedBits":"8000000000000000"},
+    {"name":"nan","nullableTag":"number","leftBits":"7ff8000000000000","rightBits":"3ff0000000000000","expectedBits":"7ff8000000000000"},
+    {"name":"null","nullableTag":"null","leftBits":"0000000000000000","rightBits":"4008000000000000","expectedBits":"4008000000000000"},
+    {"name":"undefined","nullableTag":"undefined","leftBits":"0000000000000000","rightBits":"4008000000000000","expectedBits":"4008000000000000"}
+  ]
+}

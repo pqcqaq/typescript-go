@@ -19,10 +19,10 @@ func testCompilerIdentity(t testing.TB, snapshot ProgramSnapshot) bingo.Compiler
 	return identity
 }
 
-func TestPrimitiveLoweringHashIsStableAndBoundToHIRV3(t *testing.T) {
+func TestPrimitiveLoweringHashIsStableAndBoundToHIRV5(t *testing.T) {
 	first := PrimitiveLoweringHash()
 	second := PrimitiveLoweringHash()
-	if first != second || len(first) != 64 || PrimitiveLoweringSchema != "bingo-hir-lowering-v4" || bingo.HIRSchemaVersion != 4 {
+	if first != second || len(first) != 64 || PrimitiveLoweringSchema != "bingo-hir-lowering-v5" || bingo.HIRSchemaVersion != 5 {
 		t.Fatalf("lowering identity = %q / %q / %q / HIR %d", first, second, PrimitiveLoweringSchema, bingo.HIRSchemaVersion)
 	}
 }

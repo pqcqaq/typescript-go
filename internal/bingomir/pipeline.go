@@ -145,7 +145,7 @@ func newHIRPreservingHandler(id bingo.PassID, identity bingo.CompilerBuildIdenti
 				return bingo.PassVerification{}, fmt.Errorf("pass %q did not preserve canonical typed HIR", id)
 			}
 			if id == bingo.PassVarianceAliasing {
-				artifact, err := requiredArtifact(output, bingo.PassArtifactTypedHIR, "hir-v4")
+				artifact, err := requiredArtifact(output, bingo.PassArtifactTypedHIR, "hir-v5")
 				if err != nil {
 					return bingo.PassVerification{}, err
 				}
@@ -214,7 +214,7 @@ func representationPlanHandler() bingo.PassHandler {
 			if !slices.Equal(output.Facts, mergedFacts(input.Facts, spec.WritesFacts)) {
 				return bingo.PassVerification{}, fmt.Errorf("representation plan facts %v do not match canonical transition %v", output.Facts, mergedFacts(input.Facts, spec.WritesFacts))
 			}
-			artifact, err := requiredArtifact(output, bingo.PassArtifactRepresentationPlan, "rep-plan-v1")
+			artifact, err := requiredArtifact(output, bingo.PassArtifactRepresentationPlan, "rep-plan-v2")
 			if err != nil {
 				return bingo.PassVerification{}, err
 			}
@@ -387,7 +387,7 @@ func capabilityBindingHandler() bingo.PassHandler {
 }
 
 func decodeJoinedInputs(state bingo.PassState) (joinedInputs, error) {
-	typedArtifact, err := requiredArtifact(state, bingo.PassArtifactTypedHIR, "hir-v4")
+	typedArtifact, err := requiredArtifact(state, bingo.PassArtifactTypedHIR, "hir-v5")
 	if err != nil {
 		return joinedInputs{}, err
 	}
@@ -504,14 +504,14 @@ func decodeMIRLoweringInputs(state bingo.PassState) (bingo.HIRModule, bingo.Repr
 	if err != nil {
 		return bingo.HIRModule{}, bingo.RepresentationPlan{}, err
 	}
-	planArtifact, err := requiredArtifact(state, bingo.PassArtifactRepresentationPlan, "rep-plan-v1")
+	planArtifact, err := requiredArtifact(state, bingo.PassArtifactRepresentationPlan, "rep-plan-v2")
 	if err != nil {
 		return bingo.HIRModule{}, bingo.RepresentationPlan{}, err
 	}
 	if !bytes.Equal(planArtifact.Payload, state.Artifact) {
 		return bingo.HIRModule{}, bingo.RepresentationPlan{}, fmt.Errorf("representation plan primary and sidecar differ")
 	}
-	typedArtifact, err := requiredArtifact(state, bingo.PassArtifactTypedHIR, "hir-v4")
+	typedArtifact, err := requiredArtifact(state, bingo.PassArtifactTypedHIR, "hir-v5")
 	if err != nil {
 		return bingo.HIRModule{}, bingo.RepresentationPlan{}, err
 	}
@@ -530,7 +530,7 @@ func decodeMIRLoweringInputs(state bingo.PassState) (bingo.HIRModule, bingo.Repr
 }
 
 func verifyMIRState(state bingo.PassState, bound bool) error {
-	planArtifact, err := requiredArtifact(state, bingo.PassArtifactRepresentationPlan, "rep-plan-v1")
+	planArtifact, err := requiredArtifact(state, bingo.PassArtifactRepresentationPlan, "rep-plan-v2")
 	if err != nil {
 		return err
 	}

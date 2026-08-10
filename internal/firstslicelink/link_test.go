@@ -40,6 +40,13 @@ func TestComputeResponseFileSelectsComputeHarness(t *testing.T) {
 	}
 }
 
+func TestCoalesceResponseFileSelectsCoalesceHarness(t *testing.T) {
+	text := string(responseFileBytes("coalesce"))
+	if !strings.Contains(text, "bingo_coalesce_harness.o") || strings.Contains(text, "bingo_add_harness.o") || strings.Contains(text, "bingo_choose_harness.o") {
+		t.Fatalf("coalesce response file selected wrong harness: %s", text)
+	}
+}
+
 func TestLinkArtifactRejectsTamperedBytes(t *testing.T) {
 	artifact, err := newLinkArtifact(
 		LinkRequest{

@@ -121,27 +121,32 @@ var snapshotSemanticFactRegistry = map[string]snapshotSemanticFactValidator{
 }
 
 const (
-	snapshotKindBinaryExpression    = "KindBinaryExpression"
-	snapshotKindBlock               = "KindBlock"
-	snapshotKindBooleanKeyword      = "KindBooleanKeyword"
-	snapshotKindCallExpression      = "KindCallExpression"
-	snapshotKindEndOfFile           = "KindEndOfFile"
-	snapshotKindEqualsToken         = "KindEqualsToken"
-	snapshotKindExportKeyword       = "KindExportKeyword"
-	snapshotKindExpressionStatement = "KindExpressionStatement"
-	snapshotKindFunctionDeclaration = "KindFunctionDeclaration"
-	snapshotKindIdentifier          = "KindIdentifier"
-	snapshotKindIfStatement         = "KindIfStatement"
-	snapshotKindLessThanToken       = "KindLessThanToken"
-	snapshotKindNumberKeyword       = "KindNumberKeyword"
-	snapshotKindParameter           = "KindParameter"
-	snapshotKindPlusToken           = "KindPlusToken"
-	snapshotKindReturnStatement     = "KindReturnStatement"
-	snapshotKindSourceFile          = "KindSourceFile"
-	snapshotKindVariableDeclaration = "KindVariableDeclaration"
-	snapshotKindVariableList        = "KindVariableDeclarationList"
-	snapshotKindVariableStatement   = "KindVariableStatement"
-	snapshotKindWhileStatement      = "KindWhileStatement"
+	snapshotKindBinaryExpression      = "KindBinaryExpression"
+	snapshotKindBlock                 = "KindBlock"
+	snapshotKindBooleanKeyword        = "KindBooleanKeyword"
+	snapshotKindCallExpression        = "KindCallExpression"
+	snapshotKindEndOfFile             = "KindEndOfFile"
+	snapshotKindEqualsToken           = "KindEqualsToken"
+	snapshotKindExportKeyword         = "KindExportKeyword"
+	snapshotKindExpressionStatement   = "KindExpressionStatement"
+	snapshotKindFunctionDeclaration   = "KindFunctionDeclaration"
+	snapshotKindIdentifier            = "KindIdentifier"
+	snapshotKindIfStatement           = "KindIfStatement"
+	snapshotKindLessThanToken         = "KindLessThanToken"
+	snapshotKindLiteralType           = "KindLiteralType"
+	snapshotKindNullKeyword           = "KindNullKeyword"
+	snapshotKindNumberKeyword         = "KindNumberKeyword"
+	snapshotKindParameter             = "KindParameter"
+	snapshotKindPlusToken             = "KindPlusToken"
+	snapshotKindQuestionQuestionToken = "KindQuestionQuestionToken"
+	snapshotKindReturnStatement       = "KindReturnStatement"
+	snapshotKindSourceFile            = "KindSourceFile"
+	snapshotKindUndefinedKeyword      = "KindUndefinedKeyword"
+	snapshotKindUnionType             = "KindUnionType"
+	snapshotKindVariableDeclaration   = "KindVariableDeclaration"
+	snapshotKindVariableList          = "KindVariableDeclarationList"
+	snapshotKindVariableStatement     = "KindVariableStatement"
+	snapshotKindWhileStatement        = "KindWhileStatement"
 )
 
 const (
@@ -166,11 +171,16 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindIdentifier, PayloadTag: snapshotKindIdentifier, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateIdentifierLowerer},
 	{Kind: snapshotKindIfStatement, PayloadTag: snapshotKindIfStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateIfLowerer},
 	{Kind: snapshotKindLessThanToken, PayloadTag: snapshotKindLessThanToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindLiteralType, PayloadTag: snapshotKindLiteralType, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateLiteralTypeLowerer},
+	{Kind: snapshotKindNullKeyword, PayloadTag: snapshotKindNullKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindQuestionQuestionToken, PayloadTag: snapshotKindQuestionQuestionToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindReturnStatement, PayloadTag: snapshotKindReturnStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateReturnLowerer},
 	{Kind: snapshotKindSourceFile, PayloadTag: snapshotKindSourceFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindUndefinedKeyword, PayloadTag: snapshotKindUndefinedKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindUnionType, PayloadTag: snapshotKindUnionType, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateUnionTypeLowerer},
 	{Kind: snapshotKindVariableDeclaration, PayloadTag: snapshotKindVariableDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateVariableDeclarationLowerer},
 	{Kind: snapshotKindVariableList, PayloadTag: snapshotKindVariableList, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateVariableListLowerer},
 	{Kind: snapshotKindVariableStatement, PayloadTag: snapshotKindVariableStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateVariableStatementLowerer},
@@ -459,7 +469,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		if _, err := requireChildKind(node, eof[0], snapshotKindEndOfFile, nodes); err != nil {
 			return err
 		}
-	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNumberKeyword, snapshotKindPlusToken:
+	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNullKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken, snapshotKindQuestionQuestionToken, snapshotKindUndefinedKeyword:
 		if len(node.NamedChildren) != 0 || len(node.Children) != 0 {
 			return fmt.Errorf("primitive token Kind %q cannot have children", node.Kind)
 		}
@@ -518,15 +528,15 @@ func validateIdentifierLowerer(node NodeSnapshot, _ map[NodeID]NodeSnapshot) err
 
 func validateParameterLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
 	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
-		return fmt.Errorf("primitive parameter requires exactly an identifier and number annotation")
+		return fmt.Errorf("primitive parameter requires exactly an identifier and supported annotation")
 	}
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
 	}
 	typeNodeID := childByRole(node, "type")
 	typeNode, ok := nodes[typeNodeID]
-	if !ok || typeNode.Parent != node.ID || (typeNode.Kind != snapshotKindNumberKeyword && typeNode.Kind != snapshotKindBooleanKeyword) {
-		return fmt.Errorf("primitive parameter type must be number or boolean")
+	if !ok || typeNode.Parent != node.ID || (typeNode.Kind != snapshotKindNumberKeyword && typeNode.Kind != snapshotKindBooleanKeyword && typeNode.Kind != snapshotKindUnionType) {
+		return fmt.Errorf("primitive parameter type must be number, boolean, or canonical nullable number")
 	}
 	if node.DeclaredType == 0 && node.NarrowedType == 0 && node.ContextualType == 0 {
 		return fmt.Errorf("parameter has no type reference")
@@ -603,10 +613,39 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
 			return err
 		}
+	case snapshotKindQuestionQuestionToken:
+		if _, err := requireRoleKind(node, "operator", snapshotKindQuestionQuestionToken, nodes); err != nil {
+			return err
+		}
+		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("operator %q is outside primitive replay", node.SyntaxPayload.Operator)
 	}
 	return nil
+}
+
+func validateLiteralTypeLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 1 || len(node.Children) != 1 {
+		return fmt.Errorf("primitive literal type requires one child")
+	}
+	_, err := requireRoleKind(node, "child[0]", snapshotKindNullKeyword, nodes)
+	return err
+}
+
+func validateUnionTypeLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 3 || len(node.Children) != 3 {
+		return fmt.Errorf("primitive nullable union requires number, null, and undefined")
+	}
+	if _, err := requireRoleKind(node, "child[0]", snapshotKindNumberKeyword, nodes); err != nil {
+		return err
+	}
+	if _, err := requireRoleKind(node, "child[1]", snapshotKindLiteralType, nodes); err != nil {
+		return err
+	}
+	_, err := requireRoleKind(node, "child[2]", snapshotKindUndefinedKeyword, nodes)
+	return err
 }
 
 func validateCallExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
@@ -779,6 +818,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	}
 	if isLoop {
 		return replayLoopFunction(function, events, loop, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
+	}
+	coalesce, isCoalesce, err := findPrimitiveCoalesce(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isCoalesce {
+		return replayCoalesceFunction(function, events, coalesce, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
 	}
 	choose, isChoose, err := findPrimitiveChoose(bodyID, nodes)
 	if err != nil {
@@ -1278,6 +1324,100 @@ type primitiveChooseSource struct {
 	ElseValue  NodeSnapshot
 }
 
+type primitiveCoalesceSource struct {
+	Return     NodeSnapshot
+	Expression NodeSnapshot
+	Left       NodeSnapshot
+	Right      NodeSnapshot
+}
+
+func findPrimitiveCoalesce(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveCoalesceSource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveCoalesceSource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 1 {
+		return primitiveCoalesceSource{}, false, nil
+	}
+	returnNode, ok := nodes[statements[0]]
+	if !ok || returnNode.Kind != snapshotKindReturnStatement {
+		return primitiveCoalesceSource{}, false, nil
+	}
+	expressionID := childByRole(returnNode, "expression")
+	expression, ok := nodes[expressionID]
+	if !ok || expression.Kind != snapshotKindBinaryExpression || expression.SyntaxPayload.Operator != snapshotKindQuestionQuestionToken {
+		return primitiveCoalesceSource{}, false, nil
+	}
+	left, err := requireRoleKind(expression, "left", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveCoalesceSource{}, false, err
+	}
+	right, err := requireRoleKind(expression, "right", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveCoalesceSource{}, false, err
+	}
+	if _, err := requireRoleKind(expression, "operator", snapshotKindQuestionQuestionToken, nodes); err != nil {
+		return primitiveCoalesceSource{}, false, err
+	}
+	return primitiveCoalesceSource{Return: returnNode, Expression: expression, Left: left, Right: right}, true, nil
+}
+
+func replayCoalesceFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	source primitiveCoalesceSource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if function.Name != "coalesce" || len(function.Parameters) != 2 {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive nullish replay requires exported coalesce(value, fallback)")
+	}
+	value, ok := parameterValue(source.Left, parameterValues)
+	if !ok || value != 1 || parameterTypes[value] != bingo.TypeNullableNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("nullish left operand %s is not the nullable value parameter", source.Left.ID)
+	}
+	fallback, ok := parameterValue(source.Right, parameterValues)
+	if !ok || fallback != 2 || parameterTypes[fallback] != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("nullish right operand %s is not the number fallback parameter", source.Right.ID)
+	}
+	leftType, leftErr := bingoType(nodeTypeID(source.Left), types)
+	rightType, rightErr := bingoType(nodeTypeID(source.Right), types)
+	resultType, resultErr := bingoType(nodeTypeID(source.Expression), types)
+	if leftErr != nil || rightErr != nil || resultErr != nil || leftType != bingo.TypeNullableNumber || rightType != bingo.TypeNumber || resultType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("nullish source types are not canonical nullable-number coalesce")
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, returnErr := bingoType(returnTypeID, types)
+	if returnErr != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s return type is not canonical number", functionNode.ID)
+	}
+	function.ReturnType = bingo.TypeNumber
+	function.Blocks = []bingo.HIRBlock{
+		{ID: 1, Operations: []bingo.HIROp{{ID: 3, Kind: "is_nullish", Type: bingo.TypeBoolean, Operands: []bingo.ValueID{value}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Expression)}}, Terminator: bingo.HIRTerminator{Kind: "condbranch", Value: 3, Successors: []bingo.BlockID{2, 3}, Origin: originOf(source.Expression)}},
+		{ID: 2, Operations: []bingo.HIROp{}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{4}, Origin: originOf(source.Right)}},
+		{ID: 3, Operations: []bingo.HIROp{{ID: 4, Kind: "unwrap_nullable", Type: bingo.TypeNumber, Operands: []bingo.ValueID{value}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Left)}}, Terminator: bingo.HIRTerminator{Kind: "branch", Successors: []bingo.BlockID{4}, Origin: originOf(source.Left)}},
+		{ID: 4, Operations: []bingo.HIROp{{ID: 5, Kind: "phi", Type: bingo.TypeNumber, Operands: []bingo.ValueID{fallback, 4}, IncomingBlocks: []bingo.BlockID{2, 3}, Effect: bingo.EffectPure, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Expression)}}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 5, Origin: originOf(source.Return)}},
+	}
+	events = append(events,
+		LoweringEvent{Kind: "nullish.test", Node: source.Expression.ID, Origin: source.Expression.Origin, Type: nodeTypeID(source.Left), Operator: "??", Inputs: []NodeID{source.Left.ID}},
+		LoweringEvent{Kind: "nullish.fallback", Node: source.Right.ID, Origin: source.Right.Origin, Type: nodeTypeID(source.Right), Inputs: []NodeID{source.Right.ID}},
+		LoweringEvent{Kind: "nullable.unwrap", Node: source.Left.ID, Origin: source.Left.Origin, Type: nodeTypeID(source.Left), Inputs: []NodeID{source.Left.ID}},
+		LoweringEvent{Kind: "phi", Node: source.Expression.ID, Origin: source.Expression.Origin, Type: nodeTypeID(source.Expression), Inputs: []NodeID{source.Right.ID, source.Left.ID}},
+		LoweringEvent{Kind: "return", Node: source.Return.ID, Origin: source.Return.Origin, Type: returnTypeID, Inputs: []NodeID{source.Expression.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
+	return function, events, nil
+}
+
 func findPrimitiveChoose(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveChooseSource, bool, error) {
 	body, ok := nodes[bodyID]
 	if !ok || body.Kind != snapshotKindBlock {
@@ -1554,6 +1694,19 @@ func bingoType(id TypeID, types map[TypeID]TypeSnapshot) (bingo.TypeKind, error)
 		}
 		if seen["literal|8192|0|||literal:bool:false"] && seen["literal|8192|0|||literal:bool:true"] {
 			return bingo.TypeBoolean, nil
+		}
+	}
+	if typ.Kind == "union" && typ.Flags == 134217728 && typ.ObjectFlags == 32768 && typ.TypePayload.Tag == "union" && len(typ.ElementTypes) == 3 {
+		seen := map[string]bool{}
+		for _, elementID := range typ.ElementTypes {
+			element, ok := types[elementID]
+			if !ok || element.ObjectFlags != 0 || element.TypePayload.Tag != "intrinsic" {
+				return "", fmt.Errorf("type %d is not the canonical nullable-number union", id)
+			}
+			seen[element.TypePayload.Scalar] = true
+		}
+		if seen["intrinsic|64|0|||intrinsic:number"] && seen["intrinsic|8|0|||intrinsic:null"] && seen["intrinsic|4|0|||intrinsic:undefined"] {
+			return bingo.TypeNullableNumber, nil
 		}
 	}
 	return "", fmt.Errorf("type %d (%s) is not a canonical primitive type", id, typ.Kind)

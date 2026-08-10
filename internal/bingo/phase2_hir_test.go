@@ -90,6 +90,23 @@ func validPhase2LoopHIR() HIRModule {
 	}
 }
 
+func validPhase2CoalesceHIR() HIRModule {
+	requirements := make([]RuntimeCapabilityID, 0)
+	return HIRModule{
+		SchemaVersion: HIRSchemaVersion, Provenance: testHIRProvenance(requirements), LogicalCapabilityRequirements: requirements,
+		Functions: []HIRFunction{{
+			ID: 1, Name: "coalesce", Exported: true, ReturnType: TypeNumber, Origin: testOrigin(0, 120),
+			Parameters: []HIRParameter{{Name: "value", Value: 1, Type: TypeNullableNumber, Origin: testOrigin(25, 65)}, {Name: "fallback", Value: 2, Type: TypeNumber, Origin: testOrigin(67, 83)}},
+			Blocks: []HIRBlock{
+				{ID: 1, Operations: []HIROp{{ID: 3, Kind: "is_nullish", Type: TypeBoolean, Operands: []ValueID{1}, Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(104, 121)}}, Terminator: HIRTerminator{Kind: "condbranch", Value: 3, Successors: []BlockID{2, 3}, Origin: testOrigin(104, 121)}},
+				{ID: 2, Operations: []HIROp{}, Terminator: HIRTerminator{Kind: "branch", Successors: []BlockID{4}, Origin: testOrigin(113, 121)}},
+				{ID: 3, Operations: []HIROp{{ID: 4, Kind: "unwrap_nullable", Type: TypeNumber, Operands: []ValueID{1}, Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(104, 109)}}, Terminator: HIRTerminator{Kind: "branch", Successors: []BlockID{4}, Origin: testOrigin(104, 109)}},
+				{ID: 4, Operations: []HIROp{{ID: 5, Kind: "phi", Type: TypeNumber, Operands: []ValueID{2, 4}, IncomingBlocks: []BlockID{2, 3}, Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(104, 121)}}, Terminator: HIRTerminator{Kind: "return", Value: 5, Origin: testOrigin(97, 122)}},
+			},
+		}},
+	}
+}
+
 func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	module := validPhase2ChooseHIR()
 	encoded, hash, err := CanonicalPhase2HIR(module)
@@ -135,6 +152,37 @@ func TestPhase2LoopHIRIsCanonicalAndVerifiesEdgeDominance(t *testing.T) {
 	}
 	if err := VerifyHIR(module); err == nil {
 		t.Fatal("loop HIR was accepted by the frozen Phase 2A verifier")
+	}
+}
+
+func TestPhase2CoalesceHIRIsCanonicalAndRejectsUnguardedUnwrap(t *testing.T) {
+	module := validPhase2CoalesceHIR()
+	_, hash, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	if err := VerifyCanonicalPhase2HIR(module); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyHIR(module); err == nil {
+		t.Fatal("nullable Phase 2B HIR was accepted by the frozen Phase 2A verifier")
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*HIRModule)
+	}{
+		{name: "wrong branch", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Terminator.Successors = []BlockID{3, 2} }},
+		{name: "wrong predicate", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[0].Operations[0].Operands[0] = 2 }},
+		{name: "wrong unwrap block", mutate: func(candidate *HIRModule) { candidate.Functions[0].Blocks[2].ID = 4 }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := validPhase2CoalesceHIR()
+			test.mutate(&candidate)
+			if err := VerifyPhase2HIR(candidate); err == nil {
+				t.Fatal("malformed nullable unwrap proof was accepted")
+			}
+		})
 	}
 }
 

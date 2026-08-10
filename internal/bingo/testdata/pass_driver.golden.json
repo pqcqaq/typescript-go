@@ -10,98 +10,98 @@
     "sequence": 1,
     "pass": "typed-hir",
     "iteration": 1,
-    "schema": "hir-v4",
-    "contentHash": "1b963ebf9e77e1047630f09e64a4275de8c8632ba95e776bb668ef97b823ae08"
+    "schema": "hir-v5",
+    "contentHash": "b44ea93c12f2729a2d98859593c9844644d82d6b207f6e3aa677c54f55e8c471"
   },
   {
     "sequence": 2,
     "pass": "evaluation-order-and-semantic-sugar",
     "iteration": 1,
-    "schema": "hir-v4",
-    "contentHash": "8b754370d287931304f879977414a47a9c6f16e86b84c7591a0d93e2c0d2217c"
+    "schema": "hir-v5",
+    "contentHash": "3906fffd15ee17cc1a656ba62c34597b064e79d86354100195948e462996bb11"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 1,
-    "schema": "hir-v4",
-    "contentHash": "3fb81a0c424662d3995fef31bb9a05909e3cdd1b74a1dbf5d4595cdc468dcbdf"
+    "schema": "hir-v5",
+    "contentHash": "4e751120d38a587373357c95788e31ff07528614250b9bb65385e1d87c0e0759"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 2,
-    "schema": "hir-v4",
-    "contentHash": "afe6f14073ad88c1556f0669e2f3c1fc94493d6d4871618868c13a8814f12ee6"
+    "schema": "hir-v5",
+    "contentHash": "4e77473bb4d5cb9d348e153e1c5bcca54521679cc65ed3f19ed2c89cb4f4ea9a"
   },
   {
     "sequence": 4,
     "pass": "variance-aliasing-and-conversions",
     "iteration": 1,
-    "schema": "hir-v4",
-    "contentHash": "f04bf1ddac8bb7f7f1f572d69c491e9899bc6ca1a15a547eddcab682a148e5de"
+    "schema": "hir-v5",
+    "contentHash": "8b6c0354fa5f417be08ae721207811b1cf835b6273b8964b03a0aef99b83268e"
   },
   {
     "sequence": 5,
     "pass": "resolve-target-context",
     "iteration": 1,
     "schema": "target-context-v1",
-    "contentHash": "715b14e25ea5f28c704ef1f3bedac881123bbfb504a3c08833eb1e1b665b2835"
+    "contentHash": "1cbfb7d0d01a38b4cba474f7ccb629792f771b2fde13f05dd4ca37b97b00fd12"
   },
   {
     "sequence": 6,
     "pass": "target-representation-plan",
     "iteration": 1,
-    "schema": "rep-plan-v1",
-    "contentHash": "49c8895cb474073f90c19bbf82d92ba3fccc773b178d1560c32cfbcb44159f6a"
+    "schema": "rep-plan-v2",
+    "contentHash": "210e3d23e4e22e755f08d0ecd86b375a8105b9eac3c2e0aef5430ea297606408"
   },
   {
     "sequence": 7,
     "pass": "mir-cfg-ssa",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "8690ed2534b4f023d6ba41a0e98afa9c9bddf5ca621018061c7ce09ba686d89a"
+    "schema": "mir-v3",
+    "contentHash": "772a634e3afa653ba20859784da070decf72b8b845764252933fbfdf2ddbbb54"
   },
   {
     "sequence": 8,
     "pass": "cleanup-exception-async-state",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "cbfdc46a5e26642b19e5bbc88e1033269156f35a54f87dc837d51e8a966b342d"
+    "schema": "mir-v3",
+    "contentHash": "45dde1d27716c77dfae3fe2b1daa69dee4ddaa183c1783a8c73be1b7ea59b8e4"
   },
   {
     "sequence": 9,
     "pass": "structural-mir-verifier",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "60fa9d64c0ed6dcdeb00275b3de37188f41b0498e2339f40d52f12a5c85c48d3"
+    "schema": "mir-v3",
+    "contentHash": "c748e5543f3ce92eb3d95ccaf923fb7a02588666a54fbc83a9c58593d00b02f8"
   },
   {
     "sequence": 10,
     "pass": "capability-binding-effect-freeze",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "12e0c2e8bf56ca2c713cf6e609f05656ba1bd70d084d3a5a48bb3ca70985c7aa"
+    "schema": "mir-v3",
+    "contentHash": "022a574515c6272e97a3af540226231b031b405d16a0ce9cf8975a5fe7a7180c"
   },
   {
     "sequence": 11,
     "pass": "optimize-proven-mir",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "637347b4860e8a158794cf8ef4654dcacd058fda083e15a1198f8ab66fb48b17"
+    "schema": "mir-v3",
+    "contentHash": "5138cbccf78244520052af14cf6731e76d30f895562c87f0f8f8f848a4a51f8d"
   },
   {
     "sequence": 12,
     "pass": "place-gc-roots-freeze-cleanup",
     "iteration": 1,
-    "schema": "mir-v1",
-    "contentHash": "953460afedc9b23ebbdd18e652c461b6742a252a24ae4242ae980064cf2db365"
+    "schema": "mir-v3",
+    "contentHash": "706336fd110e03018caf074d44e0dabdb2667b26fc95c51f442ecc003f88d646"
   },
   {
     "sequence": 13,
     "pass": "final-verifier",
     "iteration": 1,
-    "schema": "verified-mir-v1",
-    "contentHash": "8bc3b7eb19b945d724c88499a699573c3d1f2baec0d904b6b1d4c06c8cea0853"
+    "schema": "verified-mir-v3",
+    "contentHash": "bcb9dc18369e9abf5777662f469334cdab34f9e64e8740db3aac66aae87fdb67"
   }
 ]

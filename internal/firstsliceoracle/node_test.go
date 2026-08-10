@@ -40,3 +40,9 @@ func TestNodeLoopScriptBindsWhileAndPhiSourceSemantics(t *testing.T) {
 		t.Fatalf("loop Node script does not bind source semantics: %s", LoopScriptHash())
 	}
 }
+
+func TestNodeCoalesceScriptBindsDistinctNullishTags(t *testing.T) {
+	if CoalesceScriptHash() == ScriptHash() || CoalesceScriptHash() == ChooseScriptHash() || !strings.Contains(nodeCoalesceScript, `tag!=="number"`) || !strings.Contains(nodeCoalesceScript, `tag!=="undefined"`) || !strings.Contains(nodeCoalesceScript, "tag===\"number\"?fromBits(a):tag===\"null\"?null:undefined") {
+		t.Fatalf("coalesce Node script does not preserve tag semantics: %s", CoalesceScriptHash())
+	}
+}

@@ -50,6 +50,26 @@ func TestRunnableChooseManifestRequiresBooleanFlags(t *testing.T) {
 	}
 }
 
+func TestRunnableCoalesceManifestRequiresCanonicalTagsAndPayloads(t *testing.T) {
+	valid := CaseManifest{EntryPoint: "coalesce", TimeoutMS: 2000, Oracle: "node", Executions: []CaseExecution{{
+		Name: "null-fallback", NullableTag: "null", LeftBits: "0000000000000000", RightBits: "4000000000000000", ExpectedBits: "4000000000000000",
+	}}}
+	if err := ValidateRunnableManifest(valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, mutate := range []func(*CaseManifest){
+		func(candidate *CaseManifest) { candidate.Executions[0].NullableTag = "nil" },
+		func(candidate *CaseManifest) { candidate.Executions[0].LeftBits = "3ff0000000000000" },
+	} {
+		candidate := valid
+		candidate.Executions = append([]CaseExecution(nil), valid.Executions...)
+		mutate(&candidate)
+		if err := ValidateRunnableManifest(candidate); err == nil {
+			t.Fatal("noncanonical nullable execution was accepted")
+		}
+	}
+}
+
 func boolPointer(value bool) *bool { return &value }
 
 func TestLoadCaseRejectsUnknownRunFields(t *testing.T) {

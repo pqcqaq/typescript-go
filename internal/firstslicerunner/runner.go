@@ -165,6 +165,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var result firstslicelink.RunResult
 		if entryPoint == "choose" {
 			result, err = firstslicelink.RunChoose(caseContext, executable, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if entryPoint == "coalesce" {
+			result, err = firstslicelink.RunCoalesce(caseContext, executable, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "compute" {
 			result, err = firstslicelink.RunCompute(caseContext, executable, execution.LeftBits, execution.RightBits)
 		} else {
@@ -177,6 +179,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		var nodeResult firstsliceoracle.Result
 		if entryPoint == "choose" {
 			nodeResult, err = nodeOracle.Choose(caseContext, *execution.Flag, execution.LeftBits, execution.RightBits)
+		} else if oracleProgram == "coalesce" {
+			nodeResult, err = nodeOracle.Coalesce(caseContext, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if oracleProgram == "loop" {
 			nodeResult, err = nodeOracle.Loop(caseContext, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "compute" {
@@ -207,12 +211,24 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			Name: "reject-noncanonical-boolean-byte", Arguments: slices.Clone(result.Arguments),
 			OutputHash: result.OutputHash, Rejected: true,
 		}}
+	} else if entryPoint == "coalesce" {
+		result, err := firstslicelink.RejectNonCanonicalCoalesce(caseContext, executable, executions[0].LeftBits, executions[0].RightBits)
+		if err != nil {
+			return Report{}, fmt.Errorf("case %s noncanonical nullable tag rejection: %w", caseData.Manifest.Name, err)
+		}
+		nonCanonicalRejected = true
+		boundaryRejections = []BoundaryRejectionReport{{
+			Name: "reject-noncanonical-nullable-tag", Arguments: slices.Clone(result.Arguments),
+			OutputHash: result.OutputHash, Rejected: true,
+		}}
 	}
 	nodeScriptHash := nodeOracle.ScriptHash()
 	if entryPoint == "choose" {
 		nodeScriptHash = firstsliceoracle.ChooseScriptHash()
 	} else if oracleProgram == "loop" {
 		nodeScriptHash = firstsliceoracle.LoopScriptHash()
+	} else if oracleProgram == "coalesce" {
+		nodeScriptHash = firstsliceoracle.CoalesceScriptHash()
 	} else if entryPoint == "compute" {
 		nodeScriptHash = firstsliceoracle.ComputeScriptHash()
 	}
@@ -267,13 +283,14 @@ func VerifyReport(report Report) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute") {
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
 	if entryPoint == "add" && report.OracleProgram != "add" ||
 		entryPoint == "choose" && report.OracleProgram != "choose" ||
-		entryPoint == "compute" && report.OracleProgram != "calllocal" && report.OracleProgram != "loop" {
+		entryPoint == "compute" && report.OracleProgram != "calllocal" && report.OracleProgram != "loop" ||
+		entryPoint == "coalesce" && report.OracleProgram != "coalesce" {
 		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
 	}
 	if report.OracleProgram == "choose" {
@@ -282,16 +299,18 @@ func VerifyReport(report Report) error {
 		wantScriptHash = firstsliceoracle.ComputeScriptHash()
 	} else if report.OracleProgram == "loop" {
 		wantScriptHash = firstsliceoracle.LoopScriptHash()
+	} else if report.OracleProgram == "coalesce" {
+		wantScriptHash = firstsliceoracle.CoalesceScriptHash()
 	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
 		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
 		return fmt.Errorf("invalid first-slice runner target or timeout")
 	}
-	if report.NonCanonicalRejected != (entryPoint == "choose") {
-		return fmt.Errorf("noncanonical boolean rejection does not match entry point")
+	if report.NonCanonicalRejected != (entryPoint == "choose" || entryPoint == "coalesce") {
+		return fmt.Errorf("noncanonical boundary rejection does not match entry point")
 	}
-	if entryPoint != "choose" && len(report.BoundaryRejections) != 0 {
-		return fmt.Errorf("number report contains boolean boundary rejections")
+	if entryPoint != "choose" && entryPoint != "coalesce" && len(report.BoundaryRejections) != 0 {
+		return fmt.Errorf("number report contains boundary rejections")
 	}
 	if entryPoint == "choose" {
 		if len(report.BoundaryRejections) != 1 {
@@ -300,6 +319,14 @@ func VerifyReport(report Report) error {
 		rejection := report.BoundaryRejections[0]
 		if rejection.Name != "reject-noncanonical-boolean-byte" || len(rejection.Arguments) != 3 || rejection.Arguments[0] != "02" || !isBits(rejection.Arguments[1]) || !isBits(rejection.Arguments[2]) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
 			return fmt.Errorf("invalid noncanonical boolean rejection report")
+		}
+	} else if entryPoint == "coalesce" {
+		if len(report.BoundaryRejections) != 1 {
+			return fmt.Errorf("coalesce report must contain one nullable boundary rejection")
+		}
+		rejection := report.BoundaryRejections[0]
+		if rejection.Name != "reject-noncanonical-nullable-tag" || len(rejection.Arguments) != 3 || rejection.Arguments[0] != "03" || !isBits(rejection.Arguments[1]) || !isBits(rejection.Arguments[2]) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
+			return fmt.Errorf("invalid noncanonical nullable tag rejection report")
 		}
 	}
 	if err := bingo.ValidateCompilerBuildIdentity(report.CompilerBuildIdentity); err != nil {
@@ -330,7 +357,7 @@ func VerifyReport(report Report) error {
 	allOK := true
 	for index, execution := range report.Executions {
 		wantArguments := 2
-		if entryPoint == "choose" {
+		if entryPoint == "choose" || entryPoint == "coalesce" {
 			wantArguments = 3
 		}
 		if strings.TrimSpace(execution.Name) == "" || len(execution.Arguments) != wantArguments || !isBits(execution.ExpectedBits) || !isBits(execution.ActualBits) || !isBits(execution.NodeBits) {
@@ -422,6 +449,8 @@ func oracleProgramForHIR(entryPoint string, hir bingo.HIRModule) (string, error)
 		return "calllocal", nil
 	case entryPoint == "compute" && len(hir.Functions) == 1 && hir.Functions[0].Name == "compute" && len(hir.Functions[0].Blocks) == 4:
 		return "loop", nil
+	case entryPoint == "coalesce" && len(hir.Functions) == 1 && hir.Functions[0].Name == "coalesce":
+		return "coalesce", nil
 	default:
 		return "", fmt.Errorf("verified HIR does not identify the %q oracle program", entryPoint)
 	}

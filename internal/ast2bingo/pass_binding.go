@@ -17,7 +17,7 @@ import (
 
 const (
 	primitiveSourceTypePlanSchemaVersion uint32 = 2
-	primitiveTypedHIRSchemaVersion       uint32 = 4
+	primitiveTypedHIRSchemaVersion       uint32 = 5
 )
 
 // PrimitiveTypedHIRSchemaVersion is the wire version consumed by target-aware
@@ -78,7 +78,7 @@ func executePrimitiveHIRPasses(ctx context.Context, snapshot ProgramSnapshot, id
 	if err != nil {
 		return primitiveTypedHIRArtifact{}, execution, err
 	}
-	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v4" {
+	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v5" {
 		return primitiveTypedHIRArtifact{}, execution, fmt.Errorf(
 			"primitive pass prefix ended with %d dumps and schema %q",
 			len(execution.Dumps), execution.State.Schema,
@@ -180,7 +180,7 @@ func postVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, ite
 }
 
 func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v5"); err != nil {
 		return err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -191,7 +191,7 @@ func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iter
 }
 
 func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassResult, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v5"); err != nil {
 		return bingo.PassResult{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -213,7 +213,7 @@ func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration 
 }
 
 func postVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, input, output bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassVerification, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v4"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v5"); err != nil {
 		return bingo.PassVerification{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(input.Artifact)
@@ -456,8 +456,8 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 		parameterNode := indexes.Nodes[parameterID]
 		parameterTypeID := nodeTypeID(parameterNode)
 		parameterType, typeErr := bingoType(parameterTypeID, indexes.Types)
-		if typeErr != nil || (parameterType != bingo.TypeNumber && parameterType != bingo.TypeBoolean) {
-			return fmt.Errorf("primitive source parameter %q is not canonical number or boolean", parameterID)
+		if typeErr != nil || (parameterType != bingo.TypeNumber && parameterType != bingo.TypeBoolean && parameterType != bingo.TypeNullableNumber) {
+			return fmt.Errorf("primitive source parameter %q is not canonical number, boolean, or nullable number", parameterID)
 		}
 		expected := bingo.HIRParameter{
 			Name:   childText(parameterNode, "name", indexes.Nodes),
@@ -505,6 +505,35 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 		actualJSON, actualErr := json.Marshal(function)
 		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) || !equalLoweringEvents(artifact.Events, expectedLoopEvents) {
 			return fmt.Errorf("primitive loop HIR or evaluation-order events do not match source plan")
+		}
+		return nil
+	}
+	coalesce, isCoalesce, coalesceErr := findPrimitiveCoalesce(bodyID, indexes.Nodes)
+	if coalesceErr != nil {
+		return fmt.Errorf("primitive coalesce source: %w", coalesceErr)
+	}
+	if isCoalesce {
+		expectedFunction, expectedCoalesceEvents, err := replayCoalesceFunction(
+			bingo.HIRFunction{ID: function.ID, Name: expectedName, Exported: function.Exported, Parameters: slices.Clone(function.Parameters), Origin: originOf(functionNode)},
+			expectedEvents,
+			coalesce,
+			parameterValues,
+			func() map[bingo.ValueID]bingo.TypeKind {
+				result := make(map[bingo.ValueID]bingo.TypeKind, len(function.Parameters))
+				for _, parameter := range function.Parameters {
+					result[parameter.Value] = parameter.Type
+				}
+				return result
+			}(),
+			functionNode, indexes.Nodes, indexes.Types, indexes.Symbols, indexes.Signatures,
+		)
+		if err != nil {
+			return fmt.Errorf("rebuild primitive coalesce HIR: %w", err)
+		}
+		expectedJSON, expectedErr := json.Marshal(expectedFunction)
+		actualJSON, actualErr := json.Marshal(function)
+		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) || !equalLoweringEvents(artifact.Events, expectedCoalesceEvents) {
+			return fmt.Errorf("primitive coalesce HIR or evaluation-order events do not match source plan")
 		}
 		return nil
 	}

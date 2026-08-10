@@ -131,6 +131,43 @@ func TestReplayCommittedLocalAssignmentAndDirectCallSnapshot(t *testing.T) {
 	}
 }
 
+func TestReplayCommittedCoalesceSnapshotProducesGuardedHIR(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/coalesce/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	result, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.HIR.Functions) != 1 {
+		t.Fatalf("coalesce HIR functions = %#v", result.HIR.Functions)
+	}
+	function := result.HIR.Functions[0]
+	if function.Name != "coalesce" || len(function.Parameters) != 2 || function.Parameters[0].Type != bingo.TypeNullableNumber || function.Parameters[1].Type != bingo.TypeNumber || len(function.Blocks) != 4 {
+		t.Fatalf("coalesce HIR function = %#v", function)
+	}
+	if function.Blocks[0].Operations[0].Kind != "is_nullish" || function.Blocks[2].Operations[0].Kind != "unwrap_nullable" || function.Blocks[3].Operations[0].Kind != "phi" || !slices.Equal(function.Blocks[3].Operations[0].IncomingBlocks, []bingo.BlockID{2, 3}) {
+		t.Fatalf("coalesce guarded CFG = %#v", function.Blocks)
+	}
+	wantEvents := []string{"function.begin", "parameter", "parameter", "nullish.test", "nullish.fallback", "nullable.unwrap", "phi", "return", "function.end"}
+	gotEvents := make([]string, len(result.Events))
+	for index, event := range result.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("coalesce evaluation events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
 func TestReplaySerializedAddUsesResolvedSymbolFallback(t *testing.T) {
 	snapshot := buildReplayAddSnapshot(t)
 	identity := testCompilerIdentity(t, *snapshot)

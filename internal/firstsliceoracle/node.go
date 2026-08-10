@@ -18,6 +18,7 @@ const nodeAddScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{co
 const nodeComputeScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function add(left,right){return left+right}function compute(left,right){let value=add(left,right);value=value+right;return value}process.stdout.write(toBits(compute(fromBits(a),fromBits(b)))+"\n");`
 const nodeLoopScript = `const [a,b]=process.argv.slice(1);const fromBits=(h)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};function compute(step,limit){let value=step;while(value<limit){value=value+step}return value}process.stdout.write(toBits(compute(fromBits(a),fromBits(b)))+"\n");`
 const nodeChooseScript = `const [flag,a,b]=process.argv.slice(1);if(flag!=="true"&&flag!=="false")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(flag==="true"?a:b))+"\n");`
+const nodeCoalesceScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};const value=tag==="number"?fromBits(a):tag==="null"?null:undefined;process.stdout.write(toBits(value??fromBits(b))+"\n");`
 
 type NodeOracle struct {
 	path       string
@@ -85,6 +86,10 @@ func (oracle *NodeOracle) Choose(ctx context.Context, flag bool, left, right str
 	return oracle.run(ctx, nodeChooseScript, value, left, right)
 }
 
+func (oracle *NodeOracle) Coalesce(ctx context.Context, tag, value, fallback string) (Result, error) {
+	return oracle.run(ctx, nodeCoalesceScript, tag, value, fallback)
+}
+
 func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...string) (Result, error) {
 	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
 		return Result{}, fmt.Errorf("Node oracle is not initialized")
@@ -96,7 +101,7 @@ func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...s
 		return Result{}, fmt.Errorf("Node oracle requires at least two arguments")
 	}
 	for _, argument := range arguments {
-		if argument == "true" || argument == "false" {
+		if argument == "true" || argument == "false" || argument == "number" || argument == "null" || argument == "undefined" {
 			continue
 		}
 		if !isBits(argument) {
@@ -128,6 +133,8 @@ func LoopScriptHash() string { return hashBytes([]byte(nodeLoopScript)) }
 
 // ChooseScriptHash returns the locked script identity for boolean choose.
 func ChooseScriptHash() string { return hashBytes([]byte(nodeChooseScript)) }
+
+func CoalesceScriptHash() string { return hashBytes([]byte(nodeCoalesceScript)) }
 
 func hashBytes(data []byte) string {
 	digest := sha256.Sum256(data)

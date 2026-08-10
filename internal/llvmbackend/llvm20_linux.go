@@ -99,6 +99,8 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		}
 	case len(mir.Functions) == 1 && mir.Functions[0].Name == "compute":
 		emitLoopLLVM(ctx, builder, module, mir.Functions[0])
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "coalesce":
+		emitCoalesceLLVM(ctx, builder, module, mir.Functions[0])
 	default:
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
@@ -222,4 +224,54 @@ func emitLoopLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mi
 	value.AddIncoming([]llvm.Value{function.Param(0), next}, []llvm.BasicBlock{entry, body})
 	builder.SetInsertPointAtEnd(exit)
 	builder.CreateRet(value)
+}
+
+func emitCoalesceLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {
+	double := ctx.DoubleType()
+	i8 := ctx.Int8Type()
+	nullable := ctx.StructType([]llvm.Type{i8, llvm.ArrayType(i8, 7), double}, false)
+	functionType := llvm.FunctionType(double, []llvm.Type{nullable, double}, false)
+	function := llvm.AddFunction(module, "coalesce", functionType)
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	for index, parameter := range mir.Parameters {
+		function.Param(index).SetName(parameter.Name)
+	}
+
+	entry := llvm.AddBasicBlock(function, "entry")
+	invalid := llvm.AddBasicBlock(function, "invalid.nullable")
+	dispatch := llvm.AddBasicBlock(function, "dispatch.nullish")
+	fallback := llvm.AddBasicBlock(function, "bb2.fallback")
+	valueBlock := llvm.AddBasicBlock(function, "bb3.value")
+	merge := llvm.AddBasicBlock(function, "bb4.merge")
+
+	builder.SetInsertPointAtEnd(entry)
+	tag := builder.CreateExtractValue(function.Param(0), 0, "value.tag")
+	payload := builder.CreateExtractValue(function.Param(0), 2, "value.payload")
+	tagValid := builder.CreateICmp(llvm.IntULE, tag, llvm.ConstInt(i8, uint64(bingo.NullableNumberTagUndefined), false), "tag.canonical")
+	nonNumber := builder.CreateICmp(llvm.IntNE, tag, llvm.ConstInt(i8, uint64(bingo.NullableNumberTagNumber), false), "tag.nullish")
+	payloadBits := builder.CreateBitCast(payload, ctx.Int64Type(), "payload.bits")
+	payloadZero := builder.CreateICmp(llvm.IntEQ, payloadBits, llvm.ConstInt(ctx.Int64Type(), 0, false), "payload.canonical")
+	nonCanonicalPayload := builder.CreateAnd(nonNumber, builder.CreateNot(payloadZero, "payload.nonzero"), "nullish.payload.invalid")
+	canonical := builder.CreateAnd(tagValid, builder.CreateNot(nonCanonicalPayload, "nullable.canonical"), "nullable.valid")
+	builder.CreateCondBr(canonical, dispatch, invalid)
+
+	builder.SetInsertPointAtEnd(invalid)
+	trapType := llvm.FunctionType(ctx.VoidType(), nil, false)
+	trap := llvm.AddFunction(module, "llvm.trap", trapType)
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("noreturn"), 0))
+	builder.CreateCall(trapType, trap, nil, "")
+	builder.CreateUnreachable()
+
+	builder.SetInsertPointAtEnd(dispatch)
+	builder.CreateCondBr(nonNumber, fallback, valueBlock)
+	builder.SetInsertPointAtEnd(fallback)
+	builder.CreateBr(merge)
+	builder.SetInsertPointAtEnd(valueBlock)
+	builder.CreateBr(merge)
+	builder.SetInsertPointAtEnd(merge)
+	result := builder.CreatePHI(double, "coalesce.result")
+	result.AddIncoming([]llvm.Value{function.Param(1), payload}, []llvm.BasicBlock{fallback, valueBlock})
+	builder.CreateRet(result)
 }

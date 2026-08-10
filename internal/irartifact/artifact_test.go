@@ -125,7 +125,7 @@ func testHIR(t *testing.T) bingo.HIRModule {
 			FrontendSnapshotSchemaVersion:       bingo.HIRFrontendSnapshotSchemaVersion,
 			FrontendSnapshotHash:                strings.Repeat("1", 64),
 			SourceContentHash:                   strings.Repeat("2", 64),
-			CompilerBuildIdentity:               bingo.CompilerBuildIdentity{UpstreamCommit: strings.Repeat("3", 40), ForkCommit: strings.Repeat("4", 40), LoweringSchema: "bingo-hir-lowering-v4", LoweringHash: strings.Repeat("5", 64)},
+			CompilerBuildIdentity:               bingo.CompilerBuildIdentity{UpstreamCommit: strings.Repeat("3", 40), ForkCommit: strings.Repeat("4", 40), LoweringSchema: "bingo-hir-lowering-v5", LoweringHash: strings.Repeat("5", 64)},
 			StandardLibraryHash:                 strings.Repeat("6", 64),
 			KindManifestHash:                    strings.Repeat("7", 64),
 			LogicalCapabilityRequirementsDigest: requirementsDigest,

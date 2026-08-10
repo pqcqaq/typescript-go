@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	RepresentationPlanSchemaVersion uint32 = 1
-	FirstSliceMIRSchemaVersion      uint32 = 2
+	RepresentationPlanSchemaVersion uint32 = 2
+	FirstSliceMIRSchemaVersion      uint32 = 3
 	BoundCapabilitySchemaVersion    uint32 = 1
 )
 
@@ -23,8 +23,9 @@ const (
 type RepType string
 
 const (
-	RepI1  RepType = "i1"
-	RepF64 RepType = "f64"
+	RepI1          RepType = "i1"
+	RepF64         RepType = "f64"
+	RepNullableF64 RepType = "nullable-f64"
 )
 
 type RepresentationBinding struct {
@@ -96,7 +97,7 @@ func NewPrimitiveRepresentationPlan(provenance TargetProvenance, sourceTypes []T
 func canonicalPrimitiveSourceTypes(sourceTypes []TypeKind) ([]TypeKind, error) {
 	seen := make(map[TypeKind]bool, len(sourceTypes))
 	for _, sourceType := range sourceTypes {
-		if sourceType != TypeBoolean && sourceType != TypeNumber {
+		if sourceType != TypeBoolean && sourceType != TypeNumber && sourceType != TypeNullableNumber {
 			return nil, fmt.Errorf("primitive source type %q has no representation binding", sourceType)
 		}
 		seen[sourceType] = true
@@ -105,7 +106,7 @@ func canonicalPrimitiveSourceTypes(sourceTypes []TypeKind) ([]TypeKind, error) {
 		return nil, fmt.Errorf("primitive representation plan requires at least one source type")
 	}
 	result := make([]TypeKind, 0, len(seen))
-	for _, sourceType := range []TypeKind{TypeBoolean, TypeNumber} {
+	for _, sourceType := range []TypeKind{TypeBoolean, TypeNumber, TypeNullableNumber} {
 		if seen[sourceType] {
 			result = append(result, sourceType)
 		}
@@ -127,6 +128,11 @@ func PrimitiveRepresentationBinding(sourceType TypeKind) (RepresentationBinding,
 			return RepresentationBinding{}, err
 		}
 		return RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}, nil
+	case TypeNullableNumber:
+		if err := ValidateNullableNumberContract(CanonicalNullableNumberContract()); err != nil {
+			return RepresentationBinding{}, err
+		}
+		return RepresentationBinding{SourceType: TypeNullableNumber, RepType: RepNullableF64, BitWidth: NullableNumberABIByteWidth, ABIAlign: NullableNumberABIAlign}, nil
 	default:
 		return RepresentationBinding{}, fmt.Errorf("primitive source type %q has no representation binding", sourceType)
 	}
@@ -349,6 +355,16 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 					instruction.Kind = "phi"
 				case "call":
 					instruction.Kind = "call"
+				case "is_nullish":
+					if operation.Type != TypeBoolean || binding.RepType != RepI1 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("is_nullish operation %d has no i1 representation", operation.ID)
+					}
+					instruction.Kind = "nullable.is-nullish"
+				case "unwrap_nullable":
+					if operation.Type != TypeNumber || binding.RepType != RepF64 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("unwrap_nullable operation %d has no f64 representation", operation.ID)
+					}
+					instruction.Kind = "nullable.unwrap"
 				default:
 					return FirstSliceMIRArtifact{}, fmt.Errorf("unsupported Phase 2B HIR operation %q", operation.Kind)
 				}
@@ -498,6 +514,10 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		}
 	case len(module.Functions) == 1 && module.Functions[0].Name == "compute":
 		if err := verifyLoopMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
+	case len(module.Functions) == 1 && module.Functions[0].Name == "coalesce":
+		if err := verifyCoalesceMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
 	default:
@@ -652,6 +672,60 @@ func verifyLoopMIRFunction(function FirstSliceMIRFunction) error {
 		return fmt.Errorf("Phase 2B loop exit is invalid")
 	}
 	return nil
+}
+
+func verifyCoalesceMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.Name != "coalesce" || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
+		return fmt.Errorf("Phase 2B coalesce MIR function is invalid")
+	}
+	wantParameterTypes := []RepType{RepNullableF64, RepF64}
+	for index, parameter := range function.Parameters {
+		if parameter.Name == "" || parameter.Value != ValueID(index+1) || parameter.Type != wantParameterTypes[index] || !validOrigin(parameter.Origin) {
+			return fmt.Errorf("Phase 2B coalesce MIR parameter %d is invalid", index)
+		}
+	}
+	for index, block := range function.Blocks {
+		if block.ID != BlockID(index+1) || block.Instructions == nil || !validOrigin(block.Terminator.Origin) {
+			return fmt.Errorf("Phase 2B coalesce MIR block %d is invalid", index+1)
+		}
+	}
+	entry := function.Blocks[0]
+	if len(entry.Instructions) != 1 || !validNullableIsNullishInstruction(entry.Instructions[0], 3, 1) ||
+		entry.Terminator.Kind != "condbranch" || entry.Terminator.Value != 3 || !slices.Equal(entry.Terminator.Successors, []BlockID{2, 3}) {
+		return fmt.Errorf("Phase 2B coalesce MIR nullish branch is invalid")
+	}
+	fallback := function.Blocks[1]
+	if len(fallback.Instructions) != 0 || fallback.Terminator.Kind != "branch" || fallback.Terminator.Value != 0 || !slices.Equal(fallback.Terminator.Successors, []BlockID{4}) {
+		return fmt.Errorf("Phase 2B coalesce MIR fallback block is invalid")
+	}
+	value := function.Blocks[2]
+	if len(value.Instructions) != 1 || !validNullableUnwrapInstruction(value.Instructions[0], 4, 1) ||
+		value.Terminator.Kind != "branch" || value.Terminator.Value != 0 || !slices.Equal(value.Terminator.Successors, []BlockID{4}) {
+		return fmt.Errorf("Phase 2B coalesce MIR value block is invalid")
+	}
+	merge := function.Blocks[3]
+	if len(merge.Instructions) != 1 {
+		return fmt.Errorf("Phase 2B coalesce MIR merge block is invalid")
+	}
+	phi := merge.Instructions[0]
+	if phi.ID != 5 || phi.Kind != "phi" || phi.Type != RepF64 || !slices.Equal(phi.Operands, []ValueID{2, 4}) || !slices.Equal(phi.IncomingBlocks, []BlockID{2, 3}) ||
+		phi.Callee != 0 || phi.Effect != EffectPure || phi.LogicalCapabilityRequirements == nil || len(phi.LogicalCapabilityRequirements) != 0 || !validOrigin(phi.Origin) ||
+		merge.Terminator.Kind != "return" || merge.Terminator.Value != 5 || len(merge.Terminator.Successors) != 0 {
+		return fmt.Errorf("Phase 2B coalesce MIR phi or return is invalid")
+	}
+	return nil
+}
+
+func validNullableIsNullishInstruction(instruction FirstSliceMIRInstruction, id, operand ValueID) bool {
+	return instruction.ID == id && instruction.Kind == "nullable.is-nullish" && instruction.Type == RepI1 && slices.Equal(instruction.Operands, []ValueID{operand}) &&
+		len(instruction.IncomingBlocks) == 0 && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil &&
+		len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
+}
+
+func validNullableUnwrapInstruction(instruction FirstSliceMIRInstruction, id, operand ValueID) bool {
+	return instruction.ID == id && instruction.Kind == "nullable.unwrap" && instruction.Type == RepF64 && slices.Equal(instruction.Operands, []ValueID{operand}) &&
+		len(instruction.IncomingBlocks) == 0 && instruction.Callee == 0 && instruction.Effect == EffectPure && instruction.LogicalCapabilityRequirements != nil &&
+		len(instruction.LogicalCapabilityRequirements) == 0 && validOrigin(instruction.Origin)
 }
 
 func verifyNumberFunctionParameters(parameters []FirstSliceMIRParameter) error {

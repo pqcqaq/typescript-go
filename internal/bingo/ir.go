@@ -13,12 +13,12 @@ import (
 
 const (
 	// HIRSchemaVersion is the serialized typed-HIR contract.
-	HIRSchemaVersion uint32 = 4
+	HIRSchemaVersion uint32 = 5
 	// HIRFrontendSnapshotSchemaVersion is the only frontend snapshot schema
-	// accepted by HIR v4. Supporting another major requires an explicit reader.
+	// accepted by HIR v5. Supporting another major requires an explicit reader.
 	HIRFrontendSnapshotSchemaVersion uint32 = 2
 	// MIRSchemaVersion is the serialized target-aware MIR contract.
-	MIRSchemaVersion uint32 = 1
+	MIRSchemaVersion uint32 = 3
 )
 
 // ValueID, BlockID and FunctionID are dense IDs local to one artifact.
@@ -39,7 +39,10 @@ const (
 	TypeNumber  TypeKind = "number"
 	TypeBoolean TypeKind = "boolean"
 	TypeString  TypeKind = "string"
-	TypeVoid    TypeKind = "void"
+	// TypeNullableNumber is the canonical three-state static union used by the
+	// Phase 2B nullish slice. The target ABI preserves null and undefined tags.
+	TypeNullableNumber TypeKind = "number|null|undefined"
+	TypeVoid           TypeKind = "void"
 )
 
 // CompilerBuildIdentity identifies the exact fork checkout used for lowering

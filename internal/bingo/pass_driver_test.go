@@ -31,7 +31,7 @@ func TestPassExecutorRunsCanonicalDAGWithDeterministicDumps(t *testing.T) {
 	if !reflect.DeepEqual(firstRun, secondRun) {
 		t.Fatalf("pass execution is not deterministic:\nfirst=%#v\nsecond=%#v", firstRun, secondRun)
 	}
-	if firstRun.State.Schema != "verified-mir-v1" || !slices.Contains(firstRun.State.Facts, "final-mir") {
+	if firstRun.State.Schema != "verified-mir-v3" || !slices.Contains(firstRun.State.Facts, "final-mir") {
 		t.Fatalf("final state = %#v", firstRun.State)
 	}
 	if got, want := len(firstRun.Dumps), len(canonicalPassSpecs)+1; got != want {

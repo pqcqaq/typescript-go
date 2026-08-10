@@ -88,7 +88,7 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 			t.Fatalf("pass %d is nondeterministic or out of order", index)
 		}
 	}
-	if firstExecution.State.Schema != "verified-mir-v1" || !slices.Contains(firstExecution.State.Facts, "final-mir") ||
+	if firstExecution.State.Schema != "verified-mir-v3" || !slices.Contains(firstExecution.State.Facts, "final-mir") ||
 		!slices.Contains(firstExecution.State.Facts, "bound-capability-closure") {
 		t.Fatalf("final MIR state = %#v", firstExecution.State)
 	}
@@ -148,7 +148,7 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v4", typedBytes)
+	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v5", typedBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

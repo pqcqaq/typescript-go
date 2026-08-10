@@ -196,7 +196,24 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 				if operation.Type != callee.ReturnType {
 					return fmt.Errorf("call operation %d result type %q disagrees with callee return type %q", operation.ID, operation.Type, callee.ReturnType)
 				}
+			case "is_nullish":
+				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
+					return fmt.Errorf("operation %d: %w", operation.ID, err)
+				}
+				if values[operation.Operands[0]].typ != TypeNullableNumber || operation.Type != TypeBoolean {
+					return fmt.Errorf("is_nullish operation %d requires nullable-number input and boolean result", operation.ID)
+				}
+			case "unwrap_nullable":
+				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
+					return fmt.Errorf("operation %d: %w", operation.ID, err)
+				}
+				if values[operation.Operands[0]].typ != TypeNullableNumber || operation.Type != TypeNumber {
+					return fmt.Errorf("unwrap_nullable operation %d requires nullable-number input and number result", operation.ID)
+				}
 			}
+		}
+		if err := verifyNullableUnwrapGuard(function, blockIndex, block, values); err != nil {
+			return err
 		}
 		terminator := block.Terminator
 		switch terminator.Kind {
@@ -246,6 +263,14 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 		if len(operation.Operands) == 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee == 0 || operation.Effect != EffectCall {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
+	case "is_nullish":
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "unwrap_nullable":
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
 	default:
 		return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 	}
@@ -280,7 +305,32 @@ func validPhase2HIRType(value TypeKind) bool {
 }
 
 func validPhase2HIRValueType(value TypeKind) bool {
-	return value == TypeNumber || value == TypeBoolean
+	return value == TypeNumber || value == TypeBoolean || value == TypeNullableNumber
+}
+
+// verifyNullableUnwrapGuard prevents a nullable payload from being observed
+// without the matching nullish branch proof. The first slice intentionally
+// accepts one canonical coalesce shape rather than trusting an optimizer to
+// reconstruct this source-level safety condition.
+func verifyNullableUnwrapGuard(function HIRFunction, blockIndex int, block HIRBlock, values map[ValueID]valueDefinition) error {
+	for _, operation := range block.Operations {
+		if operation.Kind != "unwrap_nullable" {
+			continue
+		}
+		if function.Name != "coalesce" || len(function.Blocks) != 4 || blockIndex != 2 {
+			return fmt.Errorf("unwrap_nullable operation %d is outside the canonical coalesce CFG", operation.ID)
+		}
+		entry := function.Blocks[0]
+		if len(entry.Operations) != 1 || entry.Operations[0].Kind != "is_nullish" || entry.Operations[0].Operands[0] != operation.Operands[0] ||
+			entry.Terminator.Kind != "condbranch" || !slices.Equal(entry.Terminator.Successors, []BlockID{2, 3}) ||
+			entry.Terminator.Value != entry.Operations[0].ID {
+			return fmt.Errorf("unwrap_nullable operation %d lacks a matching non-nullish branch proof", operation.ID)
+		}
+		if values[operation.Operands[0]].typ != TypeNullableNumber {
+			return fmt.Errorf("unwrap_nullable operation %d has non-nullable input", operation.ID)
+		}
+	}
+	return nil
 }
 
 func CanonicalPhase2HIR(module HIRModule) ([]byte, string, error) {

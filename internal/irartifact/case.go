@@ -40,6 +40,7 @@ type CaseManifest struct {
 type CaseExecution struct {
 	Name         string `json:"name"`
 	Flag         *bool  `json:"flag,omitempty"`
+	NullableTag  string `json:"nullableTag,omitempty"`
 	LeftBits     string `json:"leftBits"`
 	RightBits    string `json:"rightBits"`
 	ExpectedBits string `json:"expectedBits"`
@@ -149,7 +150,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "compute" && entryPoint != "coalesce" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -165,7 +166,17 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 			return fmt.Errorf("choose execution %q is missing boolean flag", execution.Name)
 		}
 		if entryPoint != "choose" && execution.Flag != nil {
-			return fmt.Errorf("number execution %q must not contain boolean flag", execution.Name)
+			return fmt.Errorf("non-choose execution %q must not contain boolean flag", execution.Name)
+		}
+		if entryPoint == "coalesce" {
+			if execution.NullableTag != "number" && execution.NullableTag != "null" && execution.NullableTag != "undefined" {
+				return fmt.Errorf("coalesce execution %q has invalid nullableTag %q", execution.Name, execution.NullableTag)
+			}
+			if execution.NullableTag != "number" && execution.LeftBits != "0000000000000000" {
+				return fmt.Errorf("coalesce execution %q has noncanonical nullish payload", execution.Name)
+			}
+		} else if execution.NullableTag != "" {
+			return fmt.Errorf("non-coalesce execution %q must not contain nullableTag", execution.Name)
 		}
 		for label, value := range map[string]string{
 			"leftBits": execution.LeftBits, "rightBits": execution.RightBits, "expectedBits": execution.ExpectedBits,

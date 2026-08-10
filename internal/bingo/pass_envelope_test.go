@@ -10,7 +10,7 @@ import (
 )
 
 func TestPassArtifactEnvelopeCanonicalizesAndBindsRoleSchemaAndPayload(t *testing.T) {
-	hir, err := NewPassArtifact(PassArtifactTypedHIR, "hir-v4", json.RawMessage(`{ "z": 1, "a": 2 }`))
+	hir, err := NewPassArtifact(PassArtifactTypedHIR, "hir-v5", json.RawMessage(`{ "z": 1, "a": 2 }`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestPassArtifactEnvelopeCanonicalizesAndBindsRoleSchemaAndPayload(t *testin
 		t.Fatalf("canonical HIR artifact = %#v", storedHIR)
 	}
 
-	otherRole, err := NewPassArtifact(PassArtifactRepresentationPlan, "hir-v4", hir.Payload)
+	otherRole, err := NewPassArtifact(PassArtifactRepresentationPlan, "hir-v5", hir.Payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 		PassArtifactToolchainManifest: "toolchain-manifest-v1",
 	})
 	assertRequirements(t, representation.ReadsArtifacts, map[PassArtifactName]string{
-		PassArtifactTypedHIR:                   "hir-v4",
+		PassArtifactTypedHIR:                   "hir-v5",
 		PassArtifactBuildPlan:                  "build-plan-v1",
 		PassArtifactRuntimeManifest:            "runtime-manifest-v1",
 		PassArtifactToolchainManifest:          "toolchain-manifest-v1",
@@ -140,11 +140,11 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
 	})
 	assertRequirements(t, mir.ReadsArtifacts, map[PassArtifactName]string{
-		PassArtifactTypedHIR:           "hir-v4",
-		PassArtifactRepresentationPlan: "rep-plan-v1",
+		PassArtifactTypedHIR:           "hir-v5",
+		PassArtifactRepresentationPlan: "rep-plan-v2",
 	})
 	assertRequirements(t, capability.ReadsArtifacts, map[PassArtifactName]string{
-		PassArtifactRepresentationPlan:         "rep-plan-v1",
+		PassArtifactRepresentationPlan:         "rep-plan-v2",
 		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
 	})
 }
@@ -186,14 +186,14 @@ func TestPassExecutorRetainsResolverInputsAndOutputsThroughRepresentation(t *tes
 		t.Fatalf("final envelope is not canonical: %v", err)
 	}
 	want := map[PassArtifactName]string{
-		PassArtifactTypedHIR:                   "hir-v4",
+		PassArtifactTypedHIR:                   "hir-v5",
 		PassArtifactBuildPlan:                  "build-plan-v1",
 		PassArtifactRuntimeManifest:            "runtime-manifest-v1",
 		PassArtifactToolchainManifest:          "toolchain-manifest-v1",
 		PassArtifactTargetContext:              "target-context-v1",
 		PassArtifactDataLayout:                 "data-layout-v1",
 		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
-		PassArtifactRepresentationPlan:         "rep-plan-v1",
+		PassArtifactRepresentationPlan:         "rep-plan-v2",
 	}
 	if len(execution.State.Artifacts.Artifacts) != len(want) {
 		t.Fatalf("final artifacts = %#v", execution.State.Artifacts.Artifacts)
