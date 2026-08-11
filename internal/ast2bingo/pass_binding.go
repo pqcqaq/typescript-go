@@ -17,7 +17,7 @@ import (
 
 const (
 	primitiveSourceTypePlanSchemaVersion uint32 = 2
-	primitiveTypedHIRSchemaVersion       uint32 = 6
+	primitiveTypedHIRSchemaVersion       uint32 = 7
 )
 
 // PrimitiveTypedHIRSchemaVersion is the wire version consumed by target-aware
@@ -78,7 +78,7 @@ func executePrimitiveHIRPasses(ctx context.Context, snapshot ProgramSnapshot, id
 	if err != nil {
 		return primitiveTypedHIRArtifact{}, execution, err
 	}
-	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v6" {
+	if len(execution.Dumps) != len(primitiveHIRPassPrefix) || execution.State.Schema != "hir-v7" {
 		return primitiveTypedHIRArtifact{}, execution, fmt.Errorf(
 			"primitive pass prefix ended with %d dumps and schema %q",
 			len(execution.Dumps), execution.State.Schema,
@@ -180,7 +180,7 @@ func postVerifyPrimitiveSnapshotPass(_ context.Context, spec bingo.PassSpec, ite
 }
 
 func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) error {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v6"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v7"); err != nil {
 		return err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -191,7 +191,7 @@ func preVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iter
 }
 
 func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, state bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassResult, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v6"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v7"); err != nil {
 		return bingo.PassResult{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(state.Artifact)
@@ -213,7 +213,7 @@ func runPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration 
 }
 
 func postVerifyPrimitiveTypedHIRPass(_ context.Context, spec bingo.PassSpec, iteration int, input, output bingo.PassState, identity bingo.CompilerBuildIdentity) (bingo.PassVerification, error) {
-	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v6"); err != nil {
+	if err := requirePrimitivePass(spec, iteration, bingo.PassTypedHIR, "source-type-plan-v2", "hir-v7"); err != nil {
 		return bingo.PassVerification{}, err
 	}
 	plan, err := decodePrimitiveSourceTypePlan(input.Artifact)

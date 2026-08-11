@@ -14,7 +14,7 @@ import (
 
 const (
 	RepresentationPlanSchemaVersion uint32 = 2
-	FirstSliceMIRSchemaVersion      uint32 = 4
+	FirstSliceMIRSchemaVersion      uint32 = 5
 	BoundCapabilitySchemaVersion    uint32 = 1
 )
 

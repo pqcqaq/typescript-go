@@ -10,7 +10,7 @@ import (
 )
 
 func TestPassArtifactEnvelopeCanonicalizesAndBindsRoleSchemaAndPayload(t *testing.T) {
-	hir, err := NewPassArtifact(PassArtifactTypedHIR, "hir-v6", json.RawMessage(`{ "z": 1, "a": 2 }`))
+	hir, err := NewPassArtifact(PassArtifactTypedHIR, "hir-v7", json.RawMessage(`{ "z": 1, "a": 2 }`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestPassArtifactEnvelopeCanonicalizesAndBindsRoleSchemaAndPayload(t *testin
 		t.Fatalf("canonical HIR artifact = %#v", storedHIR)
 	}
 
-	otherRole, err := NewPassArtifact(PassArtifactRepresentationPlan, "hir-v6", hir.Payload)
+	otherRole, err := NewPassArtifact(PassArtifactRepresentationPlan, "hir-v7", hir.Payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 		PassArtifactToolchainManifest: "toolchain-manifest-v1",
 	})
 	assertRequirements(t, representation.ReadsArtifacts, map[PassArtifactName]string{
-		PassArtifactTypedHIR:                   "hir-v6",
+		PassArtifactTypedHIR:                   "hir-v7",
 		PassArtifactBuildPlan:                  "build-plan-v1",
 		PassArtifactRuntimeManifest:            "runtime-manifest-v1",
 		PassArtifactToolchainManifest:          "toolchain-manifest-v1",
@@ -140,7 +140,7 @@ func TestTargetPassMetadataRequiresTypedArtifacts(t *testing.T) {
 		PassArtifactAvailableCapabilityCatalog: "available-capability-catalog-v1",
 	})
 	assertRequirements(t, mir.ReadsArtifacts, map[PassArtifactName]string{
-		PassArtifactTypedHIR:           "hir-v6",
+		PassArtifactTypedHIR:           "hir-v7",
 		PassArtifactRepresentationPlan: "rep-plan-v2",
 	})
 	assertRequirements(t, capability.ReadsArtifacts, map[PassArtifactName]string{
@@ -186,7 +186,7 @@ func TestPassExecutorRetainsResolverInputsAndOutputsThroughRepresentation(t *tes
 		t.Fatalf("final envelope is not canonical: %v", err)
 	}
 	want := map[PassArtifactName]string{
-		PassArtifactTypedHIR:                   "hir-v6",
+		PassArtifactTypedHIR:                   "hir-v7",
 		PassArtifactBuildPlan:                  "build-plan-v1",
 		PassArtifactRuntimeManifest:            "runtime-manifest-v1",
 		PassArtifactToolchainManifest:          "toolchain-manifest-v1",

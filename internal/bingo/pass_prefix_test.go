@@ -31,8 +31,8 @@ func TestPassExecutorRunsExplicitCanonicalPrefix(t *testing.T) {
 	if execution.Dumps[0].Pass != PassValidateSnapshot || execution.Dumps[1].Pass != PassTypedHIR {
 		t.Fatalf("prefix pass order = %#v", execution.Dumps)
 	}
-	if execution.State.Schema != "hir-v6" {
-		t.Fatalf("prefix final schema = %q, want hir-v6", execution.State.Schema)
+	if execution.State.Schema != "hir-v7" {
+		t.Fatalf("prefix final schema = %q, want hir-v7", execution.State.Schema)
 	}
 	if execution.State.Artifacts != nil {
 		t.Fatalf("typed-HIR prefix unexpectedly changed its legacy PassState API: %#v", execution.State.Artifacts)

@@ -169,6 +169,12 @@ func TestPhase2UTF16StringLengthHIRIsCanonical(t *testing.T) {
 	if err := VerifyCanonicalPhase2HIR(module); err != nil {
 		t.Fatal(err)
 	}
+	oldMajor := module
+	oldMajor.SchemaVersion = 6
+	oldMajor.ContentHash = ""
+	if _, _, err := CanonicalPhase2HIR(oldMajor); err == nil || !strings.Contains(err.Error(), "unsupported HIR schema 6") {
+		t.Fatalf("old UTF-16 HIR major error = %v", err)
+	}
 	for _, mutate := range []func(*HIRModule){
 		func(value *HIRModule) { value.Functions[0].Parameters[0].Type = TypeNumber },
 		func(value *HIRModule) { value.Functions[0].Blocks[0].Operations[0].Operands[0] = 2 },

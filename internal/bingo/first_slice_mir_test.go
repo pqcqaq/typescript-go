@@ -552,6 +552,10 @@ func TestRepresentationPlanAndMIRStrictDecodersRejectUnknownFields(t *testing.T)
 	if _, err := DecodeStructuralFirstSliceMIR([]byte(unknownMIR)); err == nil || !strings.Contains(err.Error(), "unknown") {
 		t.Fatalf("unknown MIR field error = %v", err)
 	}
+	oldMIR := strings.Replace(string(moduleBytes), fmt.Sprintf(`"schemaVersion":%d`, FirstSliceMIRSchemaVersion), `"schemaVersion":4`, 1)
+	if _, err := DecodeStructuralFirstSliceMIR([]byte(oldMIR)); err == nil || !strings.Contains(err.Error(), "unsupported first-slice MIR schema 4") {
+		t.Fatalf("old UTF-16 MIR major error = %v", err)
+	}
 }
 
 func firstSliceMIRFixture(t *testing.T) (HIRModule, RepresentationPlan) {

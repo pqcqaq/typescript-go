@@ -124,7 +124,7 @@ func requireResolveTargetPass(ctx context.Context, spec bingo.PassSpec, iteratio
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if spec.ID != bingo.PassResolveTarget || spec.InputSchema != "hir-v6" || spec.OutputSchema != "target-context-v1" || iteration != 1 {
+	if spec.ID != bingo.PassResolveTarget || spec.InputSchema != "hir-v7" || spec.OutputSchema != "target-context-v1" || iteration != 1 {
 		return fmt.Errorf("unexpected resolve-target pass invocation: id=%s input=%s output=%s iteration=%d", spec.ID, spec.InputSchema, spec.OutputSchema, iteration)
 	}
 	if input.Schema != spec.InputSchema {
