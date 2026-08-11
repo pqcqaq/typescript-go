@@ -15,9 +15,9 @@ import (
 
 const (
 	// HIRSchemaVersion is the serialized typed-HIR contract.
-	HIRSchemaVersion uint32 = 7
+	HIRSchemaVersion uint32 = 8
 	// HIRFrontendSnapshotSchemaVersion is the only frontend snapshot schema
-	// accepted by HIR v7. Supporting another major requires an explicit reader.
+	// accepted by HIR v8. Supporting another major requires an explicit reader.
 	HIRFrontendSnapshotSchemaVersion uint32 = 2
 	// MIRSchemaVersion is the serialized target-aware MIR contract.
 	MIRSchemaVersion uint32 = 3

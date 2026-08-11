@@ -141,6 +141,74 @@ func validPhase2StringLengthHIR() HIRModule {
 	}
 }
 
+func validPhase2ApplicationMainHIR() HIRModule {
+	requirements := make([]RuntimeCapabilityID, 0)
+	return HIRModule{
+		SchemaVersion: HIRSchemaVersion, Provenance: testHIRProvenance(requirements), LogicalCapabilityRequirements: requirements,
+		Functions: []HIRFunction{{
+			ID: 1, Name: "main", Exported: true, ReturnType: TypeNumber, Origin: testOrigin(0, 45),
+			Parameters: []HIRParameter{},
+			Blocks: []HIRBlock{{
+				ID:         1,
+				Operations: []HIROp{{ID: 1, Kind: "number.constant", Type: TypeNumber, NumberBits: "406fe00000000000", Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(40, 43)}},
+				Terminator: HIRTerminator{Kind: "return", Value: 1, Origin: testOrigin(33, 44)},
+			}},
+		}},
+	}
+}
+
+func TestPhase2ApplicationMainHIRIsCanonicalAndRejectsTampering(t *testing.T) {
+	base := validPhase2ApplicationMainHIR()
+	_, hash, err := CanonicalPhase2HIR(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base.ContentHash = hash
+	if err := VerifyCanonicalPhase2HIR(base); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*HIRModule)
+		want   string
+	}{
+		{name: "parameter", mutate: func(module *HIRModule) {
+			module.Functions[0].Parameters = []HIRParameter{{Name: "arg", Value: 1, Type: TypeNumber, Origin: testOrigin(20, 23)}}
+			module.Functions[0].Blocks[0].Operations[0].ID = 2
+			module.Functions[0].Blocks[0].Terminator.Value = 2
+		}, want: "application main HIR function is invalid"},
+		{name: "fractional status", mutate: func(module *HIRModule) { module.Functions[0].Blocks[0].Operations[0].NumberBits = "3fe0000000000000" }, want: "application main HIR exit status is invalid"},
+		{name: "status 256", mutate: func(module *HIRModule) { module.Functions[0].Blocks[0].Operations[0].NumberBits = "4070000000000000" }, want: "application main HIR exit status is invalid"},
+		{name: "wrong return", mutate: func(module *HIRModule) { module.Functions[0].Blocks[0].Terminator.Value = 0 }, want: "return terminator requires one value"},
+		{name: "helper function", mutate: func(module *HIRModule) {
+			helper := module.Functions[0]
+			helper.ID = 1
+			helper.Name = "helper"
+			helper.Exported = false
+			module.Functions[0].ID = 2
+			module.Functions = append([]HIRFunction{helper}, module.Functions[0])
+		}, want: "application main HIR must be the sole function"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := base
+			candidate.Functions = append([]HIRFunction(nil), base.Functions...)
+			candidate.Functions[0].Parameters = append([]HIRParameter(nil), base.Functions[0].Parameters...)
+			candidate.Functions[0].Blocks = append([]HIRBlock(nil), base.Functions[0].Blocks...)
+			candidate.Functions[0].Blocks[0].Operations = append([]HIROp(nil), base.Functions[0].Blocks[0].Operations...)
+			test.mutate(&candidate)
+			candidate.ContentHash = ""
+			_, candidateHash, hashErr := CanonicalPhase2HIR(candidate)
+			if hashErr == nil {
+				candidate.ContentHash = candidateHash
+				hashErr = VerifyCanonicalPhase2HIR(candidate)
+			}
+			if hashErr == nil || !strings.Contains(hashErr.Error(), test.want) {
+				t.Fatalf("application HIR tamper error = %v, want %q", hashErr, test.want)
+			}
+		})
+	}
+}
+
 func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	module := validPhase2ChooseHIR()
 	encoded, hash, err := CanonicalPhase2HIR(module)
@@ -170,9 +238,9 @@ func TestPhase2UTF16StringLengthHIRIsCanonical(t *testing.T) {
 		t.Fatal(err)
 	}
 	oldMajor := module
-	oldMajor.SchemaVersion = 6
+	oldMajor.SchemaVersion = 7
 	oldMajor.ContentHash = ""
-	if _, _, err := CanonicalPhase2HIR(oldMajor); err == nil || !strings.Contains(err.Error(), "unsupported HIR schema 6") {
+	if _, _, err := CanonicalPhase2HIR(oldMajor); err == nil || !strings.Contains(err.Error(), "unsupported HIR schema 7") {
 		t.Fatalf("old UTF-16 HIR major error = %v", err)
 	}
 	for _, mutate := range []func(*HIRModule){

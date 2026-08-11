@@ -16,6 +16,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/microsoft/typescript-go/internal/applicationbuild"
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/core"
@@ -37,6 +38,7 @@ var (
 	loadCompilerBuildIdentity   = ast2bingo.InjectedCompilerBuildIdentity
 	openStaticCoreTargetMachine = llvmbackend.OpenFirstSliceTargetMachine
 	executeStaticCoreCase       = firstslicerunner.RunCase
+	executeApplicationBuild     = applicationbuild.Build
 )
 
 type processResult struct {
@@ -111,6 +113,8 @@ func runWithEnvironment(ctx context.Context, args []string, stdout, stderr io.Wr
 		return runCompatibility(ctx, args[0], args[1:], stdout, stderr, environment)
 	case "test":
 		return runTests(ctx, args[1:], stdout, stderr, environment)
+	case "build":
+		return runBuild(ctx, args[1:], stdout, stderr, environment)
 	case "help", "-h", "--help":
 		writeUsage(stdout)
 		return exitSuccess
@@ -119,6 +123,107 @@ func runWithEnvironment(ctx context.Context, args []string, stdout, stderr io.Wr
 		writeUsage(stderr)
 		return exitUsage
 	}
+}
+
+func runBuild(ctx context.Context, args []string, stdout, stderr io.Writer, environment commandEnvironment) int {
+	flags := flag.NewFlagSet("build", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	project := flags.String("project", "tsconfig.json", "path to tsconfig.json or its directory")
+	flags.StringVar(project, "p", "tsconfig.json", "path to tsconfig.json or its directory")
+	output := flags.String("output", "a.out", "write the Linux x86-64 executable to this path")
+	flags.StringVar(output, "o", "a.out", "write the Linux x86-64 executable to this path")
+	if err := flags.Parse(args); err != nil {
+		return exitUsage
+	}
+	if flags.NArg() > 1 {
+		fmt.Fprintln(stderr, "ts2bin build: expected at most one project path")
+		return exitUsage
+	}
+	if flags.NArg() == 1 {
+		*project = flags.Arg(0)
+	}
+	configPath, err := resolveConfigPath(*project)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: %v\n", err)
+		return exitUsage
+	}
+	configPath, err = filepath.Abs(configPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: resolve project path: %v\n", err)
+		return exitUsage
+	}
+	outputPath, err := filepath.Abs(*output)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: resolve output path: %v\n", err)
+		return exitUsage
+	}
+	reportPath := outputPath + ".report.json"
+	for _, path := range []string{outputPath, reportPath} {
+		if _, statErr := os.Stat(path); statErr == nil {
+			fmt.Fprintf(stderr, "ts2bin build: output already exists: %s\n", path)
+			return exitUsage
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			fmt.Fprintf(stderr, "ts2bin build: inspect output %s: %v\n", path, statErr)
+			return exitUsage
+		}
+	}
+	repositoryRoot, err := resolveRepositoryRoot(environment)
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: %v\n", err)
+		return exitUsage
+	}
+	identity, err := loadCompilerBuildIdentity()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: compiler identity: %v\n", err)
+		return exitUsage
+	}
+	machine, err := openStaticCoreTargetMachine()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: %v\n", err)
+		return exitDiagnostics
+	}
+	if machine != nil {
+		defer machine.Close()
+	}
+	clang, err := firstAvailableTool(environment.lookPath, "clang-20", "clang")
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: Clang 20 not found: %v\n", err)
+		return exitDiagnostics
+	}
+	lld, err := firstAvailableTool(environment.lookPath, "ld.lld-20", "ld.lld")
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: LLD 20 not found: %v\n", err)
+		return exitDiagnostics
+	}
+	runtimeDirectory := filepath.Join(repositoryRoot, "runtime", "bingo-rt", "target", "first-slice")
+	runtimeArchive := filepath.Join(runtimeDirectory, "cargo", llvmbackend.FirstSliceTriple, "release", "libbingo_runtime.a")
+	report, err := executeApplicationBuild(ctx, identity, machine, applicationbuild.Request{
+		ConfigPath: configPath, OutputPath: outputPath,
+		RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
+		Clang: clang, LLD: lld,
+	})
+	if err != nil {
+		var diagnostics *applicationbuild.DiagnosticsError
+		if errors.As(err, &diagnostics) {
+			for _, diagnostic := range diagnostics.Diagnostics {
+				writeDiagnostic(stderr, diagnostic)
+			}
+		} else {
+			fmt.Fprintf(stderr, "ts2bin build: %v\n", err)
+		}
+		return exitDiagnostics
+	}
+	reportBytes, err := report.CanonicalBytes()
+	if err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: encode report: %v\n", err)
+		return exitDiagnostics
+	}
+	if err := os.WriteFile(reportPath, append(reportBytes, '\n'), 0o644); err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: write report: %v\n", err)
+		return exitUsage
+	}
+	fmt.Fprintf(stdout, "[ok] build %s %s\n", outputPath, report.Artifacts.ExecutableHash)
+	return exitSuccess
 }
 
 func defaultCommandEnvironment() commandEnvironment {
@@ -943,5 +1048,5 @@ func shortCommit(commit string) string {
 
 func writeUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "usage: ts2bin <command> [options]")
-	fmt.Fprintln(writer, "commands: check, snapshot, dump-snapshot, emit-hir, emit-mir, diff, compatibility, upstream-audit, doctor, test, version")
+	fmt.Fprintln(writer, "commands: build, check, snapshot, dump-snapshot, emit-hir, emit-mir, diff, compatibility, upstream-audit, doctor, test, version")
 }

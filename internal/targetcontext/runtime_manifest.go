@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "eeb6aef38ded57184ac1bc720ccbd3717d72188e77ceaed0bb13e9aab253a552"
-	LockedABISchemaHash                 = "4e3cca44556784e7f981438c3d8bdd8ab0388af2ec257679ad8e483f2fa16acd"
-	LockedTargetManifestHash            = "c1528c0b97b31f2e0562f4aeaa20fb317aa432e0d5c5224ba7bc3e6e7cfdf7a8"
-	LockedRuntimeManifestHash           = "797668af610406f5566ab318b1d8c9a3b30beae3cbfe8fe7d73b21841bd99a55"
+	LockedRuntimeSourceHash             = "6094e7460d450b6cab129f4620c51206b1a05ea783b034623b2987ba00e49ad2"
+	LockedABISchemaHash                 = "5af9f32c464859fa43b890026438855012ddf4e9ed3f6f89ed5d020ecf6c6a25"
+	LockedTargetManifestHash            = "163f4e5e3a0a5f25c160748ac0c08c92a1a256361d05cd4c85151826697dff6b"
+	LockedRuntimeManifestHash           = "5959a76b5407b501bdc6333b728e49252498f6a82f19b827d800a9e83124bccf"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -42,6 +42,7 @@ type RuntimeArtifact struct {
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
 	StartupObject               RuntimeArtifact  `json:"startupObject"`
+	ApplicationStartupObject    RuntimeArtifact  `json:"applicationStartupObject"`
 	HarnessObject               RuntimeArtifact  `json:"harnessObject"`
 	ComputeHarnessObject        *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
 	ChooseHarnessObject         *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
@@ -137,6 +138,9 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	}
 	if err := validateRuntimeArtifact(manifest.Artifacts.StartupObject, "bingo_startup_empty.o"); err != nil {
 		return fmt.Errorf("startup object: %w", err)
+	}
+	if err := validateRuntimeArtifact(manifest.Artifacts.ApplicationStartupObject, "bingo_application_startup.o"); err != nil {
+		return fmt.Errorf("application startup object: %w", err)
 	}
 	if err := validateRuntimeArtifact(manifest.Artifacts.HarnessObject, "bingo_add_harness.o"); err != nil {
 		return fmt.Errorf("harness object: %w", err)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
@@ -498,7 +499,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 
 func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
 	if len(node.NamedChildren) < 4 || len(node.NamedChildren) > 7 || len(node.Children) != len(node.NamedChildren) {
-		return fmt.Errorf("primitive function requires an optional export, name, one to three parameters, number return type, and body")
+		return fmt.Errorf("primitive function requires an optional export, name, supported parameters, number return type, and body")
 	}
 	if _, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes); err != nil {
 		return err
@@ -510,7 +511,13 @@ func validateFunctionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) e
 		return err
 	}
 	parameters := namedChildren(node, "parameter[")
-	if len(parameters) < 1 || len(parameters) > 3 {
+	functionName := childText(node, "name", nodes)
+	if len(parameters) == 0 {
+		modifiers := namedChildren(node, "modifier[")
+		if functionName != "main" || len(modifiers) != 1 {
+			return fmt.Errorf("only exported application main may be parameterless")
+		}
+	} else if len(parameters) > 3 {
 		return fmt.Errorf("primitive function requires one to three parameters")
 	}
 	for _, parameter := range parameters {
@@ -658,8 +665,8 @@ func validateNumericLiteralLowerer(node NodeSnapshot, _ map[NodeID]NodeSnapshot)
 	if len(node.NamedChildren) != 0 || len(node.Children) != 0 || node.Constant.Kind != "number" || node.Constant.Text != node.SyntaxPayload.Text {
 		return fmt.Errorf("primitive numeric literal must carry one canonical number constant")
 	}
-	if node.SyntaxPayload.Text != "0" && node.SyntaxPayload.Text != "1" {
-		return fmt.Errorf("numeric literal %q is outside the primitive classify contract", node.SyntaxPayload.Text)
+	if math.IsNaN(node.Constant.Number) || math.IsInf(node.Constant.Number, 0) {
+		return fmt.Errorf("primitive numeric literal must be finite")
 	}
 	return nil
 }
@@ -869,6 +876,9 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 			function.Name = name
 		}
 	}
+	if function.Name == "main" {
+		return replayApplicationMainFunction(function, events, functionNode, nodes, types, symbols, signatures)
+	}
 	bodyID := childByRole(functionNode, "body")
 	if bodyID == "" {
 		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s has no body", functionNode.ID)
@@ -993,6 +1003,69 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	function.Blocks = []bingo.HIRBlock{block}
 	events = append(events, LoweringEvent{Kind: "return", Node: returnNode.ID, Origin: returnNode.Origin, Type: returnType})
 	events = append(events, LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin})
+	return function, events, nil
+}
+
+func replayApplicationMainFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if function.Name != "main" || len(function.Parameters) != 0 {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application entrypoint requires parameterless main")
+	}
+	body, ok := nodes[childByRole(functionNode, "body")]
+	if !ok || body.Kind != snapshotKindBlock {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 1 {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main requires exactly one return statement")
+	}
+	returnNode, err := requireChildKind(body, statements[0], snapshotKindReturnStatement, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main: %w", err)
+	}
+	literal, err := requireRoleKind(returnNode, "expression", snapshotKindNumericLiteral, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main must return a numeric literal")
+	}
+	status, err := strconv.ParseUint(literal.SyntaxPayload.Text, 10, 8)
+	if err != nil || literal.Constant.Kind != "number" || literal.Constant.Text != literal.SyntaxPayload.Text || literal.Constant.Number != float64(status) {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main exit status %q must be a canonical integer from 0 through 255", literal.SyntaxPayload.Text)
+	}
+	literalTypeID := nodeTypeID(literal)
+	literalType, err := bingoType(literalTypeID, types)
+	if err != nil || literalType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main exit status is not canonical number")
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, err := bingoType(returnTypeID, types)
+	if err != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("application main return type must be number")
+	}
+	function.ReturnType = bingo.TypeNumber
+	function.Blocks = []bingo.HIRBlock{{
+		ID: 1,
+		Operations: []bingo.HIROp{{
+			ID: 1, Kind: "number.constant", Type: bingo.TypeNumber,
+			NumberBits: fmt.Sprintf("%016x", math.Float64bits(float64(status))), Effect: bingo.EffectPure,
+			LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(literal),
+		}},
+		Terminator: bingo.HIRTerminator{Kind: "return", Value: 1, Origin: originOf(returnNode)},
+	}}
+	events = append(events,
+		LoweringEvent{Kind: "literal.number", Node: literal.ID, Origin: literal.Origin, Type: literalTypeID},
+		LoweringEvent{Kind: "return", Node: returnNode.ID, Origin: returnNode.Origin, Type: returnTypeID, Inputs: []NodeID{literal.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
 	return function, events, nil
 }
 

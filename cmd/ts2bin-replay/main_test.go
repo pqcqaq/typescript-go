@@ -106,7 +106,7 @@ func TestReplayCommandRejectsRawProgramSnapshot(t *testing.T) {
 		return bingo.CompilerBuildIdentity{
 			UpstreamCommit: strings.Repeat("1", 40),
 			ForkCommit:     strings.Repeat("2", 40),
-			LoweringSchema: "bingo-hir-lowering-v7",
+			LoweringSchema: "bingo-hir-lowering-v8",
 			LoweringHash:   strings.Repeat("4", 64),
 		}, nil
 	}

@@ -280,7 +280,7 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 
 func supportedPrimitiveFunctionSet(functions []bingo.FirstSliceMIRFunction) bool {
 	if len(functions) == 1 {
-		return functions[0].Name == "add" || functions[0].Name == "choose" || functions[0].Name == "classify" || functions[0].Name == "compute" || functions[0].Name == "coalesce" || functions[0].Name == "coalesceAssign" || functions[0].Name == "stringLength"
+		return functions[0].Name == "add" || functions[0].Name == "choose" || functions[0].Name == "classify" || functions[0].Name == "compute" || functions[0].Name == "coalesce" || functions[0].Name == "coalesceAssign" || functions[0].Name == "stringLength" || functions[0].Name == "main"
 	}
 	return len(functions) == 2 && functions[0].Name == "add" && functions[1].Name == "compute" && !functions[0].Exported && functions[1].Exported
 }

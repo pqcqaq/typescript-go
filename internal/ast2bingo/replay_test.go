@@ -100,6 +100,89 @@ func TestReplaySerializedAddProducesVerifiedHIR(t *testing.T) {
 	}
 }
 
+func TestReplayApplicationMainBoundaries(t *testing.T) {
+	cases := []struct {
+		name       string
+		source     string
+		numberBits string
+	}{
+		{name: "zero", source: `export function main(): number { return 0; }`, numberBits: "0000000000000000"},
+		{name: "one", source: `export function main(): number { return 1; }`, numberBits: "3ff0000000000000"},
+		{name: "maximum", source: `export function main(): number { return 255; }`, numberBits: "406fe00000000000"},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			request, frontend := replayTestRequest(map[string]string{
+				"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+				"/project/main.ts":       test.source,
+			})
+			snapshot, diagnostics := frontend.Build(context.Background(), request)
+			if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+				t.Fatalf("application snapshot diagnostics = %#v", diagnostics)
+			}
+			result, err := ReplaySnapshot(*snapshot, testCompilerIdentity(t, *snapshot))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.HIR.Functions) != 1 {
+				t.Fatalf("application HIR functions = %#v", result.HIR.Functions)
+			}
+			function := result.HIR.Functions[0]
+			if function.Name != "main" || !function.Exported || len(function.Parameters) != 0 || function.ReturnType != bingo.TypeNumber || len(function.Blocks) != 1 || len(function.Blocks[0].Operations) != 1 {
+				t.Fatalf("application main HIR = %#v", function)
+			}
+			if operation := function.Blocks[0].Operations[0]; operation.Kind != "number.constant" || operation.NumberBits != test.numberBits {
+				t.Fatalf("application main constant = %#v", operation)
+			}
+		})
+	}
+}
+
+func TestReplayRejectsParameterlessNonApplicationFunction(t *testing.T) {
+	request, frontend := replayTestRequest(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function compute(): number { return 0; }`,
+	})
+	snapshot, diagnostics := frontend.Build(context.Background(), request)
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("snapshot diagnostics = %#v", diagnostics)
+	}
+	if _, err := ReplaySnapshot(*snapshot, testCompilerIdentity(t, *snapshot)); err == nil || !strings.Contains(err.Error(), "only exported application main may be parameterless") {
+		t.Fatalf("parameterless non-application function error = %v", err)
+	}
+}
+
+func TestReplayApplicationMainRejectsUnsupportedSourceShapes(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{name: "non-exported", source: `function main(): number { return 0; }`, want: "type is not lowerable"},
+		{name: "parameterized", source: `export function main(value: number): number { return value; }`, want: "parameterless main"},
+		{name: "negative", source: `export function main(): number { return -1; }`, want: "must return a numeric literal"},
+		{name: "fractional", source: `export function main(): number { return 1.5; }`, want: "canonical integer from 0 through 255"},
+		{name: "out of range", source: `export function main(): number { return 256; }`, want: "canonical integer from 0 through 255"},
+		{name: "non-literal", source: `export function main(): number { const value = 1; return value; }`, want: "primitive variable initializer"},
+		{name: "NaN", source: `export function main(): number { return NaN; }`, want: "no resolved declaration"},
+		{name: "Infinity", source: `export function main(): number { return Infinity; }`, want: "no resolved declaration"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request, frontend := replayTestRequest(map[string]string{
+				"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+				"/project/main.ts":       test.source,
+			})
+			snapshot, diagnostics := frontend.Build(context.Background(), request)
+			if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+				t.Fatalf("unexpected frontend diagnostics = %#v", diagnostics)
+			}
+			if _, err := ReplaySnapshot(*snapshot, testCompilerIdentity(t, *snapshot)); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("application source rejection = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
 func TestReplayCommittedLocalAssignmentAndDirectCallSnapshot(t *testing.T) {
 	data, err := os.ReadFile("../../testdata/ts2bin/calllocal/frontend-snapshot.json")
 	if err != nil {

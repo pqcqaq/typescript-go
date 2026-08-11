@@ -1,6 +1,7 @@
 package ast2bingo
 
 import (
+	"context"
 	"go/parser"
 	"go/token"
 	"os"
@@ -9,14 +10,18 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestReplayDependencyClosureExcludesFrontendAndCheckerPackages(t *testing.T) {
-	command := exec.Command("go", "list", "-deps", "./internal/ast2bingo", "./cmd/ts2bin-replay")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "go", "list", "-buildvcs=false", "-deps", "./internal/ast2bingo", "./cmd/ts2bin-replay")
 	command.Dir = filepath.Clean(filepath.Join("..", ".."))
-	output, err := command.Output()
+	command.Env = append(os.Environ(), "GOPROXY=off", "GOSUMDB=off")
+	output, err := command.CombinedOutput()
 	if err != nil {
-		t.Fatalf("go list replay dependencies: %v", err)
+		t.Fatalf("go list replay dependencies: %v: %s", err, strings.TrimSpace(string(output)))
 	}
 	banned := map[string]struct{}{
 		"github.com/microsoft/typescript-go/internal/ast":        {},

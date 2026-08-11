@@ -10,98 +10,98 @@
     "sequence": 1,
     "pass": "typed-hir",
     "iteration": 1,
-    "schema": "hir-v7",
-    "contentHash": "fd0c67cbd28dc5f41e300e32da298f7383c50c66f53e19b13e020914c88d41ac"
+    "schema": "hir-v8",
+    "contentHash": "9ea6e9084bed24361cf24e763d66184760dcdd9a6d3cce1239cecfb852fd3393"
   },
   {
     "sequence": 2,
     "pass": "evaluation-order-and-semantic-sugar",
     "iteration": 1,
-    "schema": "hir-v7",
-    "contentHash": "d08ec1d4f5dbdf44c6f0d52c89e468f1d04a5574dbaf133d484fde608c0a0462"
+    "schema": "hir-v8",
+    "contentHash": "4ae30a9070b50c99dc5d51e2edccb0a71bd3c474d02fbfe70fc5fbd9b2c3d3c4"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 1,
-    "schema": "hir-v7",
-    "contentHash": "fa85852a5c891918f381029ee92abe12c9da9f2bf4a55106dc5a60af0fb9e82d"
+    "schema": "hir-v8",
+    "contentHash": "4c4674d333be14f8e6fb228aa846403a7fe82536ab9e5cfa5e9b6b6893a882e2"
   },
   {
     "sequence": 3,
     "pass": "specialization-fixed-point",
     "iteration": 2,
-    "schema": "hir-v7",
-    "contentHash": "44f727452b48b998c97ecd0153a05709a0965358ca863a41d1c58d29f6a018b5"
+    "schema": "hir-v8",
+    "contentHash": "400458268bbef2dd7d548f9f2a1667e6fa65d5d28534540dce8f57d2b2f19035"
   },
   {
     "sequence": 4,
     "pass": "variance-aliasing-and-conversions",
     "iteration": 1,
-    "schema": "hir-v7",
-    "contentHash": "980f681e5d3b6f9773d008532a657580887b3fbcefb9f4edc6b268d9b4feea2f"
+    "schema": "hir-v8",
+    "contentHash": "0829a3f650b321b7958fff3544315552790ae2bd4d78146a15b5477ad9849c3a"
   },
   {
     "sequence": 5,
     "pass": "resolve-target-context",
     "iteration": 1,
     "schema": "target-context-v1",
-    "contentHash": "a1f4e98a3d89aca893bf431d631f86d4084760a2ba9bd6b928adaff225d03b9a"
+    "contentHash": "707cc45e9ba17451ca1a1e6af8617eb3317070e85d7b3c8a25c764365f583aa9"
   },
   {
     "sequence": 6,
     "pass": "target-representation-plan",
     "iteration": 1,
     "schema": "rep-plan-v2",
-    "contentHash": "5e61865ac19ca76c4b867b5c9a501114196561a8e918b7974aeeb06f5d7127ff"
+    "contentHash": "9123daa1be59d19b2ae2dcc5c0008b0795d7db0d1abffd8b1911fbbfa1fa3c19"
   },
   {
     "sequence": 7,
     "pass": "mir-cfg-ssa",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "73351f5002b50e3540f394b071d5bf66ad9b7570bda1a39eb8817d6f0cf2b691"
+    "contentHash": "93f2fb0d763504c136c11f42531af8c2b021212ca58b7aefb41045c4b9805ac4"
   },
   {
     "sequence": 8,
     "pass": "cleanup-exception-async-state",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "279588138ccadf5a88144045c15ac97c3b25e4cad384998f11e62f7c2fdbc0e2"
+    "contentHash": "3278e0d2599ec8c248cde95e0aa00d8fe5da9ad95a7e77df80ec2c42a7cc000d"
   },
   {
     "sequence": 9,
     "pass": "structural-mir-verifier",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "bda6eb77639290a147d9369aa5c260c45c1d25d609d8fdfc48e107b23e60d783"
+    "contentHash": "32fbc3c4e3e55f31435051607e070360f53c828445f1e7d53f9f2124fde9849e"
   },
   {
     "sequence": 10,
     "pass": "capability-binding-effect-freeze",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "768582b1ab3fbfd7da55410bb6411ebbb04f8a5a04591c72af9bede69066eafc"
+    "contentHash": "c386766b843de3c891956a2e770b03e0c013f3a261e032e677b35eed0bbbff80"
   },
   {
     "sequence": 11,
     "pass": "optimize-proven-mir",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "03e7ac8a22aa2458a32c990dc4d0ee33e66847977e9ee262bd1053fe23c54784"
+    "contentHash": "afee7544f24b6bfde644b79316774cf1810f08e7e05b40fb61d3b67e05fbcb81"
   },
   {
     "sequence": 12,
     "pass": "place-gc-roots-freeze-cleanup",
     "iteration": 1,
     "schema": "mir-v3",
-    "contentHash": "6be94b667d956b16ff4d33193481d8ea79a61c8454cbb8c743b12e758def60c4"
+    "contentHash": "106b3564a2a00bc5dbc8149b09c3f0eedfff42adc20b5341591f602a95b2d64d"
   },
   {
     "sequence": 13,
     "pass": "final-verifier",
     "iteration": 1,
     "schema": "verified-mir-v3",
-    "contentHash": "d068339f8afc0943e0f594fffadf58aacc499c503d0b0a30b448f9e8c6e6cb65"
+    "contentHash": "30d877ea867bbc866f7214bf73399ca77e0f476555a1d609457a2646275a75cf"
   }
 ]

@@ -38,6 +38,10 @@ func TestRuntimeManifestStrictIdentityAndHashes(t *testing.T) {
 		"signature hash":       func(value *RuntimeManifest) { value.Capabilities[0].SignatureHash = strings.Repeat("3", 64) },
 		"harness hash":         func(value *RuntimeManifest) { value.Artifacts.HarnessObject.SHA256 = strings.Repeat("4", 64) },
 		"compute harness hash": func(value *RuntimeManifest) { value.Artifacts.ComputeHarnessObject.SHA256 = strings.Repeat("4", 64) },
+		"application startup hash": func(value *RuntimeManifest) {
+			value.Artifacts.ApplicationStartupObject.SHA256 = strings.Repeat("4", 64)
+		},
+		"application startup file": func(value *RuntimeManifest) { value.Artifacts.ApplicationStartupObject.File = "bingo_add_harness.o" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			candidate := *manifest
@@ -129,7 +133,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v7", []byte(`{"logicalCapabilityRequirements":[]}`))
+	hir, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v8", []byte(`{"logicalCapabilityRequirements":[]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +170,7 @@ func TestResolveTargetPassPreservesHIRAndRejectsManifestSubstitution(t *testing.
 		t.Fatal("resolver claimed a MIR-derived bound capability closure")
 	}
 
-	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v7", []byte(`{"tamperedButOpaque":true}`))
+	otherHIR, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v8", []byte(`{"tamperedButOpaque":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}

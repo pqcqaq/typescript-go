@@ -2,6 +2,7 @@ package firstslicelink
 
 import (
 	"bytes"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -44,6 +45,31 @@ func TestComputeResponseFileSelectsComputeHarness(t *testing.T) {
 	text := string(responseFileBytes("compute"))
 	if !strings.Contains(text, "bingo_compute_harness.o") || strings.Contains(text, "bingo_add_harness.o") || strings.Contains(text, "bingo_choose_harness.o") {
 		t.Fatalf("compute response file selected wrong harness: %s", text)
+	}
+}
+
+func TestApplicationResponseFileSelectsStartupObject(t *testing.T) {
+	text := string(responseFileBytes("main"))
+	if !strings.Contains(text, "bingo_application_startup.o") || strings.Contains(text, "bingo_add_harness.o") {
+		t.Fatalf("application response file selected wrong startup: %s", text)
+	}
+}
+
+func TestApplicationLinkRequestRequiresProgramABISymbol(t *testing.T) {
+	request := LinkRequest{
+		EntryPoint: "main",
+		Emission:   llvmbackend.FirstSliceEmission{LLVMIR: []byte("define double @main() { ret double 0.0 }")},
+		Runtime: targetcontext.RuntimeManifest{Target: targetcontext.RuntimeTarget{
+			Triple: llvmbackend.FirstSliceTriple, CPU: llvmbackend.FirstSliceCPU, ObjectFormat: "elf",
+		}},
+		RuntimeDirectory: t.TempDir(), OutputPath: filepath.Join(t.TempDir(), "app"), Clang: "clang-20", LLD: "ld.lld-20",
+	}
+	if err := validateRequest(request); err == nil || !strings.Contains(err.Error(), "does not contain entry point") {
+		t.Fatalf("application request with C main symbol error = %v", err)
+	}
+	request.Emission.LLVMIR = []byte("define double @bingo_program_main_v1() { ret double 0.0 }")
+	if err := validateRequest(request); err != nil {
+		t.Fatalf("application ABI symbol rejected: %v", err)
 	}
 }
 

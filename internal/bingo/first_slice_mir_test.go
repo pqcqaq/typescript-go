@@ -159,6 +159,54 @@ func TestPhase2UTF16StringLengthRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 }
 
+func TestPhase2ApplicationMainMIRIsCanonicalAndRejectsTampering(t *testing.T) {
+	hir := validPhase2ApplicationMainHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	function := base.Functions[0]
+	if function.Name != "main" || !function.Exported || len(function.Parameters) != 0 || function.ReturnType != RepF64 || len(function.Blocks) != 1 || len(function.Blocks[0].Instructions) != 1 || function.Blocks[0].Instructions[0].NumberBits != "406fe00000000000" {
+		t.Fatalf("application main MIR = %#v", function)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*FirstSliceMIRArtifact)
+		want   string
+	}{
+		{name: "not exported", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Exported = false }, want: "application main MIR function is invalid"},
+		{name: "fractional status", mutate: func(module *FirstSliceMIRArtifact) {
+			module.Functions[0].Blocks[0].Instructions[0].NumberBits = "3fe0000000000000"
+		}, want: "application main exit status is invalid"},
+		{name: "status 256", mutate: func(module *FirstSliceMIRArtifact) {
+			module.Functions[0].Blocks[0].Instructions[0].NumberBits = "4070000000000000"
+		}, want: "application main exit status is invalid"},
+		{name: "wrong return", mutate: func(module *FirstSliceMIRArtifact) { module.Functions[0].Blocks[0].Terminator.Value = 0 }, want: "application main return is invalid"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := base
+			candidate.Functions = cloneFirstSliceFunctions(base.Functions)
+			test.mutate(&candidate)
+			candidate.ContentHash, err = firstSliceMIRContentHash(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := VerifyStructuralFirstSliceMIR(candidate); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("application MIR tamper error = %v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
 func TestPhase2LocalAssignmentAndDirectCallMIRAreCanonical(t *testing.T) {
 	hir := validPhase2LocalCallHIR()
 	_, hirHash, err := CanonicalPhase2HIR(hir)
@@ -552,8 +600,8 @@ func TestRepresentationPlanAndMIRStrictDecodersRejectUnknownFields(t *testing.T)
 	if _, err := DecodeStructuralFirstSliceMIR([]byte(unknownMIR)); err == nil || !strings.Contains(err.Error(), "unknown") {
 		t.Fatalf("unknown MIR field error = %v", err)
 	}
-	oldMIR := strings.Replace(string(moduleBytes), fmt.Sprintf(`"schemaVersion":%d`, FirstSliceMIRSchemaVersion), `"schemaVersion":4`, 1)
-	if _, err := DecodeStructuralFirstSliceMIR([]byte(oldMIR)); err == nil || !strings.Contains(err.Error(), "unsupported first-slice MIR schema 4") {
+	oldMIR := strings.Replace(string(moduleBytes), fmt.Sprintf(`"schemaVersion":%d`, FirstSliceMIRSchemaVersion), `"schemaVersion":5`, 1)
+	if _, err := DecodeStructuralFirstSliceMIR([]byte(oldMIR)); err == nil || !strings.Contains(err.Error(), "unsupported first-slice MIR schema 5") {
 		t.Fatalf("old UTF-16 MIR major error = %v", err)
 	}
 }

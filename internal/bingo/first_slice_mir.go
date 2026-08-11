@@ -7,14 +7,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"slices"
+	"strconv"
 
 	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
 const (
 	RepresentationPlanSchemaVersion uint32 = 2
-	FirstSliceMIRSchemaVersion      uint32 = 5
+	FirstSliceMIRSchemaVersion      uint32 = 6
 	BoundCapabilitySchemaVersion    uint32 = 1
 )
 
@@ -576,6 +578,10 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		if err := verifyStringLengthMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
+	case len(module.Functions) == 1 && module.Functions[0].Name == "main":
+		if err := verifyApplicationMainMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("first-slice MIR function set is invalid")
 	}
@@ -585,6 +591,28 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 	}
 	if module.ContentHash != want {
 		return fmt.Errorf("first-slice MIR content hash mismatch: got %q, want %q", module.ContentHash, want)
+	}
+	return nil
+}
+
+func verifyApplicationMainMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.Name != "main" || !function.Exported || function.ReturnType != RepF64 ||
+		!validOrigin(function.Origin) || len(function.Parameters) != 0 || len(function.Blocks) != 1 {
+		return fmt.Errorf("Phase 2B application main MIR function is invalid")
+	}
+	block := function.Blocks[0]
+	if block.ID != 1 || len(block.Instructions) != 1 {
+		return fmt.Errorf("Phase 2B application main MIR block is invalid")
+	}
+	instruction := block.Instructions[0]
+	bits, err := strconv.ParseUint(instruction.NumberBits, 16, 64)
+	status := math.Float64frombits(bits)
+	if err != nil || status < 0 || status > 255 || math.Trunc(status) != status ||
+		!validF64ConstInstruction(instruction, 1, instruction.NumberBits) {
+		return fmt.Errorf("Phase 2B application main exit status is invalid")
+	}
+	if block.Terminator.Kind != "return" || block.Terminator.Value != 1 || len(block.Terminator.Successors) != 0 || !validOrigin(block.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B application main return is invalid")
 	}
 	return nil
 }

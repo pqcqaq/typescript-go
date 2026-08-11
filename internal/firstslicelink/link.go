@@ -29,7 +29,7 @@ var ErrLinkUnavailable = errors.New("first-slice linker requires Linux x86-64 LL
 type LinkRequest struct {
 	Emission llvmbackend.FirstSliceEmission
 	Runtime  targetcontext.RuntimeManifest
-	// EntryPoint selects the ABI harness and must match the sole function in
+	// EntryPoint selects the ABI harness or application startup and must match the sole function in
 	// the verified LLVM emission. The empty value is retained for the legacy
 	// add path and is normalized to "add".
 	EntryPoint       string
@@ -367,10 +367,14 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "main" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
-	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
+	llvmEntryPoint := entryPoint
+	if entryPoint == "main" {
+		llvmEntryPoint = "bingo_program_main_v1"
+	}
+	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+llvmEntryPoint+"(") {
 		return fmt.Errorf("LLVM emission does not contain entry point %q", entryPoint)
 	}
 	return nil
@@ -378,7 +382,9 @@ func validateRequest(request LinkRequest) error {
 
 func materializeLinkInputs(workspace string, request LinkRequest, entryPoint string) error {
 	harness := request.Runtime.Artifacts.HarnessObject
-	if entryPoint == "choose" {
+	if entryPoint == "main" {
+		harness = request.Runtime.Artifacts.ApplicationStartupObject
+	} else if entryPoint == "choose" {
 		if request.Runtime.Artifacts.ChooseHarnessObject == nil {
 			return fmt.Errorf("runtime manifest has no choose harness object")
 		}
@@ -458,6 +464,8 @@ func responseFileBytes(entryPoints ...string) []byte {
 		harness = "bingo_classify_harness.o"
 	} else if entryPoint == "stringLength" {
 		harness = "bingo_string_length_harness.o"
+	} else if entryPoint == "main" {
+		harness = "bingo_application_startup.o"
 	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",

@@ -148,7 +148,7 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v7", typedBytes)
+	replacement, err := bingo.NewPassArtifact(bingo.PassArtifactTypedHIR, "hir-v8", typedBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +166,56 @@ func TestLLVM20FirstSlicePipelineProducesDeterministicFinalMIR(t *testing.T) {
 	tampered.Artifacts = &tamperedEnvelope
 	if err := representationHandler.PreVerify(context.Background(), representationSpec, 1, tampered); err == nil || !strings.Contains(err.Error(), "do not join") {
 		t.Fatalf("rehashed HIR/BuildPlan substitution error = %v", err)
+	}
+}
+
+func TestLLVM20ApplicationMainUsesVersionedProgramABISymbol(t *testing.T) {
+	fs := vfstest.FromMap(map[string]string{
+		"/project/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.ts"]}`,
+		"/project/main.ts":       `export function main(): number { return 255; }`,
+	}, true)
+	frontend := tsfrontend.NewFrontend(bundled.WrapFS(fs), bundled.LibPath(), tsfrontend.TypeScriptGoCommit, tsfrontend.StandardLibraryHash)
+	snapshot, diagnostics := frontend.Build(context.Background(), tsfrontend.BuildRequest{ConfigPath: "/project/tsconfig.json", CurrentDirectory: "/project", FileSystem: fs})
+	if snapshot == nil || tsfrontend.DiagnosticsHaveErrors(diagnostics) {
+		t.Fatalf("capture application snapshot: snapshot=%v diagnostics=%#v", snapshot != nil, diagnostics)
+	}
+	frontendSnapshot, err := tsfrontend.NewFrontendSnapshot(*snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	options := tsfrontend.DefaultBingoOptions()
+	options.TargetTriple = llvmbackend.FirstSliceTriple
+	plan, err := tsfrontend.ResolveBuildPlan(frontendSnapshot, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := ast2bingo.NewCompilerBuildIdentity(snapshot.Provenance.TypeScriptGoCommit, strings.Repeat("a", 40))
+	if err != nil {
+		t.Fatal(err)
+	}
+	machine, err := llvmbackend.OpenFirstSliceTargetMachine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(machine.Close)
+	runtimeManifest, err := os.ReadFile("../targetcontext/testdata/runtime-manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalMIR, _, err := ExecuteFirstSliceMIR(context.Background(), *snapshot, identity, plan, machine, runtimeManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(finalMIR.Functions) != 1 || finalMIR.Functions[0].Name != "main" || !finalMIR.Functions[0].Exported {
+		t.Fatalf("application final MIR = %#v", finalMIR.Functions)
+	}
+	emission, err := machine.EmitFirstSliceObject(finalMIR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	llvmText := string(emission.LLVMIR)
+	if !strings.Contains(llvmText, "define double @bingo_program_main_v1()") || strings.Contains(llvmText, "define double @main(") {
+		t.Fatalf("application LLVM entrypoint is not collision-free:\n%s", llvmText)
 	}
 }
 

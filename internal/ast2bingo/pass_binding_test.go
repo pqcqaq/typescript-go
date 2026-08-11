@@ -25,7 +25,7 @@ func TestPrimitiveHIRProductionBindingExecutesOnlyCanonicalPhase15Prefix(t *test
 	if execution.Dumps[0].Pass != bingo.PassValidateSnapshot || execution.Dumps[1].Pass != bingo.PassTypedHIR {
 		t.Fatalf("production pass order = %#v", execution.Dumps)
 	}
-	if execution.State.Schema != "hir-v7" || !slices.Contains(execution.State.Facts, "typed-hir") {
+	if execution.State.Schema != "hir-v8" || !slices.Contains(execution.State.Facts, "typed-hir") {
 		t.Fatalf("production terminal state = %#v", execution.State)
 	}
 	for _, dump := range execution.Dumps {
@@ -191,7 +191,7 @@ func TestPrimitiveTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			candidate := clonePrimitiveTypedHIRTestArtifact(t, valid)
-			output := bingo.PassState{Schema: "hir-v7", Facts: []string{"source-type-plan", "typed-hir"}, Artifact: test.mutate(candidate)}
+			output := bingo.PassState{Schema: "hir-v8", Facts: []string{"source-type-plan", "typed-hir"}, Artifact: test.mutate(candidate)}
 			if _, err := handler.PostVerify(context.Background(), spec, 1, input, output); err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("post-verifier error = %v, want %q", err, test.want)
 			}
@@ -251,7 +251,7 @@ func TestPrimitiveChooseTypedHIRPostVerifierRejectsTampering(t *testing.T) {
 			test.mutate(&candidate)
 			rehashPrimitiveHIRTestArtifact(t, &candidate)
 			output := bingo.PassState{
-				Schema:   "hir-v7",
+				Schema:   "hir-v8",
 				Facts:    []string{"source-type-plan", "typed-hir"},
 				Artifact: marshalPrimitivePassTestArtifact(t, candidate),
 			}

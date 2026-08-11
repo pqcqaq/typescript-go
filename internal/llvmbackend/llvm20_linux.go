@@ -109,6 +109,10 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		emitCoalesceLLVM(ctx, builder, module, mir.Functions[0])
 	case len(mir.Functions) == 1 && mir.Functions[0].Name == "stringLength":
 		emitStringLengthLLVM(ctx, builder, module, mir.Functions[0])
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "main":
+		if err := emitApplicationMainLLVM(ctx, builder, module, mir.Functions[0]); err != nil {
+			return FirstSliceEmission{}, err
+		}
 	default:
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
@@ -123,6 +127,21 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 	}
 	defer buffer.Dispose()
 	return newFirstSliceEmission(mir, manifest, llvmIR, buffer.Bytes())
+}
+
+func emitApplicationMainLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) error {
+	double := ctx.DoubleType()
+	result, err := llvmF64Constant(double, mir.Blocks[0].Instructions[0].NumberBits)
+	if err != nil {
+		return fmt.Errorf("application main result: %w", err)
+	}
+	function := llvm.AddFunction(module, "bingo_program_main_v1", llvm.FunctionType(double, nil, false))
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	entry := llvm.AddBasicBlock(function, "entry")
+	builder.SetInsertPointAtEnd(entry)
+	builder.CreateRet(result)
+	return nil
 }
 
 func emitLocalCallLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, functions []bingo.FirstSliceMIRFunction) error {

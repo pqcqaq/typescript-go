@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
@@ -10,12 +12,96 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/microsoft/typescript-go/internal/applicationbuild"
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/firstslicerunner"
 	"github.com/microsoft/typescript-go/internal/irartifact"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 )
+
+func TestBuildCommandPublishesExecutableAndCanonicalReport(t *testing.T) {
+	repositoryRoot := writeFakeRepositoryRoot(t)
+	project := writeProject(t, `export function main(): number { return 0; }`)
+	output := filepath.Join(t.TempDir(), "application")
+	identity, err := ast2bingo.NewCompilerBuildIdentity(strings.Repeat("1", 40), strings.Repeat("2", 40))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	previousIdentity := loadCompilerBuildIdentity
+	previousMachine := openStaticCoreTargetMachine
+	previousBuild := executeApplicationBuild
+	loadCompilerBuildIdentity = func() (bingo.CompilerBuildIdentity, error) { return identity, nil }
+	openStaticCoreTargetMachine = func() (*llvmbackend.TargetMachine, error) { return nil, nil }
+	var captured applicationbuild.Request
+	executeApplicationBuild = func(_ context.Context, gotIdentity bingo.CompilerBuildIdentity, _ *llvmbackend.TargetMachine, request applicationbuild.Request) (applicationbuild.Report, error) {
+		if gotIdentity != identity {
+			t.Fatalf("build identity = %#v", gotIdentity)
+		}
+		captured = request
+		if err := os.WriteFile(request.OutputPath, []byte("ELF"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return validApplicationBuildReport(t, identity), nil
+	}
+	t.Cleanup(func() {
+		loadCompilerBuildIdentity = previousIdentity
+		openStaticCoreTargetMachine = previousMachine
+		executeApplicationBuild = previousBuild
+	})
+
+	environment := commandEnvironment{
+		goos:  "linux",
+		getwd: func() (string, error) { return repositoryRoot, nil },
+		lookPath: func(name string) (string, error) {
+			return filepath.Join(repositoryRoot, "tools", name), nil
+		},
+	}
+	var stdout, stderr bytes.Buffer
+	if code := runWithEnvironment(context.Background(), []string{"build", "-p", project, "-o", output}, &stdout, &stderr, environment); code != exitSuccess {
+		t.Fatalf("build exit = %d, stderr = %s", code, &stderr)
+	}
+	configPath := filepath.Join(project, "tsconfig.json")
+	if captured.ConfigPath != configPath || captured.OutputPath != output || captured.RuntimeDirectory != filepath.Join(repositoryRoot, "runtime", "bingo-rt", "target", "first-slice") || captured.Clang == "" || captured.LLD == "" {
+		t.Fatalf("application build request = %#v", captured)
+	}
+	if !strings.Contains(stdout.String(), "[ok] build "+output) || stderr.Len() != 0 {
+		t.Fatalf("build stdout/stderr = %q / %q", &stdout, &stderr)
+	}
+	reportBytes, err := os.ReadFile(output + ".report.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report applicationbuild.Report
+	if err := json.Unmarshal(reportBytes, &report); err != nil {
+		t.Fatal(err)
+	}
+	if err := applicationbuild.VerifyReport(report); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func validApplicationBuildReport(t *testing.T, identity bingo.CompilerBuildIdentity) applicationbuild.Report {
+	t.Helper()
+	digest := strings.Repeat("a", 64)
+	report := applicationbuild.Report{
+		SchemaVersion: applicationbuild.ReportSchemaVersion, Stage: "application-build-preview", EntryPoint: "main",
+		TargetTriple: llvmbackend.FirstSliceTriple, CompilerBuildIdentity: identity,
+		Artifacts: applicationbuild.ArtifactProvenance{
+			FrontendSnapshotHash: digest, HIRContentHash: digest, BuildPlanHash: digest, RuntimeManifestHash: digest,
+			MIRContentHash: digest, LLVMIRHash: digest, ObjectHash: digest, EmissionContentHash: digest,
+			ResponseFileHash: digest, LinkMapHash: digest, ExecutableHash: digest, LinkContentHash: digest,
+		},
+	}
+	encoded, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := sha256.Sum256(encoded)
+	report.ContentHash = hex.EncodeToString(hash[:])
+	return report
+}
 
 func TestFirstSliceIRCommandsUseVerifiedArtifacts(t *testing.T) {
 	identity, err := ast2bingo.NewCompilerBuildIdentity(

@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
+	"strconv"
 )
 
 // VerifyPhase2HIR validates the Phase 2B primitive CFG subset. The Phase 2A
@@ -54,6 +56,37 @@ func VerifyPhase2HIR(module HIRModule) error {
 		if err := verifyPhase2HIRFunction(function, functions); err != nil {
 			return fmt.Errorf("function %s: %w", function.Name, err)
 		}
+		if function.Name == "main" {
+			if len(module.Functions) != 1 {
+				return fmt.Errorf("application main HIR must be the sole function")
+			}
+			if err := verifyApplicationMainHIRFunction(function); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func verifyApplicationMainHIRFunction(function HIRFunction) error {
+	if function.ID != 1 || !function.Exported || function.ReturnType != TypeNumber || len(function.Parameters) != 0 || len(function.Blocks) != 1 {
+		return fmt.Errorf("application main HIR function is invalid")
+	}
+	block := function.Blocks[0]
+	if block.ID != 1 || len(block.Operations) != 1 {
+		return fmt.Errorf("application main HIR block is invalid")
+	}
+	operation := block.Operations[0]
+	bits, err := strconv.ParseUint(operation.NumberBits, 16, 64)
+	status := math.Float64frombits(bits)
+	if err != nil || status < 0 || status > 255 || math.Trunc(status) != status ||
+		operation.ID != 1 || operation.Kind != "number.constant" || operation.Type != TypeNumber || len(operation.Operands) != 0 ||
+		len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.Callee != 0 || operation.Effect != EffectPure ||
+		operation.LogicalCapabilityRequirements == nil || len(operation.LogicalCapabilityRequirements) != 0 || !validOrigin(operation.Origin) {
+		return fmt.Errorf("application main HIR exit status is invalid")
+	}
+	if block.Terminator.Kind != "return" || block.Terminator.Value != operation.ID || len(block.Terminator.Successors) != 0 || !validOrigin(block.Terminator.Origin) {
+		return fmt.Errorf("application main HIR return is invalid")
 	}
 	return nil
 }

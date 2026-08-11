@@ -65,17 +65,17 @@ type PassSpec struct {
 
 var canonicalPassSpecs = [...]PassSpec{
 	{ID: PassValidateSnapshot, InputSchema: "snapshot-v2", OutputSchema: "source-type-plan-v2", ReadsFacts: []string{"syntax", "types", "symbols", "signatures", "module-graph"}, WritesFacts: []string{"source-type-plan"}, PreservesEvaluationOrder: true},
-	{ID: PassTypedHIR, InputSchema: "source-type-plan-v2", OutputSchema: "hir-v7", ReadsFacts: []string{"source-type-plan"}, WritesFacts: []string{"typed-hir", "effect-proof"}, PreservesEvaluationOrder: true},
-	{ID: PassEvaluationOrder, InputSchema: "hir-v7", OutputSchema: "hir-v7", ReadsFacts: []string{"typed-hir"}, WritesFacts: []string{"evaluation-order"}, PreservesEvaluationOrder: true},
-	{ID: PassSpecialization, InputSchema: "hir-v7", OutputSchema: "hir-v7", ReadsFacts: []string{"typed-hir", "type-arguments"}, WritesFacts: []string{"specialization-fixed-point"}, PreservesEvaluationOrder: true},
+	{ID: PassTypedHIR, InputSchema: "source-type-plan-v2", OutputSchema: "hir-v8", ReadsFacts: []string{"source-type-plan"}, WritesFacts: []string{"typed-hir", "effect-proof"}, PreservesEvaluationOrder: true},
+	{ID: PassEvaluationOrder, InputSchema: "hir-v8", OutputSchema: "hir-v8", ReadsFacts: []string{"typed-hir"}, WritesFacts: []string{"evaluation-order"}, PreservesEvaluationOrder: true},
+	{ID: PassSpecialization, InputSchema: "hir-v8", OutputSchema: "hir-v8", ReadsFacts: []string{"typed-hir", "type-arguments"}, WritesFacts: []string{"specialization-fixed-point"}, PreservesEvaluationOrder: true},
 	{
-		ID: PassVarianceAliasing, InputSchema: "hir-v7", OutputSchema: "hir-v7",
+		ID: PassVarianceAliasing, InputSchema: "hir-v8", OutputSchema: "hir-v8",
 		ReadsFacts: []string{"specialization-fixed-point", "property-facts"}, WritesFacts: []string{"variance-proof", "conversion-plan"},
-		WritesArtifacts:          []PassArtifactWrite{{Name: PassArtifactTypedHIR, Schema: "hir-v7", FromPrimary: true}},
+		WritesArtifacts:          []PassArtifactWrite{{Name: PassArtifactTypedHIR, Schema: "hir-v8", FromPrimary: true}},
 		PreservesEvaluationOrder: true,
 	},
 	{
-		ID: PassResolveTarget, InputSchema: "hir-v7", OutputSchema: "target-context-v1",
+		ID: PassResolveTarget, InputSchema: "hir-v8", OutputSchema: "target-context-v1",
 		ReadsFacts: []string{"canonical-build-plan", "runtime-manifest", "toolchain-manifest"}, WritesFacts: []string{"target-context", "data-layout", "available-capability-catalog"},
 		ReadsArtifacts: []PassArtifactRequirement{
 			{Name: PassArtifactBuildPlan, Schema: "build-plan-v1"},
@@ -93,7 +93,7 @@ var canonicalPassSpecs = [...]PassSpec{
 		ID: PassRepresentationPlan, InputSchema: "target-context-v1", OutputSchema: "rep-plan-v2",
 		ReadsFacts: []string{"available-capability-catalog", "canonical-build-plan", "conversion-plan", "data-layout", "target-context", "typed-hir"}, WritesFacts: []string{"representation-plan"},
 		ReadsArtifacts: []PassArtifactRequirement{
-			{Name: PassArtifactTypedHIR, Schema: "hir-v7"},
+			{Name: PassArtifactTypedHIR, Schema: "hir-v8"},
 			{Name: PassArtifactBuildPlan, Schema: "build-plan-v1"},
 			{Name: PassArtifactRuntimeManifest, Schema: "runtime-manifest-v1"},
 			{Name: PassArtifactToolchainManifest, Schema: "toolchain-manifest-v1"},
@@ -108,7 +108,7 @@ var canonicalPassSpecs = [...]PassSpec{
 		ID: PassMIRCFGSSA, InputSchema: "rep-plan-v2", OutputSchema: "mir-v3",
 		ReadsFacts: []string{"representation-plan", "evaluation-order"}, WritesFacts: []string{"mir-cfg", "ssa"},
 		ReadsArtifacts: []PassArtifactRequirement{
-			{Name: PassArtifactTypedHIR, Schema: "hir-v7"},
+			{Name: PassArtifactTypedHIR, Schema: "hir-v8"},
 			{Name: PassArtifactRepresentationPlan, Schema: "rep-plan-v2"},
 		},
 		PreservesEvaluationOrder: true,
