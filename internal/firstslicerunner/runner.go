@@ -171,6 +171,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			result, err = firstslicelink.RunCoalesce(caseContext, executable, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "coalesceAssign" {
 			result, err = firstslicelink.RunCoalesceAssign(caseContext, executable, execution.NullableTag, execution.LeftBits, execution.RightBits)
+		} else if entryPoint == "stringLength" {
+			result, err = firstslicelink.RunStringLength(caseContext, executable, execution.UTF16CodeUnits)
 		} else if entryPoint == "compute" {
 			result, err = firstslicelink.RunCompute(caseContext, executable, execution.LeftBits, execution.RightBits)
 		} else {
@@ -189,6 +191,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			nodeResult, err = nodeOracle.Coalesce(caseContext, execution.NullableTag, execution.LeftBits, execution.RightBits)
 		} else if oracleProgram == "coalesceassign" {
 			nodeResult, err = nodeOracle.CoalesceAssign(caseContext, execution.NullableTag, execution.LeftBits, execution.RightBits)
+		} else if oracleProgram == "stringlength" {
+			nodeResult, err = nodeOracle.StringLength(caseContext, execution.UTF16CodeUnits)
 		} else if oracleProgram == "loop" {
 			nodeResult, err = nodeOracle.Loop(caseContext, execution.LeftBits, execution.RightBits)
 		} else if entryPoint == "compute" {
@@ -239,6 +243,16 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 			Name: "reject-noncanonical-coalesce-assignment-tag", Arguments: slices.Clone(result.Arguments),
 			OutputHash: result.OutputHash, Rejected: true,
 		}}
+	} else if entryPoint == "stringLength" {
+		result, err := firstslicelink.RejectNonCanonicalStringLength(caseContext, executable)
+		if err != nil {
+			return Report{}, fmt.Errorf("case %s noncanonical UTF-16 view rejection: %w", caseData.Manifest.Name, err)
+		}
+		nonCanonicalRejected = true
+		boundaryRejections = []BoundaryRejectionReport{{
+			Name: "reject-noncanonical-utf16-view", Arguments: slices.Clone(result.Arguments),
+			OutputHash: result.OutputHash, Rejected: true,
+		}}
 	}
 	nodeScriptHash := nodeOracle.ScriptHash()
 	if entryPoint == "choose" {
@@ -251,6 +265,8 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 		nodeScriptHash = firstsliceoracle.CoalesceScriptHash()
 	} else if oracleProgram == "coalesceassign" {
 		nodeScriptHash = firstsliceoracle.CoalesceAssignScriptHash()
+	} else if oracleProgram == "stringlength" {
+		nodeScriptHash = firstsliceoracle.StringLengthScriptHash()
 	} else if entryPoint == "compute" {
 		nodeScriptHash = firstsliceoracle.ComputeScriptHash()
 	}
@@ -305,7 +321,7 @@ func VerifyReport(report Report) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign") {
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
@@ -314,7 +330,8 @@ func VerifyReport(report Report) error {
 		entryPoint == "classify" && report.OracleProgram != "classify" ||
 		entryPoint == "compute" && report.OracleProgram != "calllocal" && report.OracleProgram != "loop" ||
 		entryPoint == "coalesce" && report.OracleProgram != "coalesce" ||
-		entryPoint == "coalesceAssign" && report.OracleProgram != "coalesceassign" {
+		entryPoint == "coalesceAssign" && report.OracleProgram != "coalesceassign" ||
+		entryPoint == "stringLength" && report.OracleProgram != "stringlength" {
 		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
 	}
 	if report.OracleProgram == "choose" {
@@ -329,15 +346,17 @@ func VerifyReport(report Report) error {
 		wantScriptHash = firstsliceoracle.CoalesceScriptHash()
 	} else if report.OracleProgram == "coalesceassign" {
 		wantScriptHash = firstsliceoracle.CoalesceAssignScriptHash()
+	} else if report.OracleProgram == "stringlength" {
+		wantScriptHash = firstsliceoracle.StringLengthScriptHash()
 	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
 		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
 		return fmt.Errorf("invalid first-slice runner target or timeout")
 	}
-	if report.NonCanonicalRejected != (entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign") {
+	if report.NonCanonicalRejected != (entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" || entryPoint == "stringLength") {
 		return fmt.Errorf("noncanonical boundary rejection does not match entry point")
 	}
-	if entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && len(report.BoundaryRejections) != 0 {
+	if entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && len(report.BoundaryRejections) != 0 {
 		return fmt.Errorf("number report contains boundary rejections")
 	}
 	if entryPoint == "choose" {
@@ -363,6 +382,14 @@ func VerifyReport(report Report) error {
 		rejection := report.BoundaryRejections[0]
 		if rejection.Name != "reject-noncanonical-coalesce-assignment-tag" || len(rejection.Arguments) != 3 || rejection.Arguments[0] != "03" || !isBits(rejection.Arguments[1]) || !isBits(rejection.Arguments[2]) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
 			return fmt.Errorf("invalid coalesce assignment nullable tag rejection report")
+		}
+	} else if entryPoint == "stringLength" {
+		if len(report.BoundaryRejections) != 1 {
+			return fmt.Errorf("string length report must contain one UTF-16 boundary rejection")
+		}
+		rejection := report.BoundaryRejections[0]
+		if rejection.Name != "reject-noncanonical-utf16-view" || !slices.Equal(rejection.Arguments, []string{"--invalid-null"}) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
+			return fmt.Errorf("invalid UTF-16 view rejection report")
 		}
 	}
 	if err := bingo.ValidateCompilerBuildIdentity(report.CompilerBuildIdentity); err != nil {
@@ -396,6 +423,9 @@ func VerifyReport(report Report) error {
 		if entryPoint == "classify" {
 			wantArguments = 1
 		}
+		if entryPoint == "stringLength" {
+			wantArguments = 1
+		}
 		if entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
 			wantArguments = 3
 		}
@@ -405,7 +435,7 @@ func VerifyReport(report Report) error {
 		if index > 0 && report.Executions[index-1].Name >= execution.Name {
 			return fmt.Errorf("execution reports are not in canonical name order")
 		}
-		if slices.Contains(execution.Arguments, "") || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
+		if (entryPoint != "stringLength" && slices.Contains(execution.Arguments, "")) || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
 			return fmt.Errorf("execution %q output identity is invalid", execution.Name)
 		}
 		if hashBytes([]byte(execution.NodeBits+"\n")) != execution.NodeOutputHash {
@@ -494,6 +524,8 @@ func oracleProgramForHIR(entryPoint string, hir bingo.HIRModule) (string, error)
 		return "coalesce", nil
 	case entryPoint == "coalesceAssign" && len(hir.Functions) == 1 && hir.Functions[0].Name == "coalesceAssign":
 		return "coalesceassign", nil
+	case entryPoint == "stringLength" && len(hir.Functions) == 1 && hir.Functions[0].Name == "stringLength":
+		return "stringlength", nil
 	default:
 		return "", fmt.Errorf("verified HIR does not identify the %q oracle program", entryPoint)
 	}

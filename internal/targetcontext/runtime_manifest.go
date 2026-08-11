@@ -18,10 +18,10 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "e778197982044958c33648dab477c6ced92471d5baa15eb0207a463d3d02db69"
-	LockedABISchemaHash                 = "fc3ab5888d3c65f85ae61a68654fd247e42c5b2d61fbf74b1c27282c17b14d0e"
-	LockedTargetManifestHash            = "d248e799496a08b83634f86c9bb0e466a5169d422ae62e344dd2a740d1b4fdb7"
-	LockedRuntimeManifestHash           = "777df0ab9bc37a12756277e5f9f4de07825601e81cf42b69b24e30af9b681940"
+	LockedRuntimeSourceHash             = "eeb6aef38ded57184ac1bc720ccbd3717d72188e77ceaed0bb13e9aab253a552"
+	LockedABISchemaHash                 = "4e3cca44556784e7f981438c3d8bdd8ab0388af2ec257679ad8e483f2fa16acd"
+	LockedTargetManifestHash            = "c1528c0b97b31f2e0562f4aeaa20fb317aa432e0d5c5224ba7bc3e6e7cfdf7a8"
+	LockedRuntimeManifestHash           = "797668af610406f5566ab318b1d8c9a3b30beae3cbfe8fe7d73b21841bd99a55"
 )
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
@@ -48,6 +48,7 @@ type RuntimeArtifacts struct {
 	ClassifyHarnessObject       *RuntimeArtifact `json:"classifyHarnessObject,omitempty"`
 	CoalesceHarnessObject       *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
 	CoalesceAssignHarnessObject *RuntimeArtifact `json:"coalesceAssignHarnessObject,omitempty"`
+	StringLengthHarnessObject   *RuntimeArtifact `json:"stringLengthHarnessObject,omitempty"`
 	UmbrellaArchive             RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
@@ -163,6 +164,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	if manifest.Artifacts.CoalesceAssignHarnessObject != nil {
 		if err := validateRuntimeArtifact(*manifest.Artifacts.CoalesceAssignHarnessObject, "bingo_coalesce_assign_harness.o"); err != nil {
 			return fmt.Errorf("coalesce assignment harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.StringLengthHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.StringLengthHarnessObject, "bingo_string_length_harness.o"); err != nil {
+			return fmt.Errorf("string length harness object: %w", err)
 		}
 	}
 	if len(manifest.Capabilities) != 1 {

@@ -21,6 +21,7 @@ const nodeClassifyScript = `const [a]=process.argv.slice(1);const fromBits=(h)=>
 const nodeChooseScript = `const [flag,a,b]=process.argv.slice(1);if(flag!=="true"&&flag!=="false")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};process.stdout.write(toBits(fromBits(flag==="true"?a:b))+"\n");`
 const nodeCoalesceScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};const value=tag==="number"?fromBits(a):tag==="null"?null:undefined;process.stdout.write(toBits(value??fromBits(b))+"\n");`
 const nodeCoalesceAssignScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};let value=tag==="number"?fromBits(a):tag==="null"?null:undefined;value??=fromBits(b);process.stdout.write(toBits(value)+"\n");`
+const nodeStringLengthScript = `const [h]=process.argv.slice(1);if(!/^(?:[0-9a-f]{4})*$/.test(h))process.exit(2);let s="";for(let i=0;i<h.length;i+=4)s+=String.fromCharCode(parseInt(h.slice(i,i+4),16));const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,s.length,false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
 
 type NodeOracle struct {
 	path       string
@@ -100,6 +101,13 @@ func (oracle *NodeOracle) CoalesceAssign(ctx context.Context, tag, value, fallba
 	return oracle.run(ctx, nodeCoalesceAssignScript, tag, value, fallback)
 }
 
+func (oracle *NodeOracle) StringLength(ctx context.Context, codeUnits string) (Result, error) {
+	if !isUTF16CodeUnits(codeUnits) {
+		return Result{}, fmt.Errorf("Node oracle UTF-16 argument is not canonical code-unit hex")
+	}
+	return oracle.runUTF16(ctx, nodeStringLengthScript, codeUnits)
+}
+
 func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...string) (Result, error) {
 	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
 		return Result{}, fmt.Errorf("Node oracle is not initialized")
@@ -135,6 +143,26 @@ func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...s
 	return Result{Arguments: slices.Clone(arguments), Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
 }
 
+func (oracle *NodeOracle) runUTF16(ctx context.Context, script, codeUnits string) (Result, error) {
+	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
+		return Result{}, fmt.Errorf("Node oracle is not initialized")
+	}
+	if ctx == nil {
+		return Result{}, fmt.Errorf("oracle context is nil")
+	}
+	command := exec.CommandContext(ctx, oracle.path, "-e", script, "--", codeUnits)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return Result{}, fmt.Errorf("run Node UTF-16 oracle: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || !isBits(trimmed) {
+		return Result{}, fmt.Errorf("Node UTF-16 oracle output is not one canonical binary64 line: %q", output)
+	}
+	return Result{Arguments: []string{codeUnits}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
 func ScriptHash() string { return hashBytes([]byte(nodeAddScript)) }
 
 func ComputeScriptHash() string { return hashBytes([]byte(nodeComputeScript)) }
@@ -150,6 +178,8 @@ func CoalesceScriptHash() string { return hashBytes([]byte(nodeCoalesceScript)) 
 
 func CoalesceAssignScriptHash() string { return hashBytes([]byte(nodeCoalesceAssignScript)) }
 
+func StringLengthScriptHash() string { return hashBytes([]byte(nodeStringLengthScript)) }
+
 func hashBytes(data []byte) string {
 	digest := sha256.Sum256(data)
 	return hex.EncodeToString(digest[:])
@@ -157,6 +187,18 @@ func hashBytes(data []byte) string {
 
 func isBits(value string) bool {
 	if len(value) != 16 {
+		return false
+	}
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func isUTF16CodeUnits(value string) bool {
+	if len(value)%4 != 0 {
 		return false
 	}
 	for _, char := range value {

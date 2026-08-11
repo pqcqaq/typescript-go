@@ -239,6 +239,7 @@ type FirstSliceMIRInstruction struct {
 	Operands                      []ValueID             `json:"operands"`
 	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
 	NumberBits                    string                `json:"numberBits,omitempty"`
+	UTF16CodeUnits                string                `json:"utf16CodeUnits,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
@@ -294,7 +295,7 @@ func NewRepresentationPlanForHIR(provenance TargetProvenance, hir HIRModule) (Re
 }
 
 func verifyPrimitiveHIRForMIR(hir HIRModule) error {
-	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
+	if len(hir.Functions) != 1 || hir.Functions[0].Name != "add" || len(hir.Functions[0].Blocks) != 1 {
 		if err := VerifyCanonicalPhase2HIR(hir); err != nil {
 			return fmt.Errorf("verify Phase 2B HIR before MIR lowering: %w", err)
 		}
@@ -346,13 +347,18 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 				if !ok {
 					return FirstSliceMIRArtifact{}, fmt.Errorf("operation %d has no representation binding", operation.ID)
 				}
-				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), IncomingBlocks: slices.Clone(operation.IncomingBlocks), NumberBits: operation.NumberBits, Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
+				instruction := FirstSliceMIRInstruction{ID: operation.ID, Type: binding.RepType, Operands: slices.Clone(operation.Operands), IncomingBlocks: slices.Clone(operation.IncomingBlocks), NumberBits: operation.NumberBits, UTF16CodeUnits: operation.UTF16CodeUnits, Callee: operation.Callee, Effect: operation.Effect, LogicalCapabilityRequirements: slices.Clone(operation.LogicalCapabilityRequirements), Origin: operation.Origin}
 				switch operation.Kind {
 				case "number.constant":
 					if operation.Type != TypeNumber || binding.RepType != RepF64 || !validCanonicalNumberBits(operation.NumberBits) {
 						return FirstSliceMIRArtifact{}, fmt.Errorf("number constant operation %d has no canonical f64 representation", operation.ID)
 					}
 					instruction.Kind = "f64.const"
+				case "string.constant":
+					if operation.Type != TypeString || binding.RepType != RepUTF16String || ValidateUTF16CodeUnits(operation.UTF16CodeUnits) != nil {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("string constant operation %d has no canonical UTF-16 representation", operation.ID)
+					}
+					instruction.Kind = "utf16.const"
 				case "unary":
 					if operation.Operator != "-" || binding.RepType != RepF64 {
 						return FirstSliceMIRArtifact{}, fmt.Errorf("unary operation %d has no f64 representation", operation.ID)
@@ -382,6 +388,11 @@ func LowerFirstSliceMIR(hir HIRModule, plan RepresentationPlan) (FirstSliceMIRAr
 						return FirstSliceMIRArtifact{}, fmt.Errorf("unwrap_nullable operation %d has no f64 representation", operation.ID)
 					}
 					instruction.Kind = "nullable.unwrap"
+				case "string.length":
+					if operation.Type != TypeNumber || binding.RepType != RepF64 {
+						return FirstSliceMIRArtifact{}, fmt.Errorf("string.length operation %d has no f64 representation", operation.ID)
+					}
+					instruction.Kind = "utf16.length"
 				default:
 					return FirstSliceMIRArtifact{}, fmt.Errorf("unsupported Phase 2B HIR operation %q", operation.Kind)
 				}
@@ -526,6 +537,13 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 				} else if instruction.NumberBits != "" {
 					return fmt.Errorf("instruction %d carries unexpected number bits", instruction.ID)
 				}
+				if instruction.Kind == "utf16.const" {
+					if err := ValidateUTF16CodeUnits(instruction.UTF16CodeUnits); err != nil {
+						return fmt.Errorf("UTF-16 constant instruction %d: %w", instruction.ID, err)
+					}
+				} else if instruction.UTF16CodeUnits != "" {
+					return fmt.Errorf("instruction %d carries unexpected UTF-16 code units", instruction.ID)
+				}
 			}
 		}
 	}
@@ -552,6 +570,10 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 		}
 	case len(module.Functions) == 1 && (module.Functions[0].Name == "coalesce" || module.Functions[0].Name == "coalesceAssign"):
 		if err := verifyCoalesceMIRFunction(module.Functions[0]); err != nil {
+			return err
+		}
+	case len(module.Functions) == 1 && module.Functions[0].Name == "stringLength":
+		if err := verifyStringLengthMIRFunction(module.Functions[0]); err != nil {
 			return err
 		}
 	default:
@@ -799,6 +821,28 @@ func verifyCoalesceMIRFunction(function FirstSliceMIRFunction) error {
 		phi.Callee != 0 || phi.Effect != EffectPure || phi.LogicalCapabilityRequirements == nil || len(phi.LogicalCapabilityRequirements) != 0 || !validOrigin(phi.Origin) ||
 		merge.Terminator.Kind != "return" || merge.Terminator.Value != 5 || len(merge.Terminator.Successors) != 0 {
 		return fmt.Errorf("Phase 2B coalesce MIR phi or return is invalid")
+	}
+	return nil
+}
+
+func verifyStringLengthMIRFunction(function FirstSliceMIRFunction) error {
+	if function.ID != 1 || function.Name != "stringLength" || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 1 || len(function.Blocks) != 1 {
+		return fmt.Errorf("Phase 2B UTF-16 string length MIR function is invalid")
+	}
+	parameter := function.Parameters[0]
+	if parameter.Name != "value" || parameter.Value != 1 || parameter.Type != RepUTF16String || !validOrigin(parameter.Origin) {
+		return fmt.Errorf("Phase 2B UTF-16 string length parameter is invalid")
+	}
+	block := function.Blocks[0]
+	if block.ID != 1 || len(block.Instructions) != 1 || !validOrigin(block.Terminator.Origin) {
+		return fmt.Errorf("Phase 2B UTF-16 string length block is invalid")
+	}
+	instruction := block.Instructions[0]
+	if instruction.ID != 2 || instruction.Kind != "utf16.length" || instruction.Type != RepF64 || !slices.Equal(instruction.Operands, []ValueID{1}) || len(instruction.IncomingBlocks) != 0 || instruction.NumberBits != "" || instruction.UTF16CodeUnits != "" || instruction.Callee != 0 || instruction.Effect != EffectPure || instruction.LogicalCapabilityRequirements == nil || len(instruction.LogicalCapabilityRequirements) != 0 || !validOrigin(instruction.Origin) {
+		return fmt.Errorf("Phase 2B UTF-16 string length instruction is invalid")
+	}
+	if block.Terminator.Kind != "return" || block.Terminator.Value != 2 || len(block.Terminator.Successors) != 0 {
+		return fmt.Errorf("Phase 2B UTF-16 string length return is invalid")
 	}
 	return nil
 }

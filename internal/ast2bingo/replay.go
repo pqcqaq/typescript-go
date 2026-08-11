@@ -141,10 +141,12 @@ const (
 	snapshotKindParameter                   = "KindParameter"
 	snapshotKindPlusToken                   = "KindPlusToken"
 	snapshotKindPrefixUnaryExpression       = "KindPrefixUnaryExpression"
+	snapshotKindPropertyAccessExpression    = "KindPropertyAccessExpression"
 	snapshotKindQuestionQuestionEqualsToken = "KindQuestionQuestionEqualsToken"
 	snapshotKindQuestionQuestionToken       = "KindQuestionQuestionToken"
 	snapshotKindReturnStatement             = "KindReturnStatement"
 	snapshotKindSourceFile                  = "KindSourceFile"
+	snapshotKindStringKeyword               = "KindStringKeyword"
 	snapshotKindUndefinedKeyword            = "KindUndefinedKeyword"
 	snapshotKindUnionType                   = "KindUnionType"
 	snapshotKindVariableDeclaration         = "KindVariableDeclaration"
@@ -182,10 +184,12 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindPrefixUnaryExpression, PayloadTag: snapshotKindPrefixUnaryExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validatePrefixUnaryLowerer},
+	{Kind: snapshotKindPropertyAccessExpression, PayloadTag: snapshotKindPropertyAccessExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validatePropertyAccessLowerer},
 	{Kind: snapshotKindQuestionQuestionEqualsToken, PayloadTag: snapshotKindQuestionQuestionEqualsToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindQuestionQuestionToken, PayloadTag: snapshotKindQuestionQuestionToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindReturnStatement, PayloadTag: snapshotKindReturnStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateReturnLowerer},
 	{Kind: snapshotKindSourceFile, PayloadTag: snapshotKindSourceFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindStringKeyword, PayloadTag: snapshotKindStringKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindUndefinedKeyword, PayloadTag: snapshotKindUndefinedKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindUnionType, PayloadTag: snapshotKindUnionType, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateUnionTypeLowerer},
 	{Kind: snapshotKindVariableDeclaration, PayloadTag: snapshotKindVariableDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateVariableDeclarationLowerer},
@@ -426,7 +430,13 @@ func validateFunctionContractFact(node NodeSnapshot, indexes snapshotSemanticFac
 	for _, candidate := range candidates {
 		signature = candidate
 	}
-	if signature.EffectProof.Kind != "body-resolved" || !signature.EffectProof.Complete || !slices.Equal(signature.Effects, []string{"pure"}) {
+	wantEffects := []string{"pure"}
+	if childText(node, "name", indexes.Nodes) == "stringLength" {
+		// The frontend conservatively classifies .length as a read. The
+		// string contract makes this immutable observation a pure HIR op.
+		wantEffects = []string{"read"}
+	}
+	if signature.EffectProof.Kind != "body-resolved" || !signature.EffectProof.Complete || !slices.Equal(signature.Effects, wantEffects) {
 		return fmt.Errorf("primitive function signature %d has incomplete or impure effect proof %v", signature.ID, signature.Effects)
 	}
 
@@ -476,7 +486,7 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 		if _, err := requireChildKind(node, eof[0], snapshotKindEndOfFile, nodes); err != nil {
 			return err
 		}
-	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNullKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken, snapshotKindQuestionQuestionEqualsToken, snapshotKindQuestionQuestionToken, snapshotKindUndefinedKeyword:
+	case snapshotKindBooleanKeyword, snapshotKindEndOfFile, snapshotKindEqualsToken, snapshotKindExportKeyword, snapshotKindLessThanToken, snapshotKindNullKeyword, snapshotKindNumberKeyword, snapshotKindPlusToken, snapshotKindQuestionQuestionEqualsToken, snapshotKindQuestionQuestionToken, snapshotKindStringKeyword, snapshotKindUndefinedKeyword:
 		if len(node.NamedChildren) != 0 || len(node.Children) != 0 {
 			return fmt.Errorf("primitive token Kind %q cannot have children", node.Kind)
 		}
@@ -542,8 +552,8 @@ func validateParameterLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 	}
 	typeNodeID := childByRole(node, "type")
 	typeNode, ok := nodes[typeNodeID]
-	if !ok || typeNode.Parent != node.ID || (typeNode.Kind != snapshotKindNumberKeyword && typeNode.Kind != snapshotKindBooleanKeyword && typeNode.Kind != snapshotKindUnionType) {
-		return fmt.Errorf("primitive parameter type must be number, boolean, or canonical nullable number")
+	if !ok || typeNode.Parent != node.ID || (typeNode.Kind != snapshotKindNumberKeyword && typeNode.Kind != snapshotKindBooleanKeyword && typeNode.Kind != snapshotKindStringKeyword && typeNode.Kind != snapshotKindUnionType) {
+		return fmt.Errorf("primitive parameter type must be number, boolean, string, or canonical nullable number")
 	}
 	if node.DeclaredType == 0 && node.NarrowedType == 0 && node.ContextualType == 0 {
 		return fmt.Errorf("parameter has no type reference")
@@ -557,8 +567,8 @@ func validateReturnLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) err
 	}
 	expressionID := childByRole(node, "expression")
 	expression, ok := nodes[expressionID]
-	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier && expression.Kind != snapshotKindNumericLiteral && expression.Kind != snapshotKindPrefixUnaryExpression) {
-		return fmt.Errorf("primitive return expression must be an identifier, numeric literal, prefix unary expression, or binary expression")
+	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier && expression.Kind != snapshotKindNumericLiteral && expression.Kind != snapshotKindPrefixUnaryExpression && expression.Kind != snapshotKindPropertyAccessExpression) {
+		return fmt.Errorf("primitive return expression must be an identifier, literal, prefix unary, binary, or supported property expression")
 	}
 	return nil
 }
@@ -660,6 +670,24 @@ func validatePrefixUnaryLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot
 	}
 	_, err := requireRoleKind(node, "operand", snapshotKindNumericLiteral, nodes)
 	return err
+}
+
+func validatePropertyAccessLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
+		return fmt.Errorf("primitive property access requires receiver and name")
+	}
+	receiver, err := requireRoleKind(node, "child[0]", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return err
+	}
+	name, err := requireRoleKind(node, "child[1]", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(receiver.SyntaxPayload.Text) == "" || name.SyntaxPayload.Text != "length" {
+		return fmt.Errorf("primitive property access only supports string.length")
+	}
+	return nil
 }
 
 func validateLiteralTypeLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
@@ -845,6 +873,13 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	if bodyID == "" {
 		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s has no body", functionNode.ID)
 	}
+	stringLength, isStringLength, err := findPrimitiveStringLength(bodyID, nodes)
+	if err != nil {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+	}
+	if isStringLength {
+		return replayStringLengthFunction(function, events, stringLength, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
+	}
 	if localCall, ok := findPrimitiveLocalCall(bodyID, nodes); ok {
 		return replayLocalCallFunction(function, events, localCall, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures, functionIDs)
 	}
@@ -958,6 +993,98 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	function.Blocks = []bingo.HIRBlock{block}
 	events = append(events, LoweringEvent{Kind: "return", Node: returnNode.ID, Origin: returnNode.Origin, Type: returnType})
 	events = append(events, LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin})
+	return function, events, nil
+}
+
+type primitiveStringLengthSource struct {
+	Return   NodeSnapshot
+	Access   NodeSnapshot
+	Receiver NodeSnapshot
+	Name     NodeSnapshot
+}
+
+func findPrimitiveStringLength(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveStringLengthSource, bool, error) {
+	body, ok := nodes[bodyID]
+	if !ok || body.Kind != snapshotKindBlock {
+		return primitiveStringLengthSource{}, false, fmt.Errorf("body is not a block")
+	}
+	statements := namedChildren(body, "statement[")
+	if len(statements) != 1 {
+		return primitiveStringLengthSource{}, false, nil
+	}
+	returnNode, ok := nodes[statements[0]]
+	if !ok || returnNode.Kind != snapshotKindReturnStatement {
+		return primitiveStringLengthSource{}, false, nil
+	}
+	expressionID := childByRole(returnNode, "expression")
+	access, ok := nodes[expressionID]
+	if !ok || access.Kind != snapshotKindPropertyAccessExpression {
+		return primitiveStringLengthSource{}, false, nil
+	}
+	receiver, err := requireRoleKind(access, "child[0]", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveStringLengthSource{}, false, err
+	}
+	name, err := requireRoleKind(access, "child[1]", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return primitiveStringLengthSource{}, false, err
+	}
+	if name.SyntaxPayload.Text != "length" {
+		return primitiveStringLengthSource{}, false, fmt.Errorf("string property %q is outside the primitive UTF-16 contract", name.SyntaxPayload.Text)
+	}
+	return primitiveStringLengthSource{Return: returnNode, Access: access, Receiver: receiver, Name: name}, true, nil
+}
+
+func replayStringLengthFunction(
+	function bingo.HIRFunction,
+	events []LoweringEvent,
+	source primitiveStringLengthSource,
+	parameterValues map[SymbolID]bingo.ValueID,
+	parameterTypes map[bingo.ValueID]bingo.TypeKind,
+	functionNode NodeSnapshot,
+	nodes map[NodeID]NodeSnapshot,
+	types map[TypeID]TypeSnapshot,
+	symbols map[SymbolID]SymbolSnapshot,
+	signatures map[SignatureID]SignatureSnapshot,
+) (bingo.HIRFunction, []LoweringEvent, error) {
+	if function.Name != "stringLength" || len(function.Parameters) != 1 || function.Parameters[0].Name != "value" || function.Parameters[0].Type != bingo.TypeString {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("primitive UTF-16 replay requires exported stringLength(value: string)")
+	}
+	value, ok := parameterValue(source.Receiver, parameterValues)
+	if !ok || value != 1 || parameterTypes[value] != bingo.TypeString {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("string.length receiver is not the string parameter")
+	}
+	receiverType, receiverErr := bingoType(nodeTypeID(source.Receiver), types)
+	if receiverErr != nil || receiverType != bingo.TypeString {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("string.length receiver is not canonical string")
+	}
+	accessType, accessErr := bingoType(nodeTypeID(source.Access), types)
+	nameType, nameErr := bingoType(nodeTypeID(source.Name), types)
+	if accessErr != nil || nameErr != nil || accessType != bingo.TypeNumber || nameType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("string.length property is not canonical number")
+	}
+	returnTypeID, ok := resolveFunctionReturnType(functionNode, nodes, symbols, types, signatures)
+	if !ok {
+		returnTypeID = annotatedReturnType(functionNode, nodes)
+	}
+	returnType, returnErr := bingoType(returnTypeID, types)
+	if returnErr != nil || returnType != bingo.TypeNumber {
+		return bingo.HIRFunction{}, nil, fmt.Errorf("stringLength return type is not canonical number")
+	}
+	function.ReturnType = bingo.TypeNumber
+	function.Blocks = []bingo.HIRBlock{{
+		ID: 1,
+		Operations: []bingo.HIROp{{
+			ID: 2, Kind: "string.length", Type: bingo.TypeNumber, Operands: []bingo.ValueID{1}, Effect: bingo.EffectPure,
+			LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{}, Origin: originOf(source.Access),
+		}},
+		Terminator: bingo.HIRTerminator{Kind: "return", Value: 2, Origin: originOf(source.Return)},
+	}}
+	events = append(events,
+		LoweringEvent{Kind: "string.length", Node: source.Access.ID, Origin: source.Access.Origin, Type: nodeTypeID(source.Access), Inputs: []NodeID{source.Receiver.ID, source.Name.ID}},
+		LoweringEvent{Kind: "return", Node: source.Return.ID, Origin: source.Return.Origin, Type: returnTypeID, Inputs: []NodeID{source.Access.ID}},
+		LoweringEvent{Kind: "function.end", Node: functionNode.ID, Origin: functionNode.Origin},
+	)
 	return function, events, nil
 }
 
@@ -1175,21 +1302,21 @@ func replayLocalCallFunction(
 }
 
 type primitiveClassifySource struct {
-	FirstIf           NodeSnapshot
-	FirstCondition    NodeSnapshot
-	FirstValue        NodeSnapshot
-	FirstThreshold    NodeSnapshot
-	NegativeReturn    NodeSnapshot
-	NegativeUnary     NodeSnapshot
-	NegativeLiteral   NodeSnapshot
-	SecondIf          NodeSnapshot
-	SecondCondition   NodeSnapshot
-	SecondValue       NodeSnapshot
-	SecondThreshold   NodeSnapshot
-	ZeroReturn        NodeSnapshot
-	ZeroLiteral       NodeSnapshot
-	PositiveReturn    NodeSnapshot
-	PositiveLiteral   NodeSnapshot
+	FirstIf         NodeSnapshot
+	FirstCondition  NodeSnapshot
+	FirstValue      NodeSnapshot
+	FirstThreshold  NodeSnapshot
+	NegativeReturn  NodeSnapshot
+	NegativeUnary   NodeSnapshot
+	NegativeLiteral NodeSnapshot
+	SecondIf        NodeSnapshot
+	SecondCondition NodeSnapshot
+	SecondValue     NodeSnapshot
+	SecondThreshold NodeSnapshot
+	ZeroReturn      NodeSnapshot
+	ZeroLiteral     NodeSnapshot
+	PositiveReturn  NodeSnapshot
+	PositiveLiteral NodeSnapshot
 }
 
 func findPrimitiveClassify(bodyID NodeID, nodes map[NodeID]NodeSnapshot) (primitiveClassifySource, bool, error) {
@@ -2061,6 +2188,9 @@ func bingoType(id TypeID, types map[TypeID]TypeSnapshot) (bingo.TypeKind, error)
 	}
 	if typ.Kind == "intrinsic" && typ.Flags == 64 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "intrinsic" && typ.TypePayload.Scalar == "intrinsic|64|0|||intrinsic:number" {
 		return bingo.TypeNumber, nil
+	}
+	if typ.Kind == "intrinsic" && typ.Flags == 32 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "intrinsic" && typ.TypePayload.Scalar == "intrinsic|32|0|||intrinsic:string" {
+		return bingo.TypeString, nil
 	}
 	if typ.Kind == "literal" && typ.Flags == 2048 && typ.ObjectFlags == 0 && typ.TypePayload.Tag == "literal" && strings.HasPrefix(typ.TypePayload.Scalar, "literal|2048|0|||literal:jsnum.Number:") {
 		return bingo.TypeNumber, nil

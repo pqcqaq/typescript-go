@@ -38,12 +38,13 @@ type CaseManifest struct {
 
 // CaseExecution is one observable first-slice C ABI invocation.
 type CaseExecution struct {
-	Name         string `json:"name"`
-	Flag         *bool  `json:"flag,omitempty"`
-	NullableTag  string `json:"nullableTag,omitempty"`
-	LeftBits     string `json:"leftBits"`
-	RightBits    string `json:"rightBits,omitempty"`
-	ExpectedBits string `json:"expectedBits"`
+	Name           string `json:"name"`
+	Flag           *bool  `json:"flag,omitempty"`
+	NullableTag    string `json:"nullableTag,omitempty"`
+	UTF16CodeUnits string `json:"utf16CodeUnits,omitempty"`
+	LeftBits       string `json:"leftBits"`
+	RightBits      string `json:"rightBits,omitempty"`
+	ExpectedBits   string `json:"expectedBits"`
 }
 
 type Case struct {
@@ -150,7 +151,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -178,6 +179,18 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		} else if execution.NullableTag != "" {
 			return fmt.Errorf("non-coalesce execution %q must not contain nullableTag", execution.Name)
 		}
+		if entryPoint == "stringLength" {
+			if execution.LeftBits != "" || execution.RightBits != "" || execution.NullableTag != "" {
+				return fmt.Errorf("stringLength execution %q contains a non-string ABI field", execution.Name)
+			}
+			if !isCanonicalUTF16CodeUnits(execution.UTF16CodeUnits) || !isCanonicalBits(execution.ExpectedBits) {
+				return fmt.Errorf("stringLength execution %q has invalid UTF-16 code units or expected bits", execution.Name)
+			}
+			continue
+		}
+		if execution.UTF16CodeUnits != "" {
+			return fmt.Errorf("non-stringLength execution %q must not contain UTF-16 code units", execution.Name)
+		}
 		bits := map[string]string{"leftBits": execution.LeftBits, "expectedBits": execution.ExpectedBits}
 		if entryPoint != "classify" {
 			bits["rightBits"] = execution.RightBits
@@ -195,6 +208,18 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 
 func isCanonicalBits(value string) bool {
 	if len(value) != 16 {
+		return false
+	}
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func isCanonicalUTF16CodeUnits(value string) bool {
+	if len(value)%4 != 0 {
 		return false
 	}
 	for _, char := range value {
@@ -255,7 +280,22 @@ func LoadHIR(directory string, identity bingo.CompilerBuildIdentity) (bingo.HIRM
 }
 
 func isPhase2HIR(module bingo.HIRModule) bool {
-	return len(module.Functions) > 1 || (len(module.Functions) == 1 && len(module.Functions[0].Blocks) > 1)
+	if len(module.Functions) > 1 {
+		return true
+	}
+	if len(module.Functions) != 1 {
+		return false
+	}
+	function := module.Functions[0]
+	if len(function.Blocks) > 1 {
+		return true
+	}
+	switch function.Name {
+	case "choose", "classify", "compute", "coalesce", "coalesceAssign", "stringLength":
+		return true
+	default:
+		return false
+	}
 }
 
 func LoadMIR(ctx context.Context, directory string, identity bingo.CompilerBuildIdentity, machine *llvmbackend.TargetMachine) (bingo.FirstSliceMIRArtifact, error) {

@@ -107,6 +107,8 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 		emitLoopLLVM(ctx, builder, module, mir.Functions[0])
 	case len(mir.Functions) == 1 && (mir.Functions[0].Name == "coalesce" || mir.Functions[0].Name == "coalesceAssign"):
 		emitCoalesceLLVM(ctx, builder, module, mir.Functions[0])
+	case len(mir.Functions) == 1 && mir.Functions[0].Name == "stringLength":
+		emitStringLengthLLVM(ctx, builder, module, mir.Functions[0])
 	default:
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
@@ -338,4 +340,39 @@ func emitCoalesceLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module
 	result := builder.CreatePHI(double, "coalesce.result")
 	result.AddIncoming([]llvm.Value{function.Param(1), payload}, []llvm.BasicBlock{fallback, valueBlock})
 	builder.CreateRet(result)
+}
+
+func emitStringLengthLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) {
+	i16 := ctx.Int16Type()
+	i64 := ctx.Int64Type()
+	pointer := llvm.PointerType(i16, 0)
+	view := ctx.StructType([]llvm.Type{pointer, i64}, false)
+	double := ctx.DoubleType()
+	functionType := llvm.FunctionType(double, []llvm.Type{view}, false)
+	function := llvm.AddFunction(module, "stringLength", functionType)
+	function.SetFunctionCallConv(llvm.CCallConv)
+	function.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	function.Param(0).SetName(mir.Parameters[0].Name)
+
+	entry := llvm.AddBasicBlock(function, "entry")
+	valid := llvm.AddBasicBlock(function, "decode.utf16")
+	invalid := llvm.AddBasicBlock(function, "invalid.utf16")
+	builder.SetInsertPointAtEnd(entry)
+	data := builder.CreateExtractValue(function.Param(0), 0, "value.data")
+	length := builder.CreateExtractValue(function.Param(0), 1, "value.length")
+	dataNull := builder.CreateIsNull(data, "data.null")
+	lengthZero := builder.CreateICmp(llvm.IntEQ, length, llvm.ConstInt(i64, 0, false), "length.zero")
+	canonical := builder.CreateICmp(llvm.IntEQ, dataNull, lengthZero, "view.canonical")
+	builder.CreateCondBr(canonical, valid, invalid)
+
+	builder.SetInsertPointAtEnd(invalid)
+	trapType := llvm.FunctionType(ctx.VoidType(), nil, false)
+	trap := llvm.AddFunction(module, "llvm.trap", trapType)
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("nounwind"), 0))
+	trap.AddFunctionAttr(ctx.CreateEnumAttribute(llvm.AttributeKindID("noreturn"), 0))
+	builder.CreateCall(trapType, trap, nil, "")
+	builder.CreateUnreachable()
+
+	builder.SetInsertPointAtEnd(valid)
+	builder.CreateRet(builder.CreateUIToFP(length, double, "length.number"))
 }

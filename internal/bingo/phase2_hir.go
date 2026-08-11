@@ -140,10 +140,20 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 		for operationIndex, operation := range block.Operations {
 			switch operation.Kind {
 			case "number.constant":
-				if operation.Type != TypeNumber || !validCanonicalNumberBits(operation.NumberBits) {
+				if operation.Type != TypeNumber || !validCanonicalNumberBits(operation.NumberBits) || operation.UTF16CodeUnits != "" {
 					return fmt.Errorf("number constant operation %d is not canonical binary64", operation.ID)
 				}
+			case "string.constant":
+				if operation.Type != TypeString || operation.NumberBits != "" {
+					return fmt.Errorf("string constant operation %d is not canonical UTF-16", operation.ID)
+				}
+				if err := ValidateUTF16CodeUnits(operation.UTF16CodeUnits); err != nil {
+					return fmt.Errorf("string constant operation %d: %w", operation.ID, err)
+				}
 			case "unary":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
 					return fmt.Errorf("operation %d: %w", operation.ID, err)
 				}
@@ -151,6 +161,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					return fmt.Errorf("unary operation %d requires number operand and result", operation.ID)
 				}
 			case "binary":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				for _, operand := range operation.Operands {
 					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
 						return fmt.Errorf("operation %d: %w", operation.ID, err)
@@ -161,6 +174,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					return fmt.Errorf("binary operation %d requires number operands and result", operation.ID)
 				}
 			case "compare":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				for _, operand := range operation.Operands {
 					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
 						return fmt.Errorf("operation %d: %w", operation.ID, err)
@@ -171,6 +187,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					return fmt.Errorf("comparison operation %d requires number operands and boolean result", operation.ID)
 				}
 			case "phi":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				if !slices.Equal(operation.IncomingBlocks, predecessorIDs) {
 					return fmt.Errorf("phi operation %d incoming blocks %v do not match canonical predecessors %v", operation.ID, operation.IncomingBlocks, predecessorIDs)
 				}
@@ -184,6 +203,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					}
 				}
 			case "call":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				for _, operand := range operation.Operands {
 					if err := validateValueUse(operand, blockIndex, operationIndex, values, dominators); err != nil {
 						return fmt.Errorf("operation %d: %w", operation.ID, err)
@@ -208,6 +230,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					return fmt.Errorf("call operation %d result type %q disagrees with callee return type %q", operation.ID, operation.Type, callee.ReturnType)
 				}
 			case "is_nullish":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
 					return fmt.Errorf("operation %d: %w", operation.ID, err)
 				}
@@ -215,11 +240,21 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 					return fmt.Errorf("is_nullish operation %d requires nullable-number input and boolean result", operation.ID)
 				}
 			case "unwrap_nullable":
+				if operation.UTF16CodeUnits != "" {
+					return fmt.Errorf("operation %d carries unexpected UTF-16 code units", operation.ID)
+				}
 				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
 					return fmt.Errorf("operation %d: %w", operation.ID, err)
 				}
 				if values[operation.Operands[0]].typ != TypeNullableNumber || operation.Type != TypeNumber {
 					return fmt.Errorf("unwrap_nullable operation %d requires nullable-number input and number result", operation.ID)
+				}
+			case "string.length":
+				if err := validateValueUse(operation.Operands[0], blockIndex, operationIndex, values, dominators); err != nil {
+					return fmt.Errorf("operation %d: %w", operation.ID, err)
+				}
+				if values[operation.Operands[0]].typ != TypeString || operation.Type != TypeNumber {
+					return fmt.Errorf("string.length operation %d requires string input and number result", operation.ID)
 				}
 			}
 		}
@@ -262,6 +297,13 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 		if len(operation.Operands) != 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || !validCanonicalNumberBits(operation.NumberBits) || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
+	case "string.constant":
+		if len(operation.Operands) != 0 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+		if err := ValidateUTF16CodeUnits(operation.UTF16CodeUnits); err != nil {
+			return fmt.Errorf("operation %d: %w", operation.ID, err)
+		}
 	case "unary":
 		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "-" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
@@ -288,6 +330,10 @@ func validatePhase2HIROperationShape(operation HIROp) error {
 		}
 	case "unwrap_nullable":
 		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
+			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
+		}
+	case "string.length":
+		if len(operation.Operands) != 1 || len(operation.IncomingBlocks) != 0 || operation.Operator != "" || operation.NumberBits != "" || operation.UTF16CodeUnits != "" || operation.Callee != 0 || operation.Effect != EffectPure {
 			return fmt.Errorf("operation %d is outside the Phase 2B primitive operation subset", operation.ID)
 		}
 	default:
@@ -324,7 +370,7 @@ func validPhase2HIRType(value TypeKind) bool {
 }
 
 func validPhase2HIRValueType(value TypeKind) bool {
-	return value == TypeNumber || value == TypeBoolean || value == TypeNullableNumber
+	return value == TypeNumber || value == TypeBoolean || value == TypeString || value == TypeNullableNumber
 }
 
 // verifyNullableUnwrapGuard prevents a nullable payload from being observed

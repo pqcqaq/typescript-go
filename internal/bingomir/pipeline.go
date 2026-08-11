@@ -607,7 +607,7 @@ func decodeVerifiedTypedHIR(raw []byte, identity bingo.CompilerBuildIdentity) (a
 }
 
 func verifyCanonicalPrimitiveHIR(hir bingo.HIRModule) error {
-	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
+	if len(hir.Functions) != 1 || hir.Functions[0].Name != "add" || len(hir.Functions[0].Blocks) != 1 {
 		return bingo.VerifyCanonicalPhase2HIR(hir)
 	}
 	return bingo.VerifyCanonicalHIR(hir)

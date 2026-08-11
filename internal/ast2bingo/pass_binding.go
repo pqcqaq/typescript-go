@@ -456,8 +456,8 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 		parameterNode := indexes.Nodes[parameterID]
 		parameterTypeID := nodeTypeID(parameterNode)
 		parameterType, typeErr := bingoType(parameterTypeID, indexes.Types)
-		if typeErr != nil || (parameterType != bingo.TypeNumber && parameterType != bingo.TypeBoolean && parameterType != bingo.TypeNullableNumber) {
-			return fmt.Errorf("primitive source parameter %q is not canonical number, boolean, or nullable number", parameterID)
+		if typeErr != nil || (parameterType != bingo.TypeNumber && parameterType != bingo.TypeBoolean && parameterType != bingo.TypeString && parameterType != bingo.TypeNullableNumber) {
+			return fmt.Errorf("primitive source parameter %q is not canonical number, boolean, string, or nullable number", parameterID)
 		}
 		expected := bingo.HIRParameter{
 			Name:   childText(parameterNode, "name", indexes.Nodes),
@@ -475,6 +475,29 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 	}
 
 	bodyID := childByRole(functionNode, "body")
+	stringLength, isStringLength, stringLengthErr := findPrimitiveStringLength(bodyID, indexes.Nodes)
+	if stringLengthErr != nil {
+		return fmt.Errorf("primitive string length source: %w", stringLengthErr)
+	}
+	if isStringLength {
+		parameterTypes := make(map[bingo.ValueID]bingo.TypeKind, len(function.Parameters))
+		for _, parameter := range function.Parameters {
+			parameterTypes[parameter.Value] = parameter.Type
+		}
+		expectedFunction, expectedStringEvents, err := replayStringLengthFunction(
+			bingo.HIRFunction{ID: function.ID, Name: expectedName, Exported: function.Exported, Parameters: slices.Clone(function.Parameters), Origin: originOf(functionNode)},
+			expectedEvents, stringLength, parameterValues, parameterTypes, functionNode, indexes.Nodes, indexes.Types, indexes.Symbols, indexes.Signatures,
+		)
+		if err != nil {
+			return fmt.Errorf("rebuild primitive string length HIR: %w", err)
+		}
+		expectedJSON, expectedErr := json.Marshal(expectedFunction)
+		actualJSON, actualErr := json.Marshal(function)
+		if expectedErr != nil || actualErr != nil || !bytes.Equal(expectedJSON, actualJSON) || !equalLoweringEvents(artifact.Events, expectedStringEvents) {
+			return fmt.Errorf("primitive string length HIR or evaluation-order events do not match source plan")
+		}
+		return nil
+	}
 	loop, isLoop, loopErr := findPrimitiveLoop(bodyID, indexes.Nodes)
 	if loopErr != nil {
 		return fmt.Errorf("primitive loop source: %w", loopErr)
@@ -655,14 +678,14 @@ func verifyPrimitiveTypedHIRArtifact(plan primitiveSourceTypePlan, artifact prim
 }
 
 func canonicalPrimitiveHIR(hir bingo.HIRModule) ([]byte, string, error) {
-	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
+	if len(hir.Functions) != 1 || hir.Functions[0].Name != "add" || len(hir.Functions[0].Blocks) != 1 {
 		return bingo.CanonicalPhase2HIR(hir)
 	}
 	return bingo.CanonicalHIR(hir)
 }
 
 func verifyCanonicalPrimitiveHIR(hir bingo.HIRModule) error {
-	if len(hir.Functions) > 1 || (len(hir.Functions) == 1 && len(hir.Functions[0].Blocks) > 1) {
+	if len(hir.Functions) != 1 || hir.Functions[0].Name != "add" || len(hir.Functions[0].Blocks) != 1 {
 		return bingo.VerifyCanonicalPhase2HIR(hir)
 	}
 	return bingo.VerifyCanonicalHIR(hir)

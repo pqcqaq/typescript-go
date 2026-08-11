@@ -246,6 +246,44 @@ func TestReplayCommittedClassifySnapshotProducesLiteralAndMultiReturnHIR(t *test
 	}
 }
 
+func TestReplayCommittedStringLengthSnapshotProducesUTF16HIR(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/stringlength/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	result, err := ReplayFrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bingo.VerifyCanonicalPhase2HIR(result.HIR); err != nil {
+		t.Fatal(err)
+	}
+	if len(result.HIR.Functions) != 1 {
+		t.Fatalf("string length HIR functions = %#v", result.HIR.Functions)
+	}
+	function := result.HIR.Functions[0]
+	if function.Name != "stringLength" || !function.Exported || function.ReturnType != bingo.TypeNumber || len(function.Parameters) != 1 || function.Parameters[0].Type != bingo.TypeString || len(function.Blocks) != 1 {
+		t.Fatalf("string length HIR function = %#v", function)
+	}
+	operation := function.Blocks[0].Operations[0]
+	if operation.ID != 2 || operation.Kind != "string.length" || operation.Type != bingo.TypeNumber || !slices.Equal(operation.Operands, []bingo.ValueID{1}) || function.Blocks[0].Terminator.Value != 2 {
+		t.Fatalf("string length HIR operation = %#v", operation)
+	}
+	wantEvents := []string{"function.begin", "parameter", "string.length", "return", "function.end"}
+	gotEvents := make([]string, len(result.Events))
+	for index, event := range result.Events {
+		gotEvents[index] = event.Kind
+	}
+	if !slices.Equal(gotEvents, wantEvents) {
+		t.Fatalf("string length events = %v, want %v", gotEvents, wantEvents)
+	}
+}
+
 func TestReplayCoalesceAssignRejectsRehashedReturnBindingTampering(t *testing.T) {
 	base := buildReplayCoalesceAssignSnapshot(t)
 	identity := testCompilerIdentity(t, *base)

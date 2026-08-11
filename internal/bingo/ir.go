@@ -125,6 +125,7 @@ type HIROp struct {
 	IncomingBlocks                []BlockID             `json:"incomingBlocks,omitempty"`
 	Operator                      string                `json:"operator,omitempty"`
 	NumberBits                    string                `json:"numberBits,omitempty"`
+	UTF16CodeUnits                string                `json:"utf16CodeUnits,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
 	Effect                        Effect                `json:"effect"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`

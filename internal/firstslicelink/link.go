@@ -209,6 +209,31 @@ func RunCoalesceAssign(ctx context.Context, executable, tag, value, fallback str
 	return runHarness(ctx, executable, "coalesceAssign", tagByte, value, fallback)
 }
 
+// RunStringLength executes the UTF-16 code-unit view ABI harness. The empty
+// string is represented by an empty argument and maps to {NULL, 0}.
+func RunStringLength(ctx context.Context, executable, codeUnits string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if err := validateUTF16CodeUnits(codeUnits); err != nil {
+		return RunResult{}, fmt.Errorf("UTF-16 argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, codeUnits)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run UTF-16 string length executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || validateBits(trimmed) != nil {
+		return RunResult{}, fmt.Errorf("UTF-16 string length output is not one binary64 hex line: %q", string(output))
+	}
+	return RunResult{Arguments: []string{codeUnits}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
 // RejectNonCanonicalChoose executes choose with an invalid ABI byte and
 // requires the strict entry-point trap to reject the process.
 func RejectNonCanonicalChoose(ctx context.Context, executable, left, right string) (RunResult, error) {
@@ -225,6 +250,27 @@ func RejectNonCanonicalCoalesce(ctx context.Context, executable, value, fallback
 // logical-assignment entry point.
 func RejectNonCanonicalCoalesceAssign(ctx context.Context, executable, value, fallback string) (RunResult, error) {
 	return runHarnessExpectFailure(ctx, executable, "coalesceAssign", "03", value, fallback)
+}
+
+// RejectNonCanonicalStringLength proves that a malformed {NULL, nonzero}
+// borrowed view cannot cross the native ABI boundary.
+func RejectNonCanonicalStringLength(ctx context.Context, executable string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, "--invalid-null")
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err == nil {
+		return RunResult{}, fmt.Errorf("noncanonical UTF-16 view was accepted")
+	}
+	if len(output) != 0 {
+		return RunResult{}, fmt.Errorf("noncanonical UTF-16 view emitted output: %q", output)
+	}
+	return RunResult{Arguments: []string{"--invalid-null"}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
 }
 
 func runHarness(ctx context.Context, executable, entryPoint, flag, left, right string) (RunResult, error) {
@@ -321,7 +367,7 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
 	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+entryPoint+"(") {
@@ -352,6 +398,11 @@ func materializeLinkInputs(workspace string, request LinkRequest, entryPoint str
 			return fmt.Errorf("runtime manifest has no coalesce assignment harness object")
 		}
 		harness = *request.Runtime.Artifacts.CoalesceAssignHarnessObject
+	} else if entryPoint == "stringLength" {
+		if request.Runtime.Artifacts.StringLengthHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no string length harness object")
+		}
+		harness = *request.Runtime.Artifacts.StringLengthHarnessObject
 	}
 	if entryPoint == "classify" {
 		if request.Runtime.Artifacts.ClassifyHarnessObject == nil {
@@ -405,6 +456,8 @@ func responseFileBytes(entryPoints ...string) []byte {
 		harness = "bingo_coalesce_assign_harness.o"
 	} else if entryPoint == "classify" {
 		harness = "bingo_classify_harness.o"
+	} else if entryPoint == "stringLength" {
+		harness = "bingo_string_length_harness.o"
 	}
 	return []byte(strings.Join([]string{
 		"--target=x86_64-unknown-linux-gnu",
@@ -431,6 +484,18 @@ func normalizedEntryPoint(entryPoint string) string {
 		return "add"
 	}
 	return entryPoint
+}
+
+func validateUTF16CodeUnits(value string) error {
+	if len(value)%4 != 0 {
+		return fmt.Errorf("code-unit hex length %d is not divisible by four", len(value))
+	}
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
+			return fmt.Errorf("code-unit hex is not lowercase hexadecimal")
+		}
+	}
+	return nil
 }
 
 func verifyLinkMap(responseFile, data []byte) error {

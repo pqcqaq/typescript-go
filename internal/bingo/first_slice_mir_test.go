@@ -124,6 +124,41 @@ func TestPhase2ChooseRepresentationAndMIRAreCanonical(t *testing.T) {
 	}
 }
 
+func TestPhase2UTF16StringLengthRepresentationAndMIRAreCanonical(t *testing.T) {
+	hir := validPhase2StringLengthHIR()
+	_, hirHash, err := CanonicalPhase2HIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir.ContentHash = hirHash
+	plan, err := NewRepresentationPlanForHIR(phase2ChooseProvenance(hir), hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Bindings) != 2 || plan.Bindings[0].SourceType != TypeNumber || plan.Bindings[1].SourceType != TypeString || plan.Bindings[1].RepType != RepUTF16String {
+		t.Fatalf("UTF-16 string representation plan = %#v", plan.Bindings)
+	}
+	structural, err := LowerFirstSliceMIR(hir, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	function := structural.Functions[0]
+	if function.Name != "stringLength" || function.Parameters[0].Type != RepUTF16String || function.Blocks[0].Instructions[0].Kind != "utf16.length" || function.Blocks[0].Instructions[0].Type != RepF64 {
+		t.Fatalf("UTF-16 string length MIR = %#v", function)
+	}
+	tampered := structural
+	tampered.Functions = append([]FirstSliceMIRFunction(nil), structural.Functions...)
+	tampered.Functions[0].Parameters = append([]FirstSliceMIRParameter(nil), structural.Functions[0].Parameters...)
+	tampered.Functions[0].Parameters[0].Type = RepF64
+	tampered.ContentHash, err = firstSliceMIRContentHash(tampered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyStructuralFirstSliceMIR(tampered); err == nil {
+		t.Fatal("tampered UTF-16 string MIR parameter was accepted")
+	}
+}
+
 func TestPhase2LocalAssignmentAndDirectCallMIRAreCanonical(t *testing.T) {
 	hir := validPhase2LocalCallHIR()
 	_, hirHash, err := CanonicalPhase2HIR(hir)

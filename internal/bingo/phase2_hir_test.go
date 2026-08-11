@@ -125,6 +125,22 @@ func validPhase2ClassifyHIR() HIRModule {
 	}
 }
 
+func validPhase2StringLengthHIR() HIRModule {
+	requirements := make([]RuntimeCapabilityID, 0)
+	return HIRModule{
+		SchemaVersion: HIRSchemaVersion, Provenance: testHIRProvenance(requirements), LogicalCapabilityRequirements: requirements,
+		Functions: []HIRFunction{{
+			ID: 1, Name: "stringLength", Exported: true, ReturnType: TypeNumber, Origin: testOrigin(0, 80),
+			Parameters: []HIRParameter{{Name: "value", Value: 1, Type: TypeString, Origin: testOrigin(29, 42)}},
+			Blocks: []HIRBlock{{
+				ID:         1,
+				Operations: []HIROp{{ID: 2, Kind: "string.length", Type: TypeNumber, Operands: []ValueID{1}, Effect: EffectPure, LogicalCapabilityRequirements: []RuntimeCapabilityID{}, Origin: testOrigin(62, 74)}},
+				Terminator: HIRTerminator{Kind: "return", Value: 2, Origin: testOrigin(55, 75)},
+			}},
+		}},
+	}
+}
+
 func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	module := validPhase2ChooseHIR()
 	encoded, hash, err := CanonicalPhase2HIR(module)
@@ -140,6 +156,35 @@ func TestPhase2ChooseHIRIsCanonicalAndKeepsPhase2AFrozen(t *testing.T) {
 	}
 	if err := VerifyHIR(module); err == nil {
 		t.Fatal("Phase 2B choose HIR was accepted by the frozen Phase 2A verifier")
+	}
+}
+
+func TestPhase2UTF16StringLengthHIRIsCanonical(t *testing.T) {
+	module := validPhase2StringLengthHIR()
+	_, hash, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	if err := VerifyCanonicalPhase2HIR(module); err != nil {
+		t.Fatal(err)
+	}
+	for _, mutate := range []func(*HIRModule){
+		func(value *HIRModule) { value.Functions[0].Parameters[0].Type = TypeNumber },
+		func(value *HIRModule) { value.Functions[0].Blocks[0].Operations[0].Operands[0] = 2 },
+		func(value *HIRModule) { value.Functions[0].Blocks[0].Operations[0].Kind = "binary" },
+	} {
+		candidate := module
+		candidate.Functions = append([]HIRFunction(nil), module.Functions...)
+		candidate.Functions[0].Parameters = append([]HIRParameter(nil), module.Functions[0].Parameters...)
+		candidate.Functions[0].Blocks = append([]HIRBlock(nil), module.Functions[0].Blocks...)
+		candidate.Functions[0].Blocks[0].Operations = append([]HIROp(nil), module.Functions[0].Blocks[0].Operations...)
+		candidate.Functions[0].Blocks[0].Operations[0].Operands = append([]ValueID(nil), module.Functions[0].Blocks[0].Operations[0].Operands...)
+		mutate(&candidate)
+		candidate.ContentHash = ""
+		if _, _, err := CanonicalPhase2HIR(candidate); err == nil {
+			t.Fatal("tampered UTF-16 string length HIR was accepted")
+		}
 	}
 }
 

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "name": "utf16-string-length",
+  "entryPoint": "stringLength",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {
+      "name": "ascii",
+      "utf16CodeUnits": "004100420043",
+      "expectedBits": "4008000000000000"
+    },
+    {
+      "name": "empty",
+      "utf16CodeUnits": "",
+      "expectedBits": "0000000000000000"
+    },
+    {
+      "name": "lone-surrogate",
+      "utf16CodeUnits": "d800",
+      "expectedBits": "3ff0000000000000"
+    },
+    {
+      "name": "mixed-surrogates",
+      "utf16CodeUnits": "0041d83dde00d800",
+      "expectedBits": "4010000000000000"
+    },
+    {
+      "name": "surrogate-pair-is-two-code-units",
+      "utf16CodeUnits": "d83dde00",
+      "expectedBits": "4000000000000000"
+    }
+  ]
+}
