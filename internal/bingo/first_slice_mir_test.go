@@ -68,8 +68,12 @@ func TestPrimitiveRepresentationBindingsSeparateBooleanAndNumber(t *testing.T) {
 	if number != (RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}) {
 		t.Fatalf("number representation binding = %#v", number)
 	}
-	if _, err := PrimitiveRepresentationBinding(TypeString); err == nil || !strings.Contains(err.Error(), "no representation binding") {
-		t.Fatalf("unsupported representation error = %v", err)
+	stringBinding, err := PrimitiveRepresentationBinding(TypeString)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stringBinding != (RepresentationBinding{SourceType: TypeString, RepType: RepUTF16String, BitWidth: 128, ABIAlign: 8}) {
+		t.Fatalf("UTF-16 string representation binding = %#v", stringBinding)
 	}
 	nullable, err := PrimitiveRepresentationBinding(TypeNullableNumber)
 	if err != nil {

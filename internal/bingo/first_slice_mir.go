@@ -26,6 +26,7 @@ const (
 	RepI1          RepType = "i1"
 	RepF64         RepType = "f64"
 	RepNullableF64 RepType = "nullable-f64"
+	RepUTF16String RepType = "utf16-string"
 )
 
 type RepresentationBinding struct {
@@ -97,7 +98,7 @@ func NewPrimitiveRepresentationPlan(provenance TargetProvenance, sourceTypes []T
 func canonicalPrimitiveSourceTypes(sourceTypes []TypeKind) ([]TypeKind, error) {
 	seen := make(map[TypeKind]bool, len(sourceTypes))
 	for _, sourceType := range sourceTypes {
-		if sourceType != TypeBoolean && sourceType != TypeNumber && sourceType != TypeNullableNumber {
+		if sourceType != TypeBoolean && sourceType != TypeNumber && sourceType != TypeString && sourceType != TypeNullableNumber {
 			return nil, fmt.Errorf("primitive source type %q has no representation binding", sourceType)
 		}
 		seen[sourceType] = true
@@ -106,7 +107,7 @@ func canonicalPrimitiveSourceTypes(sourceTypes []TypeKind) ([]TypeKind, error) {
 		return nil, fmt.Errorf("primitive representation plan requires at least one source type")
 	}
 	result := make([]TypeKind, 0, len(seen))
-	for _, sourceType := range []TypeKind{TypeBoolean, TypeNumber, TypeNullableNumber} {
+	for _, sourceType := range []TypeKind{TypeBoolean, TypeNumber, TypeString, TypeNullableNumber} {
 		if seen[sourceType] {
 			result = append(result, sourceType)
 		}
@@ -128,6 +129,11 @@ func PrimitiveRepresentationBinding(sourceType TypeKind) (RepresentationBinding,
 			return RepresentationBinding{}, err
 		}
 		return RepresentationBinding{SourceType: TypeNumber, RepType: RepF64, BitWidth: 64, ABIAlign: 8}, nil
+	case TypeString:
+		if err := ValidateUTF16StringContract(CanonicalUTF16StringContract()); err != nil {
+			return RepresentationBinding{}, err
+		}
+		return RepresentationBinding{SourceType: TypeString, RepType: RepUTF16String, BitWidth: UTF16StringABIByteWidth, ABIAlign: UTF16StringABIAlign}, nil
 	case TypeNullableNumber:
 		if err := ValidateNullableNumberContract(CanonicalNullableNumberContract()); err != nil {
 			return RepresentationBinding{}, err
