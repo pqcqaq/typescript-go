@@ -151,7 +151,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "objectAlias" && entryPoint != "propertyNullishAssign" && entryPoint != "closureCounter" && entryPoint != "classCounter" && entryPoint != "derivedCounter" && entryPoint != "classAccess" {
 		return fmt.Errorf("unsupported runnable entryPoint %q", manifest.EntryPoint)
 	}
 	names := make(map[string]struct{}, len(manifest.Executions))
@@ -169,7 +169,7 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		if entryPoint != "choose" && execution.Flag != nil {
 			return fmt.Errorf("non-choose execution %q must not contain boolean flag", execution.Name)
 		}
-		if entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
+		if entryPoint == "coalesce" || entryPoint == "coalesceAssign" || entryPoint == "propertyNullishAssign" {
 			if execution.NullableTag != "number" && execution.NullableTag != "null" && execution.NullableTag != "undefined" {
 				return fmt.Errorf("coalesce execution %q has invalid nullableTag %q", execution.Name, execution.NullableTag)
 			}
@@ -191,11 +191,17 @@ func ValidateRunnableManifest(manifest CaseManifest) error {
 		if execution.UTF16CodeUnits != "" {
 			return fmt.Errorf("non-stringLength execution %q must not contain UTF-16 code units", execution.Name)
 		}
+		if entryPoint == "classAccess" {
+			if execution.LeftBits != "" || execution.RightBits != "" || !isCanonicalBits(execution.ExpectedBits) {
+				return fmt.Errorf("classAccess execution %q contains arguments or invalid expected bits", execution.Name)
+			}
+			continue
+		}
 		bits := map[string]string{"leftBits": execution.LeftBits, "expectedBits": execution.ExpectedBits}
-		if entryPoint != "classify" {
+		if entryPoint != "classify" && entryPoint != "objectAlias" && entryPoint != "propertyNullishAssign" && entryPoint != "closureCounter" && entryPoint != "classCounter" {
 			bits["rightBits"] = execution.RightBits
 		} else if execution.RightBits != "" {
-			return fmt.Errorf("classify execution %q must not contain rightBits", execution.Name)
+			return fmt.Errorf("single-argument execution %q must not contain rightBits", execution.Name)
 		}
 		for label, value := range bits {
 			if !isCanonicalBits(value) {

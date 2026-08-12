@@ -705,6 +705,318 @@ func TestSnapshotLowererReadinessRegistryIsSortedAndBound(t *testing.T) {
 	}
 }
 
+func TestVERT010ObjectSnapshotReadinessHandlers(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/objectalias/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodes := make(map[NodeID]NodeSnapshot, len(frontend.Program.Nodes))
+	for _, node := range frontend.Program.Nodes {
+		nodes[node.ID] = node
+	}
+	wanted := map[string]int{
+		snapshotKindObjectLiteralExpression:     1,
+		snapshotKindShorthandPropertyAssignment: 1,
+		snapshotKindPropertyAccessExpression:    3,
+	}
+	seen := make(map[string]int, len(wanted))
+	for _, node := range frontend.Program.Nodes {
+		if _, ok := wanted[node.Kind]; !ok {
+			continue
+		}
+		definition, ok := lookupSnapshotLowererReadiness(node.Kind)
+		if !ok {
+			t.Fatalf("missing readiness lowerer for %s", node.Kind)
+		}
+		if err := definition.Handle(node, nodes); err != nil {
+			t.Fatalf("%s %s: %v", node.Kind, node.ID, err)
+		}
+		seen[node.Kind]++
+	}
+	for kind, count := range wanted {
+		if seen[kind] != count {
+			t.Fatalf("readiness handled %d %s nodes, want %d", seen[kind], kind, count)
+		}
+	}
+}
+
+func TestReplayVERT010FrontendSnapshotIsCanonicalAndDeterministic(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/objectalias/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	first, err := ReplayVERT010FrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := ReplayVERT010FrontendSnapshot(data, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstBytes, err := first.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondBytes, err := second.CanonicalBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(firstBytes, secondBytes) {
+		t.Fatal("VERT-010 replay is not deterministic")
+	}
+	if first.HIR.SchemaVersion != bingo.VERT010HIRSchemaVersion || len(first.HIR.ObjectTypes) != 1 || first.HIR.Functions[0].Blocks[0].Terminator.Value != 9 {
+		t.Fatalf("unexpected VERT-010 HIR: %#v", first.HIR)
+	}
+}
+
+func TestReplayVERT010RejectsRehashedPropertySymbolSubstitution(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/objectalias/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	broken := cloneReplaySnapshot(t, &frontend.Program)
+	nodes := make(map[NodeID]NodeSnapshot, len(broken.Nodes))
+	for _, node := range broken.Nodes {
+		nodes[node.ID] = node
+	}
+	propertyAccesses := make([]int, 0, 3)
+	for index, node := range broken.Nodes {
+		if node.Kind == snapshotKindPropertyAccessExpression && childText(node, "child[1]", nodes) == "value" {
+			propertyAccesses = append(propertyAccesses, index)
+		}
+	}
+	if len(propertyAccesses) != 3 {
+		t.Fatalf("property access count = %d", len(propertyAccesses))
+	}
+	var substitute SymbolID
+	for _, symbol := range broken.Symbols {
+		if symbol.Name == "value" && symbol.ID != broken.Nodes[propertyAccesses[0]].Symbol {
+			substitute = symbol.ID
+			break
+		}
+	}
+	if substitute == "" {
+		t.Fatal("substitute value symbol is missing")
+	}
+	broken.Nodes[propertyAccesses[1]].Symbol = substitute
+	if err := finalizeTestSnapshot(&broken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReplayVERT010Snapshot(broken, identity); err == nil || !strings.Contains(err.Error(), "property symbol identity mismatch") {
+		t.Fatalf("property substitution error = %v", err)
+	}
+}
+
+func TestReplayVERT010RejectsUnsupportedSourceShapes(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/objectalias/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := testCompilerIdentity(t, frontend.Program)
+	base := frontend.Program
+	tests := []struct {
+		name string
+		edit func(*ProgramSnapshot) bool
+	}{
+		{"copied alias", func(snapshot *ProgramSnapshot) bool {
+			nodes := indexPrimitiveSnapshot(*snapshot).Nodes
+			for index := range snapshot.Nodes {
+				node := snapshot.Nodes[index]
+				if node.Kind == snapshotKindVariableDeclaration && childText(node, "name", nodes) == "alias" {
+					initializer := childByRole(node, "initializer")
+					for initializerIndex := range snapshot.Nodes {
+						if snapshot.Nodes[initializerIndex].ID == initializer {
+							snapshot.Nodes[initializerIndex].SyntaxPayload.Text = "value"
+							return true
+						}
+					}
+				}
+			}
+			return false
+		}},
+		{"computed key", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Nodes {
+				if snapshot.Nodes[index].Kind == snapshotKindShorthandPropertyAssignment {
+					snapshot.Nodes[index].Kind = "KindComputedPropertyName"
+					snapshot.Nodes[index].SyntaxPayload.Tag = "KindComputedPropertyName"
+					return true
+				}
+			}
+			return false
+		}},
+		{"accessor", func(snapshot *ProgramSnapshot) bool {
+			return replaceSnapshotKind(snapshot, snapshotKindShorthandPropertyAssignment, "KindGetAccessor")
+		}},
+		{"method", func(snapshot *ProgramSnapshot) bool {
+			return replaceSnapshotKind(snapshot, snapshotKindShorthandPropertyAssignment, "KindMethodDeclaration")
+		}},
+		{"spread", func(snapshot *ProgramSnapshot) bool {
+			return replaceSnapshotKind(snapshot, snapshotKindShorthandPropertyAssignment, "KindSpreadAssignment")
+		}},
+		{"optional property", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Types {
+				if snapshot.Types[index].ID == 3 {
+					snapshot.Types[index].PropertyFacts[0].Optional = true
+					return true
+				}
+			}
+			return false
+		}},
+		{"additional property", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Types {
+				if snapshot.Types[index].ID == 3 {
+					snapshot.Types[index].Properties = append(snapshot.Types[index].Properties, snapshot.Types[index].Properties[0])
+					snapshot.Types[index].PropertyFacts = append(snapshot.Types[index].PropertyFacts, snapshot.Types[index].PropertyFacts[0])
+					return true
+				}
+			}
+			return false
+		}},
+		{"unsupported field type", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Types {
+				if snapshot.Types[index].ID == 3 {
+					snapshot.Types[index].PropertyFacts[0].ReadType = 6
+					snapshot.Types[index].PropertyFacts[0].WriteType = 6
+					return true
+				}
+			}
+			return false
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneReplaySnapshot(t, &base)
+			if !test.edit(&broken) {
+				t.Fatal("test mutation did not find its target")
+			}
+			if err := finalizeTestSnapshot(&broken); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ReplayVERT010Snapshot(broken, identity); err == nil {
+				t.Fatal("unsupported VERT-010 source shape was accepted")
+			}
+		})
+	}
+}
+
+func TestVERT011SnapshotPassesExactReadinessGate(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/propertynullishassign/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := buildPrimitiveSourceTypePlan(frontend.Program)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Functions) != 1 {
+		t.Fatalf("VERT-011 readiness functions = %v", plan.Functions)
+	}
+	function := replayFunctionNode(t, &frontend.Program, "propertyNullishAssign")
+	if plan.Functions[0] != function.ID {
+		t.Fatalf("VERT-011 readiness function = %q, want %q", plan.Functions[0], function.ID)
+	}
+}
+
+func TestVERT011SnapshotReadinessRejectsShapeTampering(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/propertynullishassign/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		edit func(*ProgramSnapshot) bool
+	}{
+		{"dynamic key", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Nodes {
+				if snapshot.Nodes[index].Kind == snapshotKindElementAccessExpression {
+					keyID := childByRole(snapshot.Nodes[index], "child[1]")
+					for keyIndex := range snapshot.Nodes {
+						if snapshot.Nodes[keyIndex].ID == keyID {
+							snapshot.Nodes[keyIndex].SyntaxPayload.Text = "dynamicKey"
+							return true
+						}
+					}
+				}
+			}
+			return false
+		}},
+		{"getter substitution", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Nodes {
+				if snapshot.Nodes[index].Kind == snapshotKindGetAccessor {
+					nameID := childByRole(snapshot.Nodes[index], "name")
+					for nameIndex := range snapshot.Nodes {
+						if snapshot.Nodes[nameIndex].ID == nameID {
+							snapshot.Nodes[nameIndex].SyntaxPayload.Text = "other"
+							return true
+						}
+					}
+				}
+			}
+			return false
+		}},
+		{"declared this proof", func(snapshot *ProgramSnapshot) bool {
+			for index := range snapshot.Nodes {
+				if snapshot.Nodes[index].Kind == snapshotKindThisKeyword {
+					snapshot.Nodes[index].DeclaredType = snapshot.Nodes[index].NarrowedType
+					return true
+				}
+			}
+			return false
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := cloneReplaySnapshot(t, &frontend.Program)
+			if !test.edit(&broken) {
+				t.Fatal("test mutation did not find its target")
+			}
+			if err := finalizeTestSnapshot(&broken); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := buildPrimitiveSourceTypePlan(broken); err == nil {
+				t.Fatal("tampered VERT-011 snapshot passed readiness")
+			}
+		})
+	}
+}
+
+func replaceSnapshotKind(snapshot *ProgramSnapshot, oldKind, newKind string) bool {
+	for index := range snapshot.Nodes {
+		if snapshot.Nodes[index].Kind == oldKind {
+			snapshot.Nodes[index].Kind = newKind
+			snapshot.Nodes[index].SyntaxPayload.Tag = newKind
+			return true
+		}
+	}
+	return false
+}
+
 func TestPrimitiveReadinessRequiresRegisteredSemanticFacts(t *testing.T) {
 	t.Parallel()
 	snapshot := buildReplayAddSnapshot(t)

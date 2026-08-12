@@ -8,9 +8,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/frontendwire"
 	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
@@ -18,11 +20,27 @@ const (
 	RuntimeManifestSchemaVersion uint32 = 1
 	LockedRuntimeName                   = "core-es2020"
 	LockedRuntimeABIVersion      uint32 = 1
-	LockedRuntimeSourceHash             = "6094e7460d450b6cab129f4620c51206b1a05ea783b034623b2987ba00e49ad2"
-	LockedABISchemaHash                 = "5af9f32c464859fa43b890026438855012ddf4e9ed3f6f89ed5d020ecf6c6a25"
-	LockedTargetManifestHash            = "163f4e5e3a0a5f25c160748ac0c08c92a1a256361d05cd4c85151826697dff6b"
-	LockedRuntimeManifestHash           = "5959a76b5407b501bdc6333b728e49252498f6a82f19b827d800a9e83124bccf"
+	LockedRuntimeSourceHash             = "bb2f8346742a14ce9d6b96446dc007ec9f7be798ea49b18cdb99ab99a57bbc92"
+	LockedABISchemaHash                 = "12c5f0fac0559b74dd9365b22f1bba8e532e55d5a9bd77bb94b6a74efd7c6bb3"
+	LockedTargetManifestHash            = "d888122a4e26d6ee5c0844ea256e71de625d337795b5584d62f2a1d9b194cc19"
+	InteropTargetManifestHash           = "14c3eb2bb6df5fe2febf918cd8996e0c9c4860162d35ccc9650e92c2edc3deb0"
+	LockedRuntimeManifestHash           = "7acc709640921bfdc8a9195188c9a41e242c1cd2807b79dc0cca106e7df4b81f"
 )
+
+func lockedRuntimeManifestHash(profile string) (string, bool) {
+	switch profile {
+	case string(frontendwire.ProfileStatic):
+		return LockedRuntimeManifestHash, true
+	case string(frontendwire.ProfileInterop):
+		return "", false
+	default:
+		return "", false
+	}
+}
+
+func isSupportedRuntimeProfile(profile string) bool {
+	return profile == string(frontendwire.ProfileStatic) || profile == string(frontendwire.ProfileInterop)
+}
 
 // RuntimeTarget is the target tuple implemented by one runtime artifact set.
 type RuntimeTarget struct {
@@ -41,16 +59,23 @@ type RuntimeArtifact struct {
 
 // RuntimeArtifacts lists the first-slice link inputs.
 type RuntimeArtifacts struct {
-	StartupObject               RuntimeArtifact  `json:"startupObject"`
-	ApplicationStartupObject    RuntimeArtifact  `json:"applicationStartupObject"`
-	HarnessObject               RuntimeArtifact  `json:"harnessObject"`
-	ComputeHarnessObject        *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
-	ChooseHarnessObject         *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
-	ClassifyHarnessObject       *RuntimeArtifact `json:"classifyHarnessObject,omitempty"`
-	CoalesceHarnessObject       *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
-	CoalesceAssignHarnessObject *RuntimeArtifact `json:"coalesceAssignHarnessObject,omitempty"`
-	StringLengthHarnessObject   *RuntimeArtifact `json:"stringLengthHarnessObject,omitempty"`
-	UmbrellaArchive             RuntimeArtifact  `json:"umbrellaArchive"`
+	StartupObject                      RuntimeArtifact  `json:"startupObject"`
+	ApplicationStartupObject           RuntimeArtifact  `json:"applicationStartupObject"`
+	HarnessObject                      RuntimeArtifact  `json:"harnessObject"`
+	ComputeHarnessObject               *RuntimeArtifact `json:"computeHarnessObject,omitempty"`
+	ChooseHarnessObject                *RuntimeArtifact `json:"chooseHarnessObject,omitempty"`
+	ClassifyHarnessObject              *RuntimeArtifact `json:"classifyHarnessObject,omitempty"`
+	CoalesceHarnessObject              *RuntimeArtifact `json:"coalesceHarnessObject,omitempty"`
+	CoalesceAssignHarnessObject        *RuntimeArtifact `json:"coalesceAssignHarnessObject,omitempty"`
+	StringLengthHarnessObject          *RuntimeArtifact `json:"stringLengthHarnessObject,omitempty"`
+	ObjectAliasHarnessObject           *RuntimeArtifact `json:"objectAliasHarnessObject,omitempty"`
+	PropertyNullishAssignHarnessObject *RuntimeArtifact `json:"propertyNullishAssignHarnessObject,omitempty"`
+	ClosureCounterHarnessObject        *RuntimeArtifact `json:"closureCounterHarnessObject,omitempty"`
+	ClassCounterHarnessObject          *RuntimeArtifact `json:"classCounterHarnessObject,omitempty"`
+	DerivedCounterHarnessObject        *RuntimeArtifact `json:"derivedCounterHarnessObject,omitempty"`
+	ClassAccessHarnessObject           *RuntimeArtifact `json:"classAccessHarnessObject,omitempty"`
+	CheckedObjectCastHarnessObject     *RuntimeArtifact `json:"checkedObjectCastHarnessObject,omitempty"`
+	UmbrellaArchive                    RuntimeArtifact  `json:"umbrellaArchive"`
 }
 
 // RuntimeCapability is one available versioned C ABI implementation.
@@ -92,6 +117,63 @@ type RuntimeManifest struct {
 	ContentHash        string              `json:"contentHash"`
 }
 
+type lockedRuntimeCapability struct {
+	logicalName bingo.RuntimeCapabilityID
+	symbolName  string
+	signature   string
+	effects     []bingo.PassEffect
+}
+
+var staticRuntimeCapabilities = []lockedRuntimeCapability{
+	{"rt.abi.version", "bingo_rt_abi_version_v1", "() -> u32", []bingo.PassEffect{}},
+	{"rt.gc.alloc", "bingo_gc_alloc_v1", "(*const shape, **object) -> status", []bingo.PassEffect{bingo.PassEffectAllocate, bingo.PassEffectSafepoint}},
+	{"rt.gc.collect", "bingo_gc_collect_v1", "() -> status", []bingo.PassEffect{bingo.PassEffectSafepoint}},
+	{"rt.gc.frame.link", "bingo_gc_frame_link_v1", "(*frame) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.frame.unlink", "bingo_gc_frame_unlink_v1", "(*frame) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.heap.reset", "bingo_gc_heap_reset_v1", "() -> status", []bingo.PassEffect{}},
+	{"rt.gc.root.clear", "bingo_gc_root_clear_v1", "(*frame, u32) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.root.publish", "bingo_gc_root_publish_v1", "(*frame, u64) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.root.reload", "bingo_gc_root_reload_v1", "(*frame, u32, **object) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.root.store", "bingo_gc_root_store_v1", "(*frame, u32, *object) -> status", []bingo.PassEffect{bingo.PassEffectRootPublication}},
+	{"rt.gc.safepoint", "bingo_gc_safepoint_v1", "() -> status", []bingo.PassEffect{bingo.PassEffectSafepoint}},
+	{"rt.gc.stats", "bingo_gc_stats_v1", "(*stats) -> status", []bingo.PassEffect{bingo.PassEffectRead}},
+	{"rt.gc.write_barrier", "bingo_gc_write_barrier_v1", "(*object, u32, *object) -> status", []bingo.PassEffect{bingo.PassEffectWrite}},
+}
+
+var interopRuntimeCapability = lockedRuntimeCapability{
+	bingo.DynamicPropertyLoadCapability,
+	bingo.DynamicPropertyLoadSymbol,
+	"u32(dynamic-value-v1,utf16-string-view,dynamic-value-v1*)",
+	[]bingo.PassEffect{bingo.PassEffectCall, bingo.PassEffectRead, bingo.PassEffectThrow},
+}
+
+func runtimeCapabilitiesForProfile(profile string) ([]lockedRuntimeCapability, bool) {
+	capabilities := slices.Clone(staticRuntimeCapabilities)
+	switch profile {
+	case string(frontendwire.ProfileStatic):
+		return capabilities, true
+	case string(frontendwire.ProfileInterop):
+		capabilities = append(capabilities, interopRuntimeCapability)
+		slices.SortFunc(capabilities, func(left, right lockedRuntimeCapability) int {
+			return strings.Compare(string(left.logicalName), string(right.logicalName))
+		})
+		return capabilities, true
+	default:
+		return nil, false
+	}
+}
+
+func targetManifestHashForProfile(profile string) (string, bool) {
+	switch profile {
+	case string(frontendwire.ProfileStatic):
+		return LockedTargetManifestHash, true
+	case string(frontendwire.ProfileInterop):
+		return InteropTargetManifestHash, true
+	default:
+		return "", false
+	}
+}
+
 // DecodeRuntimeManifest strictly decodes and validates a locked manifest.
 func DecodeRuntimeManifest(data []byte) (*RuntimeManifest, error) {
 	var manifest RuntimeManifest
@@ -127,10 +209,11 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 		manifest.Target.Features == nil || len(manifest.Target.Features) != 0 || manifest.Target.ObjectFormat != "elf" {
 		return fmt.Errorf("unsupported runtime target: %#v", manifest.Target)
 	}
-	if manifest.Profile != "static" || manifest.GC != "tracing" || manifest.Exceptions != "none" || manifest.Panic != "abort" {
+	if !isSupportedRuntimeProfile(manifest.Profile) || manifest.GC != "tracing" || manifest.Exceptions != "none" || manifest.Panic != "abort" {
 		return fmt.Errorf("unsupported runtime profile: profile=%s gc=%s exceptions=%s panic=%s", manifest.Profile, manifest.GC, manifest.Exceptions, manifest.Panic)
 	}
-	if manifest.SourceHash != LockedRuntimeSourceHash || manifest.ABISchemaHash != LockedABISchemaHash || manifest.TargetManifestHash != LockedTargetManifestHash {
+	targetManifestHash, ok := targetManifestHashForProfile(manifest.Profile)
+	if !ok || manifest.SourceHash != LockedRuntimeSourceHash || manifest.ABISchemaHash != LockedABISchemaHash || manifest.TargetManifestHash != targetManifestHash {
 		return fmt.Errorf("runtime source or schema identity is not locked")
 	}
 	if err := validateRuntimeArtifact(manifest.Artifacts.UmbrellaArchive, "libbingo_runtime.a"); err != nil {
@@ -175,25 +258,63 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 			return fmt.Errorf("string length harness object: %w", err)
 		}
 	}
-	if len(manifest.Capabilities) != 1 {
-		return fmt.Errorf("runtime capability count is %d, want 1", len(manifest.Capabilities))
+	if manifest.Artifacts.ObjectAliasHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ObjectAliasHarnessObject, "bingo_object_alias_harness.o"); err != nil {
+			return fmt.Errorf("object alias harness object: %w", err)
+		}
 	}
-	capability := manifest.Capabilities[0]
-	if capability.LogicalName != "rt.abi.version" || capability.SymbolName != "bingo_rt_abi_version_v1" ||
-		capability.ABIVersion != "1.0.0" || capability.Signature != "() -> u32" ||
-		capability.Effects == nil || len(capability.Effects) != 0 ||
-		capability.RequiredFeatures == nil || len(capability.RequiredFeatures) != 0 {
-		return fmt.Errorf("unsupported first-slice runtime capability: %#v", capability)
+	if manifest.Artifacts.PropertyNullishAssignHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.PropertyNullishAssignHarnessObject, "bingo_property_nullish_assign_harness.o"); err != nil {
+			return fmt.Errorf("property nullish assignment harness object: %w", err)
+		}
 	}
-	signatureHash, err := canonicalHash(capability.Signature)
-	if err != nil {
-		return fmt.Errorf("hash runtime capability signature: %w", err)
+	if manifest.Artifacts.ClosureCounterHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ClosureCounterHarnessObject, "bingo_closure_counter_harness.o"); err != nil {
+			return fmt.Errorf("closure counter harness object: %w", err)
+		}
 	}
-	if capability.SignatureHash != signatureHash {
-		return fmt.Errorf("runtime capability signature hash mismatch: got %s want %s", capability.SignatureHash, signatureHash)
+	if manifest.Artifacts.ClassCounterHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ClassCounterHarnessObject, "bingo_class_counter_harness.o"); err != nil {
+			return fmt.Errorf("class counter harness object: %w", err)
+		}
 	}
-	if capability.ImplementationHash != manifest.Artifacts.UmbrellaArchive.SHA256 {
-		return fmt.Errorf("runtime capability implementation hash does not match umbrella archive")
+	if manifest.Artifacts.DerivedCounterHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.DerivedCounterHarnessObject, "bingo_derived_counter_harness.o"); err != nil {
+			return fmt.Errorf("derived counter harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.ClassAccessHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.ClassAccessHarnessObject, "bingo_class_access_harness.o"); err != nil {
+			return fmt.Errorf("class access harness object: %w", err)
+		}
+	}
+	if manifest.Artifacts.CheckedObjectCastHarnessObject != nil {
+		if err := validateRuntimeArtifact(*manifest.Artifacts.CheckedObjectCastHarnessObject, "bingo_checked_object_cast_harness.o"); err != nil {
+			return fmt.Errorf("checked object cast harness object: %w", err)
+		}
+	}
+	wantedCapabilities, _ := runtimeCapabilitiesForProfile(manifest.Profile)
+	if len(manifest.Capabilities) != len(wantedCapabilities) {
+		return fmt.Errorf("runtime capability count is %d, want %d for profile %q", len(manifest.Capabilities), len(wantedCapabilities), manifest.Profile)
+	}
+	for index, capability := range manifest.Capabilities {
+		want := wantedCapabilities[index]
+		if capability.LogicalName != want.logicalName || capability.SymbolName != want.symbolName ||
+			capability.ABIVersion != "1.0.0" || capability.Signature != want.signature ||
+			!slices.Equal(capability.Effects, want.effects) ||
+			capability.RequiredFeatures == nil || len(capability.RequiredFeatures) != 0 {
+			return fmt.Errorf("unsupported first-slice runtime capability %d: %#v", index, capability)
+		}
+		signatureHash, err := canonicalHash(capability.Signature)
+		if err != nil {
+			return fmt.Errorf("hash runtime capability signature: %w", err)
+		}
+		if capability.SignatureHash != signatureHash {
+			return fmt.Errorf("runtime capability signature hash mismatch: got %s want %s", capability.SignatureHash, signatureHash)
+		}
+		if capability.ImplementationHash != manifest.Artifacts.UmbrellaArchive.SHA256 {
+			return fmt.Errorf("runtime capability implementation hash does not match umbrella archive")
+		}
 	}
 	if !strings.HasPrefix(manifest.Toolchain.Rustc, "rustc 1.97.1 ") ||
 		!strings.HasPrefix(manifest.Toolchain.Cargo, "cargo 1.97.1 ") ||
@@ -207,8 +328,12 @@ func ValidateRuntimeManifest(manifest RuntimeManifest) error {
 	if manifest.ContentHash != want {
 		return fmt.Errorf("runtime manifest hash mismatch: got %s want %s", manifest.ContentHash, want)
 	}
-	if manifest.ContentHash != LockedRuntimeManifestHash {
-		return fmt.Errorf("runtime manifest identity %s is not locked", manifest.ContentHash)
+	lockedHash, published := lockedRuntimeManifestHash(manifest.Profile)
+	if !published {
+		return fmt.Errorf("runtime profile %q has no authoritative manifest identity", manifest.Profile)
+	}
+	if manifest.ContentHash != lockedHash {
+		return fmt.Errorf("runtime manifest identity %s is not locked for profile %q", manifest.ContentHash, manifest.Profile)
 	}
 	return nil
 }

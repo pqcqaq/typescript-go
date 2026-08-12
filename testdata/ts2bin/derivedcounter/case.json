@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "derived-class-counter",
+  "entryPoint": "derivedCounter",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {"name": "infinity", "leftBits": "7ff0000000000000", "rightBits": "3ff0000000000000", "expectedBits": "7ff0000000000000"},
+    {"name": "negative-zero-step-two", "leftBits": "8000000000000000", "rightBits": "4000000000000000", "expectedBits": "4018000000000000"},
+    {"name": "one-negative-one", "leftBits": "3ff0000000000000", "rightBits": "bff0000000000000", "expectedBits": "bff0000000000000"},
+    {"name": "payload-qnan", "leftBits": "7ff8000000000042", "rightBits": "4000000000000000", "expectedBits": "7ff8000000000042"},
+    {"name": "positive-zero-step-one", "leftBits": "0000000000000000", "rightBits": "3ff0000000000000", "expectedBits": "4008000000000000"}
+  ]
+}

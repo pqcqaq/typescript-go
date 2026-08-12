@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "name": "property-nullish-assignment",
+  "entryPoint": "propertyNullishAssign",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {
+      "name": "infinity",
+      "leftBits": "7ff0000000000000",
+      "nullableTag": "number",
+      "expectedBits": "7ff0000000000000"
+    },
+    {
+      "name": "negative-zero",
+      "leftBits": "8000000000000000",
+      "nullableTag": "number",
+      "expectedBits": "8000000000000000"
+    },
+    {
+      "name": "null",
+      "leftBits": "0000000000000000",
+      "nullableTag": "null",
+      "expectedBits": "3ff0000000000000"
+    },
+    {
+      "name": "one",
+      "leftBits": "3ff0000000000000",
+      "nullableTag": "number",
+      "expectedBits": "3ff0000000000000"
+    },
+    {
+      "name": "payload-qnan",
+      "leftBits": "7ff8000000000042",
+      "nullableTag": "number",
+      "expectedBits": "7ff8000000000042"
+    },
+    {
+      "name": "positive-zero",
+      "leftBits": "0000000000000000",
+      "nullableTag": "number",
+      "expectedBits": "0000000000000000"
+    },
+    {
+      "name": "undefined",
+      "leftBits": "0000000000000000",
+      "nullableTag": "undefined",
+      "expectedBits": "3ff0000000000000"
+    }
+  ]
+}

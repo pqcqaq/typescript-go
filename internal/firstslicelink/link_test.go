@@ -87,6 +87,69 @@ func TestCoalesceAssignResponseFileSelectsCoalesceAssignHarness(t *testing.T) {
 	}
 }
 
+func TestCheckedObjectCastResponseFileSelectsCheckedHarness(t *testing.T) {
+	text := string(responseFileBytes(checkedObjectCastEntryPoint))
+	if !strings.Contains(text, "bingo_checked_object_cast_harness.o") || strings.Contains(text, "bingo_add_harness.o") {
+		t.Fatalf("checked object cast response file selected wrong harness: %s", text)
+	}
+}
+
+func TestCheckedObjectCastLinkRequestRequiresStatusABISymbol(t *testing.T) {
+	request := LinkRequest{
+		EntryPoint: checkedObjectCastEntryPoint,
+		Emission:   llvmbackend.FirstSliceEmission{LLVMIR: []byte("define double @bingo_checked_object_cast_v1() { ret double 0.0 }")},
+		Runtime: targetcontext.RuntimeManifest{Target: targetcontext.RuntimeTarget{
+			Triple: llvmbackend.FirstSliceTriple, CPU: llvmbackend.FirstSliceCPU, ObjectFormat: "elf",
+		}},
+		RuntimeDirectory: t.TempDir(), OutputPath: filepath.Join(t.TempDir(), "cast"), Clang: "clang-20", LLD: "ld.lld-20",
+	}
+	if err := validateRequest(request); err == nil || !strings.Contains(err.Error(), "does not contain entry point") {
+		t.Fatalf("checked object cast request with double ABI error = %v", err)
+	}
+	request.Emission.LLVMIR = []byte("define i32 @bingo_checked_object_cast_v1() { ret i32 0 }")
+	if err := validateRequest(request); err != nil {
+		t.Fatalf("checked object cast status ABI rejected: %v", err)
+	}
+}
+
+func TestCheckedObjectCastMaterializationRequiresHarnessArtifact(t *testing.T) {
+	request := LinkRequest{Runtime: targetcontext.RuntimeManifest{}}
+	if err := materializeLinkInputs(t.TempDir(), request, checkedObjectCastEntryPoint); err == nil || !strings.Contains(err.Error(), "no checked object cast harness object") {
+		t.Fatalf("missing checked object cast harness error = %v", err)
+	}
+}
+
+func TestCheckedObjectCastOutputRejectsNoncanonicalProtocol(t *testing.T) {
+	if err := validateCheckedObjectCastOutput([]byte("1:7ff8000000000042\n")); err != nil {
+		t.Fatalf("canonical checked object cast output rejected: %v", err)
+	}
+	for _, output := range []string{
+		"2:7ff8000000000042\n",
+		"1:7FF8000000000042\n",
+		"1:7ff8000000000042",
+		"1:7ff8000000000042\n0:0000000000000000\n",
+	} {
+		if err := validateCheckedObjectCastOutput([]byte(output)); err == nil {
+			t.Fatalf("checked object cast output accepted %q", output)
+		}
+	}
+}
+
+func TestRunCheckedObjectCastRejectsNoncanonicalArgumentsBeforeExecution(t *testing.T) {
+	for _, test := range []struct {
+		shape string
+		bits  string
+	}{
+		{shape: "unknown", bits: "7ff8000000000042"},
+		{shape: "matching", bits: "7FF8000000000042"},
+		{shape: "matching", bits: "7ff8"},
+	} {
+		if _, err := RunCheckedObjectCast(t.Context(), filepath.Join(t.TempDir(), "missing"), test.shape, test.bits); err == nil {
+			t.Fatalf("RunCheckedObjectCast accepted shape %q bits %q", test.shape, test.bits)
+		}
+	}
+}
+
 func TestLinkArtifactRejectsTamperedBytes(t *testing.T) {
 	artifact, err := newLinkArtifact(
 		LinkRequest{

@@ -51,6 +51,39 @@ func openFirstSliceTargetMachine() (*TargetMachine, error) {
 		emitFirstSlice: func(module bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error) {
 			return emitFirstSliceObject(targetMachine, manifest, module)
 		},
+		emitVERT010: func(module bingo.VERT010BoundMIR) (VERT010Emission, error) {
+			return emitVERT010Object(targetMachine, manifest, module)
+		},
+		emitVERT011: func(module bingo.VERT011BoundMIR) (VERT011Emission, error) {
+			return emitVERT011Object(targetMachine, manifest, module)
+		},
+		emitVERT012: func(module bingo.VERT012BoundMIR) (VERT012Emission, error) {
+			return emitVERT012Object(targetMachine, manifest, module)
+		},
+		emitVERT013a: func(module bingo.VERT013aBoundMIR) (VERT013aEmission, error) {
+			return emitVERT013aObject(targetMachine, manifest, module)
+		},
+		emitVERT013b: func(module bingo.VERT013bBoundMIR) (VERT013bEmission, error) {
+			return emitVERT013bObject(targetMachine, manifest, module)
+		},
+		emitClassAccess: func(module bingo.ClassAccessBoundMIR) (ClassAccessEmission, error) {
+			return emitClassAccessObject(targetMachine, manifest, module)
+		},
+		emitObjectView: func(plan ObjectViewBackendPlan) (ObjectViewEmission, error) {
+			return emitObjectViewObject(targetMachine, manifest, plan)
+		},
+		emitCheckedCast: func(plan CheckedObjectCastBackendPlan) (CheckedObjectCastEmission, error) {
+			return emitCheckedObjectCastObject(targetMachine, manifest, plan)
+		},
+		emitFunctionThunk: func(plan FunctionThunkBackendPlan) (FunctionThunkEmission, error) {
+			return emitFunctionThunkObject(targetMachine, manifest, plan)
+		},
+		emitPropertyAccess: func(plan PropertyAccessBackendPlan) (PropertyAccessEmission, error) {
+			return emitPropertyAccessObject(targetMachine, manifest, plan)
+		},
+		emitObjectLayoutCopy: func(plan ObjectLayoutCopyBackendPlan) (ObjectLayoutCopyEmission, error) {
+			return emitObjectLayoutCopyObject(targetMachine, manifest, plan)
+		},
 		dispose: targetMachine.Dispose,
 	}, nil
 }
@@ -90,30 +123,20 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 
 	builder := ctx.NewBuilder()
 	defer builder.Dispose()
-	switch {
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "add":
-		emitNumberAddLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "choose":
-		emitBooleanChooseLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "classify":
-		if err := emitClassifyLLVM(ctx, builder, module, mir.Functions[0]); err != nil {
-			return FirstSliceEmission{}, err
+	matched := false
+	for _, emitter := range firstSliceLLVMEmitters {
+		if !emitter.matches(mir.Functions) {
+			continue
 		}
-	case len(mir.Functions) == 2 && mir.Functions[0].Name == "add" && mir.Functions[1].Name == "compute":
-		if err := emitLocalCallLLVM(ctx, builder, module, mir.Functions); err != nil {
-			return FirstSliceEmission{}, err
+		if matched {
+			return FirstSliceEmission{}, fmt.Errorf("primitive LLVM function set matches multiple emitters")
 		}
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "compute":
-		emitLoopLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && (mir.Functions[0].Name == "coalesce" || mir.Functions[0].Name == "coalesceAssign"):
-		emitCoalesceLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "stringLength":
-		emitStringLengthLLVM(ctx, builder, module, mir.Functions[0])
-	case len(mir.Functions) == 1 && mir.Functions[0].Name == "main":
-		if err := emitApplicationMainLLVM(ctx, builder, module, mir.Functions[0]); err != nil {
-			return FirstSliceEmission{}, err
+		matched = true
+		if err := emitter.emit(ctx, builder, module, mir.Functions); err != nil {
+			return FirstSliceEmission{}, fmt.Errorf("emit %s LLVM: %w", emitter.name, err)
 		}
-	default:
+	}
+	if !matched {
 		return FirstSliceEmission{}, fmt.Errorf("unsupported primitive LLVM function set")
 	}
 
@@ -127,6 +150,62 @@ func emitFirstSliceObject(targetMachine llvm.TargetMachine, manifest ToolchainMa
 	}
 	defer buffer.Dispose()
 	return newFirstSliceEmission(mir, manifest, llvmIR, buffer.Bytes())
+}
+
+type firstSliceLLVMEmitter struct {
+	name    string
+	matches func([]bingo.FirstSliceMIRFunction) bool
+	emit    func(llvm.Context, llvm.Builder, llvm.Module, []bingo.FirstSliceMIRFunction) error
+}
+
+var firstSliceLLVMEmitters = [...]firstSliceLLVMEmitter{
+	singleLLVMFunctionEmitter("number-add", "add", func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, function bingo.FirstSliceMIRFunction) error {
+		emitNumberAddLLVM(ctx, builder, module, function)
+		return nil
+	}),
+	singleLLVMFunctionEmitter("boolean-choose", "choose", func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, function bingo.FirstSliceMIRFunction) error {
+		emitBooleanChooseLLVM(ctx, builder, module, function)
+		return nil
+	}),
+	singleLLVMFunctionEmitter("number-classify", "classify", emitClassifyLLVM),
+	{
+		name: "local-call",
+		matches: func(functions []bingo.FirstSliceMIRFunction) bool {
+			return len(functions) == 2 && functions[0].Name == "add" && functions[1].Name == "compute"
+		},
+		emit: emitLocalCallLLVM,
+	},
+	singleLLVMFunctionEmitter("number-loop", "compute", func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, function bingo.FirstSliceMIRFunction) error {
+		emitLoopLLVM(ctx, builder, module, function)
+		return nil
+	}),
+	{
+		name: "nullable-coalesce",
+		matches: func(functions []bingo.FirstSliceMIRFunction) bool {
+			return len(functions) == 1 && (functions[0].Name == "coalesce" || functions[0].Name == "coalesceAssign")
+		},
+		emit: func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, functions []bingo.FirstSliceMIRFunction) error {
+			emitCoalesceLLVM(ctx, builder, module, functions[0])
+			return nil
+		},
+	},
+	singleLLVMFunctionEmitter("utf16-string-length", "stringLength", func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, function bingo.FirstSliceMIRFunction) error {
+		emitStringLengthLLVM(ctx, builder, module, function)
+		return nil
+	}),
+	singleLLVMFunctionEmitter("application-main", "main", emitApplicationMainLLVM),
+}
+
+func singleLLVMFunctionEmitter(name, functionName string, emit func(llvm.Context, llvm.Builder, llvm.Module, bingo.FirstSliceMIRFunction) error) firstSliceLLVMEmitter {
+	return firstSliceLLVMEmitter{
+		name: name,
+		matches: func(functions []bingo.FirstSliceMIRFunction) bool {
+			return len(functions) == 1 && functions[0].Name == functionName
+		},
+		emit: func(ctx llvm.Context, builder llvm.Builder, module llvm.Module, functions []bingo.FirstSliceMIRFunction) error {
+			return emit(ctx, builder, module, functions[0])
+		},
+	}
 }
 
 func emitApplicationMainLLVM(ctx llvm.Context, builder llvm.Builder, module llvm.Module, mir bingo.FirstSliceMIRFunction) error {

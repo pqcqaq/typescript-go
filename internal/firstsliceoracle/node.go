@@ -22,6 +22,16 @@ const nodeChooseScript = `const [flag,a,b]=process.argv.slice(1);if(flag!=="true
 const nodeCoalesceScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};const value=tag==="number"?fromBits(a):tag==="null"?null:undefined;process.stdout.write(toBits(value??fromBits(b))+"\n");`
 const nodeCoalesceAssignScript = `const [tag,a,b]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);const fromBits=(h)=>{v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const toBits=(n)=>{v.setFloat64(0,n,false);return v.getBigUint64(0,false).toString(16).padStart(16,"0")};let value=tag==="number"?fromBits(a):tag==="null"?null:undefined;value??=fromBits(b);process.stdout.write(toBits(value)+"\n");`
 const nodeStringLengthScript = `const [h]=process.argv.slice(1);if(!/^(?:[0-9a-f]{4})*$/.test(h))process.exit(2);let s="";for(let i=0;i<h.length;i+=4)s+=String.fromCharCode(parseInt(h.slice(i,i+4),16));const x=new ArrayBuffer(8),v=new DataView(x);v.setFloat64(0,s.length,false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeObjectAliasScript = `const [h]=process.argv.slice(1);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const value=v.getFloat64(0,false);const object={value};const alias=object;alias.value=alias.value+1;v.setFloat64(0,object.value,false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodePropertyNullishAssignScript = `const [tag,h]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const value=tag==="number"?v.getFloat64(0,false):tag==="null"?null:undefined;const object={backing:value,get result(){return this.backing},set result(next){this.backing=next}};const key="result";const result=(object[key]??=1);v.setFloat64(0,result,false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeClosureCounterScript = `const [h]=process.argv.slice(1);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const start=v.getFloat64(0,false);function makeCounter(value){let count=value;return()=>{count+=1;return count}}const increment=makeCounter(start);v.setFloat64(0,increment()+increment(),false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeClassCounterScript = `const [h]=process.argv.slice(1);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const start=v.getFloat64(0,false);class Counter{value=0;constructor(value){this.value=value}increment(){this.value+=1;return this.value}}const counter=new Counter(start);v.setFloat64(0,counter.increment()+counter.increment(),false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeDerivedCounterScript = `const cv=h=>{const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);return v.getFloat64(0,false)};const [a,b]=process.argv.slice(1),start=cv(a),step=cv(b),x=new ArrayBuffer(8),v=new DataView(x);class Counter{value=0;constructor(value){this.value=value}}class StepCounter extends Counter{step=1;constructor(value,step){super(value);this.step=step}increment(){this.value+=this.step;return this.value}}const counter=new StepCounter(start,step);v.setFloat64(0,counter.increment()+counter.increment(),false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeClassAccessScript = `const x=new ArrayBuffer(8),v=new DataView(x);class Vault{secret=1;value=2;readSecret(other){return other.secret}}class DerivedVault extends Vault{readValue(other){return other.value}}const vault=new DerivedVault;v.setFloat64(0,vault.readSecret(vault)+vault.readValue(vault),false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeObjectViewScript = `const [h]=process.argv.slice(1);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const source={value:v.getFloat64(0,false)};const view=source;v.setFloat64(0,view.value,false);process.stdout.write(v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeObjectLayoutCopyScript = `const [h]=process.argv.slice(1);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const source={value:v.getFloat64(0,false)};const copy={value:source.value};source.value=1;v.setFloat64(0,copy.value,false);process.stdout.write((copy!==source?"1":"0")+":"+v.getBigUint64(0,false).toString(16).padStart(16,"0")+"\n");`
+const nodeObjectAccessorViewScript = `const [tag,h]=process.argv.slice(1);if(tag!=="number"&&tag!=="null"&&tag!=="undefined")process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const payload=v.getFloat64(0,false);const source={backing:tag==="number"?payload:tag==="null"?null:undefined,get result(){return this.backing}};const view=source,result=view.result,outTag=result===null?"1":result===undefined?"2":"0";if(outTag==="0")v.setFloat64(0,result,false);process.stdout.write(outTag+":"+(outTag==="0"?v.getBigUint64(0,false).toString(16).padStart(16,"0"):h)+"\n");`
+const nodeCheckedObjectCastScript = `const [shape,h]=process.argv.slice(1);if(!["matching","missing","extra","accessor"].includes(shape)||!/^[0-9a-f]{16}$/.test(h))process.exit(2);const x=new ArrayBuffer(8),v=new DataView(x);v.setBigUint64(0,BigInt("0x"+h),false);const payload=v.getFloat64(0,false);let source;if(shape==="matching")source={value:payload};else if(shape==="missing")source={};else if(shape==="extra")source={value:payload,extra:1};else source={get value(){return payload}};const d=Object.getOwnPropertyDescriptor(source,"value"),match=!!d&&Object.prototype.hasOwnProperty.call(d,"value");if(match)v.setFloat64(0,source.value,false);process.stdout.write((match?"1":"0")+":"+(match?v.getBigUint64(0,false).toString(16).padStart(16,"0"):h)+"\n");`
 
 type NodeOracle struct {
 	path       string
@@ -108,6 +118,110 @@ func (oracle *NodeOracle) StringLength(ctx context.Context, codeUnits string) (R
 	return oracle.runUTF16(ctx, nodeStringLengthScript, codeUnits)
 }
 
+func (oracle *NodeOracle) ObjectAlias(ctx context.Context, value string) (Result, error) {
+	return oracle.run(ctx, nodeObjectAliasScript, value)
+}
+
+func (oracle *NodeOracle) PropertyNullishAssign(ctx context.Context, tag, value string) (Result, error) {
+	return oracle.run(ctx, nodePropertyNullishAssignScript, tag, value)
+}
+
+func (oracle *NodeOracle) ClosureCounter(ctx context.Context, value string) (Result, error) {
+	return oracle.run(ctx, nodeClosureCounterScript, value)
+}
+
+func (oracle *NodeOracle) ClassCounter(ctx context.Context, value string) (Result, error) {
+	return oracle.run(ctx, nodeClassCounterScript, value)
+}
+
+func (oracle *NodeOracle) DerivedCounter(ctx context.Context, start, step string) (Result, error) {
+	return oracle.run(ctx, nodeDerivedCounterScript, start, step)
+}
+
+func (oracle *NodeOracle) ClassAccess(ctx context.Context) (Result, error) {
+	return oracle.run(ctx, nodeClassAccessScript)
+}
+
+func (oracle *NodeOracle) ObjectView(ctx context.Context, value string) (Result, error) {
+	return oracle.run(ctx, nodeObjectViewScript, value)
+}
+
+func (oracle *NodeOracle) ObjectLayoutCopy(ctx context.Context, value string) (Result, error) {
+	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
+		return Result{}, fmt.Errorf("Node oracle is not initialized")
+	}
+	if ctx == nil {
+		return Result{}, fmt.Errorf("oracle context is nil")
+	}
+	if !isBits(value) {
+		return Result{}, fmt.Errorf("Node object-layout-copy payload is not canonical binary64 hex")
+	}
+	command := exec.CommandContext(ctx, oracle.path, "-e", nodeObjectLayoutCopyScript, "--", value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return Result{}, fmt.Errorf("run Node object-layout-copy oracle: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if len(trimmed) != 18 || (trimmed[0] != '0' && trimmed[0] != '1') || trimmed[1] != ':' || !isBits(trimmed[2:]) {
+		return Result{}, fmt.Errorf("Node object-layout-copy output is invalid: %q", output)
+	}
+	return Result{Arguments: []string{value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+func (oracle *NodeOracle) ObjectAccessorView(ctx context.Context, tag, value string) (Result, error) {
+	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
+		return Result{}, fmt.Errorf("Node oracle is not initialized")
+	}
+	if ctx == nil {
+		return Result{}, fmt.Errorf("oracle context is nil")
+	}
+	if tag != "number" && tag != "null" && tag != "undefined" {
+		return Result{}, fmt.Errorf("Node accessor-view tag is invalid")
+	}
+	if !isBits(value) {
+		return Result{}, fmt.Errorf("Node accessor-view payload is not canonical binary64 hex")
+	}
+	command := exec.CommandContext(ctx, oracle.path, "-e", nodeObjectAccessorViewScript, "--", tag, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return Result{}, fmt.Errorf("run Node accessor-view oracle: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if len(trimmed) != 18 || (trimmed[0] < '0' || trimmed[0] > '2') || trimmed[1] != ':' || !isBits(trimmed[2:]) {
+		return Result{}, fmt.Errorf("Node accessor-view output is invalid: %q", output)
+	}
+	arguments := []string{tag, value}
+	return Result{Arguments: arguments, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+func (oracle *NodeOracle) CheckedObjectCast(ctx context.Context, shape, value string) (Result, error) {
+	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
+		return Result{}, fmt.Errorf("Node oracle is not initialized")
+	}
+	if ctx == nil {
+		return Result{}, fmt.Errorf("oracle context is nil")
+	}
+	if shape != "matching" && shape != "missing" && shape != "extra" && shape != "accessor" {
+		return Result{}, fmt.Errorf("Node checked-cast shape is invalid")
+	}
+	if !isBits(value) {
+		return Result{}, fmt.Errorf("Node checked-cast payload is not canonical binary64 hex")
+	}
+	command := exec.CommandContext(ctx, oracle.path, "-e", nodeCheckedObjectCastScript, "--", shape, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return Result{}, fmt.Errorf("run Node checked-cast oracle: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if len(trimmed) != 18 || (trimmed[0] != '0' && trimmed[0] != '1') || trimmed[1] != ':' || !isBits(trimmed[2:]) {
+		return Result{}, fmt.Errorf("Node checked-cast output is invalid: %q", output)
+	}
+	return Result{Arguments: []string{shape, value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
 func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...string) (Result, error) {
 	if oracle == nil || strings.TrimSpace(oracle.path) == "" {
 		return Result{}, fmt.Errorf("Node oracle is not initialized")
@@ -115,7 +229,7 @@ func (oracle *NodeOracle) run(ctx context.Context, script string, arguments ...s
 	if ctx == nil {
 		return Result{}, fmt.Errorf("oracle context is nil")
 	}
-	if len(arguments) < 1 {
+	if len(arguments) < 1 && script != nodeClassAccessScript {
 		return Result{}, fmt.Errorf("Node oracle requires at least one argument")
 	}
 	for _, argument := range arguments {
@@ -179,6 +293,22 @@ func CoalesceScriptHash() string { return hashBytes([]byte(nodeCoalesceScript)) 
 func CoalesceAssignScriptHash() string { return hashBytes([]byte(nodeCoalesceAssignScript)) }
 
 func StringLengthScriptHash() string { return hashBytes([]byte(nodeStringLengthScript)) }
+
+func ObjectAliasScriptHash() string { return hashBytes([]byte(nodeObjectAliasScript)) }
+
+func PropertyNullishAssignScriptHash() string {
+	return hashBytes([]byte(nodePropertyNullishAssignScript))
+}
+
+func ClosureCounterScriptHash() string { return hashBytes([]byte(nodeClosureCounterScript)) }
+
+func ClassCounterScriptHash() string       { return hashBytes([]byte(nodeClassCounterScript)) }
+func DerivedCounterScriptHash() string     { return hashBytes([]byte(nodeDerivedCounterScript)) }
+func ClassAccessScriptHash() string        { return hashBytes([]byte(nodeClassAccessScript)) }
+func ObjectViewScriptHash() string         { return hashBytes([]byte(nodeObjectViewScript)) }
+func ObjectLayoutCopyScriptHash() string   { return hashBytes([]byte(nodeObjectLayoutCopyScript)) }
+func ObjectAccessorViewScriptHash() string { return hashBytes([]byte(nodeObjectAccessorViewScript)) }
+func CheckedObjectCastScriptHash() string  { return hashBytes([]byte(nodeCheckedObjectCastScript)) }
 
 func hashBytes(data []byte) string {
 	digest := sha256.Sum256(data)

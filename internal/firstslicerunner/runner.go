@@ -108,6 +108,24 @@ func RunCase(ctx context.Context, directory string, identity bingo.CompilerBuild
 	}
 	caseContext, cancel := context.WithTimeout(ctx, time.Duration(caseData.Manifest.TimeoutMS)*time.Millisecond)
 	defer cancel()
+	if caseData.Manifest.EntryPoint == "objectAlias" {
+		return runVERT010Case(caseContext, caseData, identity, machine, options)
+	}
+	if caseData.Manifest.EntryPoint == "propertyNullishAssign" {
+		return runVERT011Case(caseContext, caseData, identity, machine, options)
+	}
+	if caseData.Manifest.EntryPoint == "closureCounter" {
+		return runVERT012Case(caseContext, caseData, identity, machine, options)
+	}
+	if caseData.Manifest.EntryPoint == "classCounter" {
+		return runVERT013aCase(caseContext, caseData, identity, machine, options)
+	}
+	if caseData.Manifest.EntryPoint == "derivedCounter" {
+		return runVERT013bCase(caseContext, caseData, identity, machine, options)
+	}
+	if caseData.Manifest.EntryPoint == "classAccess" {
+		return runClassAccessCase(caseContext, caseData, identity, machine, options)
+	}
 
 	hir, err := irartifact.LoadHIR(directory, identity)
 	if err != nil {
@@ -321,7 +339,7 @@ func VerifyReport(report Report) error {
 	if entryPoint == "" {
 		entryPoint = "add"
 	}
-	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength") {
+	if report.SchemaVersion != ReportSchemaVersion || report.Stage != "static-core" || strings.TrimSpace(report.CaseName) == "" || (entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "objectAlias" && entryPoint != "propertyNullishAssign" && entryPoint != "closureCounter" && entryPoint != "classCounter" && entryPoint != "derivedCounter" && entryPoint != "classAccess") {
 		return fmt.Errorf("unsupported first-slice runner report identity")
 	}
 	wantScriptHash := firstsliceoracle.ScriptHash()
@@ -333,6 +351,24 @@ func VerifyReport(report Report) error {
 		entryPoint == "coalesceAssign" && report.OracleProgram != "coalesceassign" ||
 		entryPoint == "stringLength" && report.OracleProgram != "stringlength" {
 		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
+	}
+	if entryPoint == "objectAlias" && report.OracleProgram != "objectalias" {
+		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
+	}
+	if entryPoint == "propertyNullishAssign" && report.OracleProgram != "propertynullishassign" {
+		return fmt.Errorf("oracle program %q does not match entry point %q", report.OracleProgram, entryPoint)
+	}
+	if entryPoint == "closureCounter" && report.OracleProgram != "closurecounter" {
+		return fmt.Errorf("closureCounter report oracle program is %q", report.OracleProgram)
+	}
+	if entryPoint == "classCounter" && report.OracleProgram != "classcounter" {
+		return fmt.Errorf("classCounter report oracle program is %q", report.OracleProgram)
+	}
+	if entryPoint == "derivedCounter" && report.OracleProgram != "derivedcounter" {
+		return fmt.Errorf("derivedCounter report oracle program is %q", report.OracleProgram)
+	}
+	if entryPoint == "classAccess" && report.OracleProgram != "classaccess" {
+		return fmt.Errorf("classAccess report oracle program is %q", report.OracleProgram)
 	}
 	if report.OracleProgram == "choose" {
 		wantScriptHash = firstsliceoracle.ChooseScriptHash()
@@ -348,15 +384,27 @@ func VerifyReport(report Report) error {
 		wantScriptHash = firstsliceoracle.CoalesceAssignScriptHash()
 	} else if report.OracleProgram == "stringlength" {
 		wantScriptHash = firstsliceoracle.StringLengthScriptHash()
+	} else if report.OracleProgram == "objectalias" {
+		wantScriptHash = firstsliceoracle.ObjectAliasScriptHash()
+	} else if report.OracleProgram == "propertynullishassign" {
+		wantScriptHash = firstsliceoracle.PropertyNullishAssignScriptHash()
+	} else if report.OracleProgram == "closurecounter" {
+		wantScriptHash = firstsliceoracle.ClosureCounterScriptHash()
+	} else if report.OracleProgram == "classcounter" {
+		wantScriptHash = firstsliceoracle.ClassCounterScriptHash()
+	} else if report.OracleProgram == "derivedcounter" {
+		wantScriptHash = firstsliceoracle.DerivedCounterScriptHash()
+	} else if report.OracleProgram == "classaccess" {
+		wantScriptHash = firstsliceoracle.ClassAccessScriptHash()
 	}
 	if report.TargetTriple != llvmbackend.FirstSliceTriple || report.TimeoutMS == 0 || report.TimeoutMS > 60_000 ||
 		report.NodeVersion != firstsliceoracle.LockedNodeVersion || report.NodeScriptHash != wantScriptHash {
 		return fmt.Errorf("invalid first-slice runner target or timeout")
 	}
-	if report.NonCanonicalRejected != (entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" || entryPoint == "stringLength") {
+	if report.NonCanonicalRejected != (entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" || entryPoint == "stringLength" || entryPoint == "propertyNullishAssign") {
 		return fmt.Errorf("noncanonical boundary rejection does not match entry point")
 	}
-	if entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && len(report.BoundaryRejections) != 0 {
+	if entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "propertyNullishAssign" && len(report.BoundaryRejections) != 0 {
 		return fmt.Errorf("number report contains boundary rejections")
 	}
 	if entryPoint == "choose" {
@@ -391,6 +439,14 @@ func VerifyReport(report Report) error {
 		if rejection.Name != "reject-noncanonical-utf16-view" || !slices.Equal(rejection.Arguments, []string{"--invalid-null"}) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
 			return fmt.Errorf("invalid UTF-16 view rejection report")
 		}
+	} else if entryPoint == "propertyNullishAssign" {
+		if len(report.BoundaryRejections) != 1 {
+			return fmt.Errorf("property nullish assignment report must contain one nullable boundary rejection")
+		}
+		rejection := report.BoundaryRejections[0]
+		if rejection.Name != "reject-noncanonical-nullable-tag" || len(rejection.Arguments) != 2 || rejection.Arguments[0] != "03" || !isBits(rejection.Arguments[1]) || rejection.OutputHash != hashBytes(nil) || !rejection.Rejected {
+			return fmt.Errorf("invalid property nullish assignment tag rejection report")
+		}
 	}
 	if err := bingo.ValidateCompilerBuildIdentity(report.CompilerBuildIdentity); err != nil {
 		return err
@@ -420,8 +476,14 @@ func VerifyReport(report Report) error {
 	allOK := true
 	for index, execution := range report.Executions {
 		wantArguments := 2
-		if entryPoint == "classify" {
+		if entryPoint == "classAccess" {
+			wantArguments = 0
+		}
+		if entryPoint == "classify" || entryPoint == "objectAlias" || entryPoint == "closureCounter" || entryPoint == "classCounter" {
 			wantArguments = 1
+		}
+		if entryPoint == "propertyNullishAssign" {
+			wantArguments = 2
 		}
 		if entryPoint == "stringLength" {
 			wantArguments = 1
@@ -435,7 +497,7 @@ func VerifyReport(report Report) error {
 		if index > 0 && report.Executions[index-1].Name >= execution.Name {
 			return fmt.Errorf("execution reports are not in canonical name order")
 		}
-		if (entryPoint != "stringLength" && slices.Contains(execution.Arguments, "")) || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
+		if (entryPoint != "stringLength" && entryPoint != "classAccess" && slices.Contains(execution.Arguments, "")) || hashBytes([]byte(execution.ActualBits+"\n")) != execution.OutputHash {
 			return fmt.Errorf("execution %q output identity is invalid", execution.Name)
 		}
 		if hashBytes([]byte(execution.NodeBits+"\n")) != execution.NodeOutputHash {

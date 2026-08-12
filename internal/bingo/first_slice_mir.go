@@ -549,40 +549,20 @@ func verifyFirstSliceMIR(module FirstSliceMIRArtifact) error {
 			}
 		}
 	}
-	switch {
-	case len(module.Functions) == 1 && module.Functions[0].Name == "add":
-		if err := verifyNumberAddMIRFunction(module.Functions[0]); err != nil {
-			return err
+	matched := false
+	for _, verifier := range firstSliceMIRFunctionSetVerifiers {
+		if !verifier.matches(module.Functions) {
+			continue
 		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "choose":
-		if err := verifyBooleanChooseMIRFunction(module.Functions[0]); err != nil {
-			return err
+		if matched {
+			return fmt.Errorf("first-slice MIR function set matches multiple verifier contracts")
 		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "classify":
-		if err := verifyClassifyMIRFunction(module.Functions[0]); err != nil {
-			return err
+		matched = true
+		if err := verifier.verify(module.Functions); err != nil {
+			return fmt.Errorf("%s MIR contract: %w", verifier.name, err)
 		}
-	case len(module.Functions) == 2 && module.Functions[0].Name == "add" && module.Functions[1].Name == "compute":
-		if err := verifyLocalCallMIRFunctions(module.Functions); err != nil {
-			return err
-		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "compute":
-		if err := verifyLoopMIRFunction(module.Functions[0]); err != nil {
-			return err
-		}
-	case len(module.Functions) == 1 && (module.Functions[0].Name == "coalesce" || module.Functions[0].Name == "coalesceAssign"):
-		if err := verifyCoalesceMIRFunction(module.Functions[0]); err != nil {
-			return err
-		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "stringLength":
-		if err := verifyStringLengthMIRFunction(module.Functions[0]); err != nil {
-			return err
-		}
-	case len(module.Functions) == 1 && module.Functions[0].Name == "main":
-		if err := verifyApplicationMainMIRFunction(module.Functions[0]); err != nil {
-			return err
-		}
-	default:
+	}
+	if !matched {
 		return fmt.Errorf("first-slice MIR function set is invalid")
 	}
 	want, err := firstSliceMIRContentHash(module)
@@ -812,7 +792,7 @@ func verifyLoopMIRFunction(function FirstSliceMIRFunction) error {
 }
 
 func verifyCoalesceMIRFunction(function FirstSliceMIRFunction) error {
-	if function.ID != 1 || (function.Name != "coalesce" && function.Name != "coalesceAssign") || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
+	if function.ID != 1 || !function.Exported || function.ReturnType != RepF64 || !validOrigin(function.Origin) || len(function.Parameters) != 2 || len(function.Blocks) != 4 {
 		return fmt.Errorf("Phase 2B coalesce MIR function is invalid")
 	}
 	wantParameterTypes := []RepType{RepNullableF64, RepF64}

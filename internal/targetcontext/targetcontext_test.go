@@ -6,12 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
 	"github.com/microsoft/typescript-go/internal/buildplan"
 	"github.com/microsoft/typescript-go/internal/frontendwire"
@@ -60,9 +62,10 @@ func TestRuntimeManifestStrictIdentityAndHashes(t *testing.T) {
 	}
 	rehashed := *manifest
 	rehashed.Capabilities = append([]RuntimeCapability(nil), manifest.Capabilities...)
-	rehashed.Capabilities[0] = manifest.Capabilities[0]
 	rehashed.Artifacts.UmbrellaArchive.SHA256 = strings.Repeat("4", 64)
-	rehashed.Capabilities[0].ImplementationHash = rehashed.Artifacts.UmbrellaArchive.SHA256
+	for index := range rehashed.Capabilities {
+		rehashed.Capabilities[index].ImplementationHash = rehashed.Artifacts.UmbrellaArchive.SHA256
+	}
 	rehashed.ContentHash, err = runtimeManifestContentHash(rehashed)
 	if err != nil {
 		t.Fatal(err)
@@ -90,11 +93,350 @@ func TestResolveTargetContextBindsRealManifestFacts(t *testing.T) {
 	if resolution.Context.LLVMDataLayout != llvmbackend.FirstSliceDataLayout || resolution.Context.DataLayoutHash != toolchain.DataLayout.ContentHash {
 		t.Fatalf("LLVM data layout provenance = %#v", resolution.Context)
 	}
-	if len(resolution.Catalog.Capabilities) != 1 || resolution.Catalog.Capabilities[0].LogicalName != "rt.abi.version" {
+	if len(resolution.Catalog.Capabilities) != len(staticRuntimeCapabilities) || resolution.Catalog.Capabilities[0].LogicalName != "rt.abi.version" || resolution.Catalog.Capabilities[len(resolution.Catalog.Capabilities)-1].LogicalName != "rt.gc.write_barrier" {
 		t.Fatalf("available catalog = %#v", resolution.Catalog)
 	}
 	if resolution.Context.AvailableCapabilityCatalogHash != resolution.Catalog.ContentHash {
 		t.Fatalf("catalog hash was not bound into context")
+	}
+}
+
+func TestBindPropertyAccessMIRRejectsLockedCatalogWithoutDynamicCapability(t *testing.T) {
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := make([]bingo.PropertyAccessHIRInput, 0, 4)
+	for _, item := range []struct {
+		name   string
+		domain bingo.PropertyKeyDomain
+		keys   []string
+		source string
+	}{{"direct", bingo.PropertyKeyDirect, []string{"left"}, ""}, {"dynamic", bingo.PropertyKeyUnknown, nil, "source"}, {"finite", bingo.PropertyKeyLiteralUnion, []string{"left", "right"}, ""}, {"literal", bingo.PropertyKeyLiteral, []string{"right"}, ""}} {
+		admission, err := bingo.BuildPropertyAccessAdmission(strings.Repeat("1", 64), item.domain, item.keys, bingo.PropertyAccessInterop, item.source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		inputs = append(inputs, bingo.PropertyAccessHIRInput{FunctionName: item.name, AccessNodeID: item.name, ReceiverTypeHash: strings.Repeat("1", 64), KeyTypeHash: strings.Repeat("2", 64), Admission: admission})
+	}
+	hir, err := bingo.BuildPropertyAccessHIRArtifact(strings.Repeat("3", 64), strings.Repeat("4", 64), inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	abi, err := bingo.BuildDynamicValueABIContract()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerPropertyAccessMIR(hir, resolution.Context.Triple, resolution.Context.DataLayoutHash, abi)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BindPropertyAccessMIR(mir, resolution.Context, resolution.Catalog); err == nil || !strings.Contains(err.Error(), `runtime capability "rt.dynamic.property_load" is unavailable`) {
+		t.Fatalf("binding error = %v", err)
+	}
+}
+
+func TestBindObjectLayoutCopyUsesLockedAllocationCapability(t *testing.T) {
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir, err := bingo.BuildObjectLayoutCopyHIRArtifact(testTargetObjectLayoutCopy(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerObjectLayoutCopyMIR(hir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := BindObjectLayoutCopy(mir, resolution.Context, resolution.Catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bound.Bindings) != len(bingo.ObjectLayoutCopyCapabilityRequirements()) || bound.Bindings[0].LogicalName != "rt.gc.alloc" || bound.Bindings[0].SymbolName != "bingo_gc_alloc_v1" || bound.TargetContextHash != resolution.Context.ContentHash || bound.CatalogHash != resolution.Catalog.ContentHash {
+		t.Fatalf("unexpected object layout copy binding: %#v", bound)
+	}
+	tampered := mir
+	tampered.DataLayoutHash = strings.Repeat("0", 64)
+	if _, err := BindObjectLayoutCopy(tampered, resolution.Context, resolution.Catalog); err == nil {
+		t.Fatal("copy binding accepted substituted DataLayout")
+	}
+}
+
+func testTargetObjectLayoutCopy(t *testing.T) bingo.ObjectLayoutCopyContract {
+	t.Helper()
+	source := bingo.ObjectSemanticContract{SchemaVersion: bingo.ObjectSemanticContractSchemaVersion, TypeKey: strings.Repeat("1", 64), Identity: bingo.ObjectIdentityReference, Equality: bingo.ObjectEqualityReference, Properties: []bingo.ObjectPropertyContract{{Key: "value", Kind: bingo.ObjectPropertyData, ReadTypeKey: strings.Repeat("2", 64), WriteTypeKey: strings.Repeat("2", 64), Visibility: "public"}}}
+	_, hash, err := bingo.CanonicalObjectSemanticContract(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.ContentHash = hash
+	targetSemantic := bingo.ObjectSemanticContract{SchemaVersion: bingo.ObjectSemanticContractSchemaVersion, TypeKey: strings.Repeat("3", 64), Identity: bingo.ObjectIdentityReference, Equality: bingo.ObjectEqualityReference, Properties: []bingo.ObjectPropertyContract{{Key: "value", Kind: bingo.ObjectPropertyData, ReadTypeKey: strings.Repeat("2", 64), Readonly: true, Visibility: "public"}}}
+	_, hash, err = bingo.CanonicalObjectSemanticContract(targetSemantic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetSemantic.ContentHash = hash
+	relations, err := bingo.BuildTypeRelationGraph([]bingo.TypeRelationNode{{TypeKey: strings.Repeat("2", 64), DeclarationKey: strings.Repeat("2", 64)}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := bingo.CanonicalObjectLayoutTarget(bingo.ObjectLayoutX8664Triple)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceLayout, err := bingo.PlanObjectLayout(source.TypeKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "value", Kind: bingo.ObjectPropertyData, Representation: "f64"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	targetLayout, err := bingo.PlanObjectLayout(targetSemantic.TypeKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "value", Kind: bingo.ObjectPropertyData, Representation: "f64"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contract, err := bingo.BuildObjectLayoutCopyContract(source, targetSemantic, relations, sourceLayout, targetLayout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return contract
+}
+
+func TestBindVERT010MIRSelectsExactRuntimeImplementations(t *testing.T) {
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hir := testTargetVERT010HIR(t)
+	target, err := bingo.CanonicalObjectLayoutTarget(bingo.ObjectLayoutX8664Triple)
+	if err != nil {
+		t.Fatal(err)
+	}
+	layout, err := bingo.PlanObjectLayout(hir.ObjectTypes[0].TypeKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "value", Kind: bingo.ObjectPropertyData, Representation: "f64"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerVERT010MIR(hir, layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := BindVERT010MIR(mir, resolution.Context, resolution.Catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bound.Closure.Bindings) != len(bingo.VERT010LogicalCapabilities()) {
+		t.Fatalf("bound capability count = %d", len(bound.Closure.Bindings))
+	}
+	for index, binding := range bound.Closure.Bindings {
+		want := resolution.Catalog.Capabilities[slices.IndexFunc(resolution.Catalog.Capabilities, func(capability AvailableCapability) bool { return capability.LogicalName == binding.LogicalName })]
+		if binding.SymbolName != want.SymbolName || binding.SignatureHash != want.SignatureHash || binding.LogicalName != bingo.VERT010LogicalCapabilities()[index] {
+			t.Fatalf("binding %d = %#v, want %#v", index, binding, want)
+		}
+	}
+}
+
+func TestBindVERT011MIRSelectsExactRuntimeImplementations(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/propertynullishassign/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := ast2bingo.NewCompilerBuildIdentity("86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee", "9a53ae50f6da67c9b3948b239d8292967e42422b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := ast2bingo.ReplayVERT011Snapshot(frontend.Program, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := bingo.CanonicalObjectLayoutTarget(bingo.ObjectLayoutX8664Triple)
+	if err != nil {
+		t.Fatal(err)
+	}
+	layout, err := bingo.PlanObjectLayout(replay.HIR.PlaceRefs.Places[0].ObjectTypeKey, target, []bingo.ObjectLayoutPropertyInput{
+		{Key: "backing", Kind: bingo.ObjectPropertyData, Representation: "nullable-f64"},
+		{Key: "result", Kind: bingo.ObjectPropertyAccessor},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerVERT011MIR(replay.HIR, layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := BindVERT011MIR(mir, resolution.Context, resolution.Catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, binding := range bound.Closure.Bindings {
+		catalogIndex := slices.IndexFunc(resolution.Catalog.Capabilities, func(capability AvailableCapability) bool {
+			return capability.LogicalName == binding.LogicalName
+		})
+		if catalogIndex < 0 {
+			t.Fatalf("bound capability %q is absent", binding.LogicalName)
+		}
+		want := resolution.Catalog.Capabilities[catalogIndex]
+		if binding.SymbolName != want.SymbolName || binding.SignatureHash != want.SignatureHash || binding.LogicalName != bingo.VERT010LogicalCapabilities()[index] {
+			t.Fatalf("VERT-011 binding %d = %#v, want %#v", index, binding, want)
+		}
+	}
+}
+
+func TestBindVERT012MIRSelectsExactRuntimeImplementations(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/closurecounter/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := ast2bingo.NewCompilerBuildIdentity("86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee", "9a53ae50f6da67c9b3948b239d8292967e42422b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := ast2bingo.ReplayVERT012Snapshot(frontend.Program, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := bingo.CanonicalObjectLayoutTarget(bingo.ObjectLayoutX8664Triple)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cellKey, environmentKey := bingo.VERT012LayoutTypeKeys(replay.Contract.ContentHash)
+	cell, err := bingo.PlanObjectLayout(cellKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "value", Kind: bingo.ObjectPropertyData, Representation: "f64"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	environment, err := bingo.PlanObjectLayout(environmentKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "cell", Kind: bingo.ObjectPropertyData, Representation: "gc-ref", Reference: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerVERT012MIR(replay.HIR, cell, environment)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := BindVERT012MIR(mir, resolution.Context, resolution.Catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bound.Closure.Bindings) != len(bingo.VERT012LogicalCapabilities()) {
+		t.Fatalf("VERT-012 binding count = %d", len(bound.Closure.Bindings))
+	}
+	for index, binding := range bound.Closure.Bindings {
+		catalogIndex := slices.IndexFunc(resolution.Catalog.Capabilities, func(capability AvailableCapability) bool {
+			return capability.LogicalName == binding.LogicalName
+		})
+		if catalogIndex < 0 {
+			t.Fatalf("bound capability %q is absent", binding.LogicalName)
+		}
+		want := resolution.Catalog.Capabilities[catalogIndex]
+		if binding.SymbolName != want.SymbolName || binding.SignatureHash != want.SignatureHash || binding.LogicalName != bingo.VERT012LogicalCapabilities()[index] {
+			t.Fatalf("VERT-012 binding %d = %#v, want %#v", index, binding, want)
+		}
+	}
+}
+
+func testTargetVERT010HIR(t *testing.T) bingo.HIRModule {
+	t.Helper()
+	requirements := bingo.VERT010LogicalCapabilities()
+	digest, err := bingo.LogicalCapabilityRequirementsDigest(requirements)
+	if err != nil {
+		t.Fatal(err)
+	}
+	origin := bingo.Origin{File: "/project/objectalias.ts", Start: 1, End: 2}
+	objectType := bingo.HIRObjectType{TypeKey: strings.Repeat("b", 64), Properties: []bingo.HIRObjectProperty{{Key: "value", SymbolKey: "symbol/value", SourceTypeKey: strings.Repeat("d", 64), Type: bingo.TypeNumber, Mutable: true, Required: true}}}
+	objectType.SemanticContractHash, err = bingo.VERT010ObjectSemanticContractHash(objectType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty := []bingo.RuntimeCapabilityID{}
+	module := bingo.HIRModule{
+		SchemaVersion:                 bingo.VERT010HIRSchemaVersion,
+		Provenance:                    bingo.HIRProvenance{FrontendSnapshotSchemaVersion: bingo.HIRFrontendSnapshotSchemaVersion, FrontendSnapshotHash: strings.Repeat("a", 64), SourceContentHash: strings.Repeat("b", 64), CompilerBuildIdentity: bingo.CompilerBuildIdentity{UpstreamCommit: strings.Repeat("a", 40), ForkCommit: strings.Repeat("b", 40), LoweringSchema: "test", LoweringHash: strings.Repeat("c", 64)}, StandardLibraryHash: strings.Repeat("d", 64), KindManifestHash: strings.Repeat("e", 64), LogicalCapabilityRequirementsDigest: digest},
+		LogicalCapabilityRequirements: requirements, ObjectTypes: []bingo.HIRObjectType{objectType},
+		Functions: []bingo.HIRFunction{{ID: 1, Name: "objectAlias", Exported: true, ReturnType: bingo.TypeNumber, Origin: origin, Parameters: []bingo.HIRParameter{{Name: "value", Value: 1, Type: bingo.TypeNumber, Origin: origin}}, Blocks: []bingo.HIRBlock{{ID: 1, Operations: []bingo.HIROp{
+			{ID: 2, Kind: "object.alloc", Type: bingo.TypeObject, Effect: bingo.EffectAllocate, ObjectTypeKey: objectType.TypeKey, LogicalCapabilityRequirements: []bingo.RuntimeCapabilityID{"rt.gc.alloc"}, Origin: origin},
+			{ID: 3, Kind: "object.field.init", Type: bingo.TypeObject, Operands: []bingo.ValueID{2, 1}, Effect: bingo.EffectWrite, ObjectTypeKey: objectType.TypeKey, PropertySymbolKey: "symbol/value", LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 4, Kind: "object.alias", Type: bingo.TypeObject, Operands: []bingo.ValueID{3}, Effect: bingo.EffectPure, ObjectTypeKey: objectType.TypeKey, LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 5, Kind: "object.field.load", Type: bingo.TypeNumber, Operands: []bingo.ValueID{4}, Effect: bingo.EffectRead, ObjectTypeKey: objectType.TypeKey, PropertySymbolKey: "symbol/value", LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 6, Kind: "number.constant", Type: bingo.TypeNumber, NumberBits: "3ff0000000000000", Effect: bingo.EffectPure, LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 7, Kind: "binary", Type: bingo.TypeNumber, Operands: []bingo.ValueID{5, 6}, Operator: "+", Effect: bingo.EffectPure, LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 8, Kind: "object.field.store", Type: bingo.TypeObject, Operands: []bingo.ValueID{4, 7}, Effect: bingo.EffectWrite, ObjectTypeKey: objectType.TypeKey, PropertySymbolKey: "symbol/value", LogicalCapabilityRequirements: empty, Origin: origin},
+			{ID: 9, Kind: "object.field.load", Type: bingo.TypeNumber, Operands: []bingo.ValueID{3}, Effect: bingo.EffectRead, ObjectTypeKey: objectType.TypeKey, PropertySymbolKey: "symbol/value", LogicalCapabilityRequirements: empty, Origin: origin},
+		}, Terminator: bingo.HIRTerminator{Kind: "return", Value: 9, Origin: origin}}}}},
+	}
+	_, hash, err := bingo.CanonicalVERT010ObjectHIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	return module
+}
+
+func TestBindVERT013aMIRSelectsExactRuntimeImplementations(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/ts2bin/classcounter/frontend-snapshot.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	frontend, err := frontendwire.DecodeFrontendSnapshot(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := ast2bingo.NewCompilerBuildIdentity("86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee", "9a53ae50f6da67c9b3948b239d8292967e42422b")
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := ast2bingo.ReplayVERT013aSnapshot(frontend.Program, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := bingo.CanonicalObjectLayoutTarget(bingo.ObjectLayoutX8664Triple)
+	if err != nil {
+		t.Fatal(err)
+	}
+	layout, err := bingo.PlanObjectLayout(replay.Contract.Classes[0].InstanceTypeKey, target, []bingo.ObjectLayoutPropertyInput{{Key: "value", Kind: bingo.ObjectPropertyData, Representation: "f64"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mir, err := bingo.LowerVERT013aMIR(replay.HIR, layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bound, err := BindVERT013aMIR(mir, resolution.Context, resolution.Catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bound.Closure.Bindings) != len(bingo.VERT013aLogicalCapabilities()) {
+		t.Fatalf("VERT-013a binding count = %d", len(bound.Closure.Bindings))
+	}
+	for index, binding := range bound.Closure.Bindings {
+		catalogIndex := slices.IndexFunc(resolution.Catalog.Capabilities, func(capability AvailableCapability) bool { return capability.LogicalName == binding.LogicalName })
+		if catalogIndex < 0 {
+			t.Fatalf("bound capability %q is absent", binding.LogicalName)
+		}
+		want := resolution.Catalog.Capabilities[catalogIndex]
+		if binding.SymbolName != want.SymbolName || binding.SignatureHash != want.SignatureHash || binding.LogicalName != bingo.VERT013aLogicalCapabilities()[index] {
+			t.Fatalf("VERT-013a binding %d = %#v, want %#v", index, binding, want)
+		}
+	}
+	tampered := mir
+	tampered.Layout.Target.DataLayoutHash = strings.Repeat("0", 64)
+	if _, err := BindVERT013aMIR(tampered, resolution.Context, resolution.Catalog); err == nil {
+		t.Fatal("VERT-013a accepted substituted target layout")
 	}
 }
 
@@ -122,6 +464,149 @@ func TestResolveTargetContextRejectsUnsupportedRequests(t *testing.T) {
 				t.Fatal("unsupported request was accepted")
 			}
 		})
+	}
+}
+
+func TestResolveTargetContextAdmitsInteropContractButRejectsStaticRuntime(t *testing.T) {
+	plan := validBuildPlan()
+	plan.Profile = frontendwire.ProfileInterop
+	rehashBuildPlan(&plan)
+	_, err := resolveTargetContext(plan, validToolchainManifest(), runtimeManifestFixture(t))
+	if err == nil || !strings.Contains(err.Error(), "does not match runtime manifest") {
+		t.Fatalf("interop plan with static runtime error = %v", err)
+	}
+	if strings.Contains(err.Error(), "unavailable for the first-slice target") {
+		t.Fatalf("interop profile was rejected by the target contract instead of runtime identity: %v", err)
+	}
+}
+
+func TestInteropRuntimeManifestRequiresAuthoritativeIdentity(t *testing.T) {
+	manifest := interopRuntimeManifestCandidate(t)
+	if err := ValidateRuntimeManifest(manifest); err == nil || !strings.Contains(err.Error(), "no authoritative manifest identity") {
+		t.Fatalf("canonical interop manifest error = %v", err)
+	}
+}
+
+func TestInteropTargetManifestHashMatchesRuntimeBuildInputs(t *testing.T) {
+	type profileOverlay struct {
+		Profile      string              `json:"profile"`
+		Capabilities []RuntimeCapability `json:"capabilities"`
+	}
+
+	runtimeRoot := filepath.Join("..", "..", "..", "runtime", "bingo-rt")
+	baselineBytes, err := os.ReadFile(filepath.Join(runtimeRoot, "manifests", "first-slice-target.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlayBytes, err := os.ReadFile(filepath.Join(runtimeRoot, "manifests", "first-slice-interop-overlay.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var baseline map[string]any
+	var overlay profileOverlay
+	if err := json.Unmarshal(baselineBytes, &baseline); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
+		t.Fatal(err)
+	}
+	if baseline["profile"] != string(frontendwire.ProfileStatic) || overlay.Profile != string(frontendwire.ProfileInterop) {
+		t.Fatalf("unexpected runtime build profiles: baseline=%q overlay=%q", baseline["profile"], overlay.Profile)
+	}
+	capabilities, ok := baseline["capabilities"].([]any)
+	if !ok {
+		t.Fatal("baseline capabilities are not an array")
+	}
+	baseline["profile"] = overlay.Profile
+	for _, capability := range overlay.Capabilities {
+		capabilities = append(capabilities, map[string]any{
+			"logicalName": capability.LogicalName, "symbolName": capability.SymbolName,
+			"abiVersion": capability.ABIVersion, "signature": capability.Signature,
+			"effects": capability.Effects, "requiredFeatures": capability.RequiredFeatures,
+		})
+	}
+	slices.SortFunc(capabilities, func(left, right any) int {
+		leftCapability, leftOK := left.(map[string]any)
+		rightCapability, rightOK := right.(map[string]any)
+		if !leftOK || !rightOK {
+			t.Fatal("runtime capability is not an object")
+		}
+		return strings.Compare(fmt.Sprint(leftCapability["logicalName"]), fmt.Sprint(rightCapability["logicalName"]))
+	})
+	baseline["capabilities"] = capabilities
+	hash, err := canonicalHash(baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash != InteropTargetManifestHash {
+		t.Fatalf("interop target manifest hash = %s, want %s", hash, InteropTargetManifestHash)
+	}
+}
+
+func TestInteropRuntimeManifestCapabilityClosureIsStrict(t *testing.T) {
+	base := interopRuntimeManifestCandidate(t)
+	tests := map[string]func(*RuntimeManifest){
+		"missing": func(value *RuntimeManifest) { value.Capabilities = value.Capabilities[1:] },
+		"extra": func(value *RuntimeManifest) {
+			value.Capabilities = append(value.Capabilities, value.Capabilities[len(value.Capabilities)-1])
+		},
+		"symbol":    func(value *RuntimeManifest) { value.Capabilities[0].SymbolName = "other" },
+		"signature": func(value *RuntimeManifest) { value.Capabilities[0].Signature = "other" },
+		"effects":   func(value *RuntimeManifest) { value.Capabilities[0].Effects = []bingo.PassEffect{bingo.PassEffectRead} },
+		"order": func(value *RuntimeManifest) {
+			value.Capabilities[0], value.Capabilities[1] = value.Capabilities[1], value.Capabilities[0]
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			candidate := base
+			candidate.Capabilities = append([]RuntimeCapability(nil), base.Capabilities...)
+			mutate(&candidate)
+			candidate.ContentHash, _ = runtimeManifestContentHash(candidate)
+			if err := ValidateRuntimeManifest(candidate); err == nil || strings.Contains(err.Error(), "no authoritative manifest identity") {
+				t.Fatalf("interop capability substitution reached identity gate: %v", err)
+			}
+		})
+	}
+}
+
+func interopRuntimeManifestCandidate(t *testing.T) RuntimeManifest {
+	t.Helper()
+	manifest, err := DecodeRuntimeManifest(runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest.Profile = string(frontendwire.ProfileInterop)
+	manifest.TargetManifestHash = InteropTargetManifestHash
+	wanted, _ := runtimeCapabilitiesForProfile(manifest.Profile)
+	manifest.Capabilities = make([]RuntimeCapability, len(wanted))
+	for index, capability := range wanted {
+		signatureHash, err := canonicalHash(capability.signature)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manifest.Capabilities[index] = RuntimeCapability{LogicalName: capability.logicalName, SymbolName: capability.symbolName, ABIVersion: "1.0.0", Signature: capability.signature, Effects: slices.Clone(capability.effects), RequiredFeatures: []string{}, SignatureHash: signatureHash, ImplementationHash: manifest.Artifacts.UmbrellaArchive.SHA256}
+	}
+	manifest.ContentHash, err = runtimeManifestContentHash(*manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return *manifest
+}
+
+func TestTargetContextRejectsProfileSubstitutionAcrossPublishedIdentity(t *testing.T) {
+	resolution, err := resolveTargetContext(validBuildPlan(), validToolchainManifest(), runtimeManifestFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	context := resolution.Context
+	context.Profile = string(frontendwire.ProfileInterop)
+	context.ContentHash, err = targetContextContentHash(context)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateTargetContext(context); err == nil || !strings.Contains(err.Error(), "published runtime profile identity") {
+		t.Fatalf("rehashed profile substitution error = %v", err)
 	}
 }
 

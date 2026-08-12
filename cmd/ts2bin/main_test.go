@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -79,6 +80,92 @@ func TestBuildCommandPublishesExecutableAndCanonicalReport(t *testing.T) {
 	}
 	if err := applicationbuild.VerifyReport(report); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBuildCommandRollsBackExecutableWhenReportFails(t *testing.T) {
+	tests := []struct {
+		name              string
+		invalidReport     bool
+		publicationError  error
+		wantExit          int
+		wantMessage       string
+		wantPublishCalled bool
+	}{
+		{
+			name:          "encoding",
+			invalidReport: true,
+			wantExit:      exitDiagnostics,
+			wantMessage:   "unsupported application build report identity",
+		},
+		{
+			name:              "publication",
+			publicationError:  errors.New("injected report publication failure"),
+			wantExit:          exitUsage,
+			wantMessage:       "injected report publication failure",
+			wantPublishCalled: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repositoryRoot := writeFakeRepositoryRoot(t)
+			project := writeProject(t, `export function main(): number { return 0; }`)
+			output := filepath.Join(t.TempDir(), "application")
+			identity, err := ast2bingo.NewCompilerBuildIdentity(strings.Repeat("1", 40), strings.Repeat("2", 40))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			previousIdentity := loadCompilerBuildIdentity
+			previousMachine := openStaticCoreTargetMachine
+			previousBuild := executeApplicationBuild
+			previousPublish := publishApplicationReport
+			loadCompilerBuildIdentity = func() (bingo.CompilerBuildIdentity, error) { return identity, nil }
+			openStaticCoreTargetMachine = func() (*llvmbackend.TargetMachine, error) { return nil, nil }
+			executeApplicationBuild = func(_ context.Context, _ bingo.CompilerBuildIdentity, _ *llvmbackend.TargetMachine, request applicationbuild.Request) (applicationbuild.Report, error) {
+				if err := os.WriteFile(request.OutputPath, []byte("ELF"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if test.invalidReport {
+					return applicationbuild.Report{}, nil
+				}
+				return validApplicationBuildReport(t, identity), nil
+			}
+			publishCalled := false
+			publishApplicationReport = func(string, []byte, os.FileMode) error {
+				publishCalled = true
+				return test.publicationError
+			}
+			t.Cleanup(func() {
+				loadCompilerBuildIdentity = previousIdentity
+				openStaticCoreTargetMachine = previousMachine
+				executeApplicationBuild = previousBuild
+				publishApplicationReport = previousPublish
+			})
+
+			environment := commandEnvironment{
+				goos:  "linux",
+				getwd: func() (string, error) { return repositoryRoot, nil },
+				lookPath: func(name string) (string, error) {
+					return filepath.Join(repositoryRoot, "tools", name), nil
+				},
+			}
+			var stdout, stderr bytes.Buffer
+			if code := runWithEnvironment(context.Background(), []string{"build", "-p", project, "-o", output}, &stdout, &stderr, environment); code != test.wantExit {
+				t.Fatalf("build exit = %d, stderr = %s", code, &stderr)
+			}
+			if !strings.Contains(stderr.String(), test.wantMessage) {
+				t.Fatalf("build stderr = %q", &stderr)
+			}
+			if publishCalled != test.wantPublishCalled {
+				t.Fatalf("publish called = %t, want %t", publishCalled, test.wantPublishCalled)
+			}
+			for _, path := range []string{output, output + ".report.json"} {
+				if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
+					t.Fatalf("failed build published %s: %v", path, statErr)
+				}
+			}
+		})
 	}
 }
 

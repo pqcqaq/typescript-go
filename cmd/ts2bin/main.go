@@ -17,8 +17,10 @@ import (
 	"syscall"
 
 	"github.com/microsoft/typescript-go/internal/applicationbuild"
+	"github.com/microsoft/typescript-go/internal/artifactio"
 	"github.com/microsoft/typescript-go/internal/ast2bingo"
 	"github.com/microsoft/typescript-go/internal/bingo"
+	"github.com/microsoft/typescript-go/internal/bingomir"
 	"github.com/microsoft/typescript-go/internal/core"
 	"github.com/microsoft/typescript-go/internal/firstslicerunner"
 	"github.com/microsoft/typescript-go/internal/irartifact"
@@ -39,6 +41,11 @@ var (
 	openStaticCoreTargetMachine = llvmbackend.OpenFirstSliceTargetMachine
 	executeStaticCoreCase       = firstslicerunner.RunCase
 	executeApplicationBuild     = applicationbuild.Build
+	executeVERT010Pipeline      = bingomir.ExecuteVERT010
+	executeVERT011Pipeline      = bingomir.ExecuteVERT011
+	executeVERT012Pipeline      = bingomir.ExecuteVERT012
+	executeVERT013aPipeline     = bingomir.ExecuteVERT013a
+	publishApplicationReport    = artifactio.PublishNewFile
 )
 
 type processResult struct {
@@ -105,6 +112,28 @@ func runWithEnvironment(ctx context.Context, args []string, stdout, stderr io.Wr
 		return runEmitHIR(ctx, args[1:], stdout, stderr)
 	case "emit-mir":
 		return runEmitMIR(ctx, args[1:], stdout, stderr)
+	case "emit-vert010":
+		return runEmitVERT010(ctx, args[1:], stdout, stderr)
+	case "emit-vert011":
+		return runEmitVERT011(ctx, args[1:], stdout, stderr)
+	case "emit-vert012":
+		return runEmitVERT012(ctx, args[1:], stdout, stderr)
+	case "emit-vert013a":
+		return runEmitVERT013a(ctx, args[1:], stdout, stderr)
+	case "emit-vert013b":
+		return runEmitVERT013b(ctx, args[1:], stdout, stderr)
+	case "emit-classaccess":
+		return runEmitClassAccess(ctx, args[1:], stdout, stderr)
+	case "emit-checked-cast-replay":
+		return runEmitCheckedCastReplay(args[1:], stdout, stderr)
+	case "emit-function-thunk-replay":
+		return runEmitFunctionThunkReplay(args[1:], stdout, stderr)
+	case "emit-object-layout-copy-replay":
+		return runEmitObjectLayoutCopyReplay(args[1:], stdout, stderr)
+	case "emit-property-access-replay":
+		return runEmitPropertyAccessReplay(args[1:], stdout, stderr)
+	case "emit-property-access-unbound":
+		return runEmitPropertyAccessUnbound(args[1:], stdout, stderr)
 	case "diff":
 		return runIRDiff(args[1:], stdout, stderr)
 	case "doctor":
@@ -215,11 +244,11 @@ func runBuild(ctx context.Context, args []string, stdout, stderr io.Writer, envi
 	}
 	reportBytes, err := report.CanonicalBytes()
 	if err != nil {
-		fmt.Fprintf(stderr, "ts2bin build: encode report: %v\n", err)
+		fmt.Fprintf(stderr, "ts2bin build: encode report: %v\n", rollbackApplicationOutput(outputPath, err))
 		return exitDiagnostics
 	}
-	if err := os.WriteFile(reportPath, append(reportBytes, '\n'), 0o644); err != nil {
-		fmt.Fprintf(stderr, "ts2bin build: write report: %v\n", err)
+	if err := publishApplicationReport(reportPath, append(reportBytes, '\n'), 0o644); err != nil {
+		fmt.Fprintf(stderr, "ts2bin build: write report: %v\n", rollbackApplicationOutput(outputPath, err))
 		return exitUsage
 	}
 	fmt.Fprintf(stdout, "[ok] build %s %s\n", outputPath, report.Artifacts.ExecutableHash)
@@ -1048,5 +1077,5 @@ func shortCommit(commit string) string {
 
 func writeUsage(writer io.Writer) {
 	fmt.Fprintln(writer, "usage: ts2bin <command> [options]")
-	fmt.Fprintln(writer, "commands: build, check, snapshot, dump-snapshot, emit-hir, emit-mir, diff, compatibility, upstream-audit, doctor, test, version")
+	fmt.Fprintln(writer, "commands: build, check, snapshot, dump-snapshot, emit-hir, emit-mir, emit-vert010, emit-vert011, emit-vert012, emit-vert013a, emit-vert013b, emit-classaccess, emit-checked-cast-replay, emit-function-thunk-replay, emit-property-access-replay, emit-property-access-unbound, diff, compatibility, upstream-audit, doctor, test, version")
 }

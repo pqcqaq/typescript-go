@@ -1,0 +1,2167 @@
+{
+  "schemaVersion": 2,
+  "program": {
+    "schemaVersion": 2,
+    "config": {
+      "bingoSchemaVersion": 1,
+      "bingo": {
+        "profile": "static"
+      },
+      "bingoDigest": "73ce2298bd290adf349c62434b6747ff68622cf8d1f01824457e6e6b6a1787fa",
+      "typescript": {
+        "strict": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictBindCallApply": true,
+        "strictBuiltinIteratorReturn": true,
+        "strictPropertyInitialization": true,
+        "useUnknownInCatchVariables": true,
+        "exactOptionalPropertyTypes": false,
+        "noUncheckedIndexedAccess": false,
+        "noPropertyAccessFromIndexSignature": false,
+        "noImplicitReturns": false,
+        "noFallthroughCasesInSwitch": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "allowJs": false,
+        "checkJs": false,
+        "allowArbitraryExtensions": false,
+        "allowNonTsExtensions": false,
+        "allowImportingTsExtensions": false,
+        "rewriteRelativeImportExtensions": false,
+        "allowUmdGlobalAccess": false,
+        "alwaysStrict": true,
+        "useDefineForClassFields": true,
+        "verbatimModuleSyntax": false,
+        "experimentalDecorators": false,
+        "emitDecoratorMetadata": false,
+        "esModuleInterop": false,
+        "allowSyntheticDefaultImports": false,
+        "isolatedModules": false,
+        "isolatedDeclarations": false,
+        "erasableSyntaxOnly": false,
+        "noCheck": false,
+        "disableSizeLimit": false,
+        "noErrorTruncation": false,
+        "assumeChangesOnlyAffectDirectDependencies": false,
+        "noImplicitOverride": false,
+        "forceConsistentCasingInFileNames": false,
+        "noResolve": false,
+        "noDtsResolution": false,
+        "noLib": false,
+        "noUncheckedSideEffectImports": false,
+        "preserveSymlinks": false,
+        "skipLibCheck": false,
+        "skipDefaultLibCheck": false,
+        "deduplicatePackages": true,
+        "libReplacement": false,
+        "stableTypeOrdering": true,
+        "preserveConstEnums": false,
+        "maxNodeModuleJsDepth": 0,
+        "target": "ES2025",
+        "module": "ES2022",
+        "moduleResolution": "Bundler",
+        "moduleDetection": "auto",
+        "jsx": "none",
+        "resolvePackageJsonExports": true,
+        "resolvePackageJsonImports": true,
+        "resolveJsonModule": true
+      },
+      "typescriptDigest": "97946abaaf9f2e38ea0ead4ff7e3491ce361138aac41a6f407b0ea24f14c0871",
+      "canonicalConfigPath": "tsconfig.json",
+      "canonicalProjectRoot": "."
+    },
+    "provenance": {
+      "typescriptGoCommit": "86cc4767d4ebadb9b7845d0ab8eb2b05785c3fee",
+      "typescriptVersion": "7.1.0-dev",
+      "goVersion": "go1.26.0",
+      "standardLibraryHash": "b82676463eea69ca2b7e4a6db078098999eae73b0e426cca8b8d1a7ebfc08967",
+      "kindManifestHash": "932701c10b59f8f2527ab0e36997363b45840a6a7315ab1589e2bad0ac4faa0d"
+    },
+    "files": [
+      {
+        "id": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "canonicalPath": "objectalias.ts",
+        "contentHash": "cb00c432fb4c54f51cc59205d5d4ecc247071e4833b352459156c10e555d22b4",
+        "sourceBlob": "export function objectAlias(value: number): number {\n  const object = { value };\n  const alias = object;\n  alias.value = alias.value + 1;\n  return object.value;\n}\n",
+        "scriptKind": "ScriptKindTS",
+        "isDeclarationFile": false,
+        "isExternalModule": true,
+        "emitModuleFormat": "ES2022",
+        "impliedModuleFormat": "None",
+        "rootNodes": [
+          "node_37f7c2d84f1de647df806f3cbfa94797"
+        ]
+      }
+    ],
+    "modules": [
+      {
+        "id": "module_d816ca5162d50ac28b56bf76d25402c5",
+        "canonicalPath": "objectalias.ts",
+        "format": "esm",
+        "external": false,
+        "scc": 0
+      }
+    ],
+    "moduleEdges": [],
+    "moduleSccs": [
+      {
+        "id": 0,
+        "modules": [
+          "module_d816ca5162d50ac28b56bf76d25402c5"
+        ]
+      }
+    ],
+    "moduleGraphDigest": "5ea2e92bb878a68dbd971e7fa961651385da8e9714f10e29c15d29d3c4e1d80d",
+    "origins": [
+      {
+        "id": "origin_0a3ee6f6a22e7f833feb62a6b3f29e6b",
+        "node": "node_78acc163847b9daf58aff9af016641ce",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 146,
+          "end": 159
+        }
+      },
+      {
+        "id": "origin_1018c5aedc135113e194e4eafa58cb2b",
+        "node": "node_4b42bc75bd77c3e642b6c99e46ad0955",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 88,
+          "end": 103
+        }
+      },
+      {
+        "id": "origin_10d5bee73291b8bd2370c92426d4dbfc",
+        "node": "node_4d8678ff8b869167c680b56e700492a4",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 113,
+          "end": 118
+        }
+      },
+      {
+        "id": "origin_168f22ee70d4e5e3d64d09bfc085f17d",
+        "node": "node_b2bd1dc762b6a6223344c3772a5274d4",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 15,
+          "end": 27
+        }
+      },
+      {
+        "id": "origin_17f444961e9ef9d7ae7d5ea4fb913a0d",
+        "node": "node_73e2c2609b57b38aff1b5b6eaa9e52e0",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 154,
+          "end": 159
+        }
+      },
+      {
+        "id": "origin_1fba31c6bb61d53e65c97cc4bffd54f5",
+        "node": "node_b451524cd1719a44a9525d539fcc8d70",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 137
+        }
+      },
+      {
+        "id": "origin_3045d559d5e66af900b70bb499bb7a15",
+        "node": "node_50ae544454d824b21026a16b470f2467",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 52,
+          "end": 79
+        }
+      },
+      {
+        "id": "origin_30c8c9f91d8d6ffb267595672e586ad0",
+        "node": "node_fa8cf5c23d5ed4acdb47a788b2e511eb",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 34,
+          "end": 41
+        }
+      },
+      {
+        "id": "origin_35b068bee020f32540290e857d8751df",
+        "node": "node_75fdd5c8a3fc1888dcc232dc1b5fd046",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 28,
+          "end": 33
+        }
+      },
+      {
+        "id": "origin_38d0dbb78c1c7a07580f665b34bfb923",
+        "node": "node_0a41b4e322ba80d8a89bb21e2f866a29",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 71,
+          "end": 77
+        }
+      },
+      {
+        "id": "origin_43e66e4d2cb315d9b7b04a85dba17da3",
+        "node": "node_46d026bdab42709b30ada36ada69b96c",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 71,
+          "end": 77
+        }
+      },
+      {
+        "id": "origin_4434ed18bf671d41d6146643e9cc7812",
+        "node": "node_ae25addb767f8f91ae8ef82fc1648d7c",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 60,
+          "end": 67
+        }
+      },
+      {
+        "id": "origin_45b5529a6ea9331bced91bfdbdf037e9",
+        "node": "node_504f5564e4d557adfdcd41d45a11b2c1",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 112
+        }
+      },
+      {
+        "id": "origin_45e2473c1aa5b8da93eae0051b2804c3",
+        "node": "node_714ab81510cc1f32768befea98e88333",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 126
+        }
+      },
+      {
+        "id": "origin_61e529a2770c3dd4a743ce8239c477bf",
+        "node": "node_e39ac47cca05588acbf4f7ac7f3342c1",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 132,
+          "end": 134
+        }
+      },
+      {
+        "id": "origin_68734b02789350b009fbaee2a9d3074b",
+        "node": "node_b3bb42b0dff907717e568f256a93b0eb",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 28,
+          "end": 41
+        }
+      },
+      {
+        "id": "origin_6933ef3ca296e3da215187a6dfd18f45",
+        "node": "node_dee8de3ebab97d71ba1de01e572301f3",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 118
+        }
+      },
+      {
+        "id": "origin_75b018d1e24c3a105ccbb2201bf259aa",
+        "node": "node_78e4e22df4aed9331813b0a2aa524b88",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 118,
+          "end": 120
+        }
+      },
+      {
+        "id": "origin_7951439a9e3ec368f067c85d74354a6f",
+        "node": "node_3f6d0b7477045341d8db313fcd755db7",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 136
+        }
+      },
+      {
+        "id": "origin_7b524e55a3582e6c573d6804e752cf25",
+        "node": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 50,
+          "end": 162
+        }
+      },
+      {
+        "id": "origin_7d3b4c51c1aaff0a911faf67c70e8ea3",
+        "node": "node_46d9db7fc3e64221858b3fdc7559e6f1",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 96,
+          "end": 103
+        }
+      },
+      {
+        "id": "origin_7dadfafb227e27db080bb6ce4115120f",
+        "node": "node_49b2a726f4a38e95a4b05d179fc3aa30",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 69,
+          "end": 79
+        }
+      },
+      {
+        "id": "origin_86dad6756bcd048954de123a66d369ef",
+        "node": "node_8218b0abfc13847b24e560318b3622df",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 134,
+          "end": 136
+        }
+      },
+      {
+        "id": "origin_873e1f3b5728ed625627898c2a932ac7",
+        "node": "node_be51348b461a450b6e4592fec613c530",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 162
+        }
+      },
+      {
+        "id": "origin_8eef91edfc1bbf7903f6c00de4645a8b",
+        "node": "node_f2990cddd1398dd5533e8a39fa2d7ae0",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 80,
+          "end": 103
+        }
+      },
+      {
+        "id": "origin_9484a49bbf891e42fd6e970d7df07b95",
+        "node": "node_dcf4326da9cc3d6f477a3d45bb557d27",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 52,
+          "end": 80
+        }
+      },
+      {
+        "id": "origin_a08cdf9327d334ed3de54819f477f103",
+        "node": "node_37f7c2d84f1de647df806f3cbfa94797",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 163
+        }
+      },
+      {
+        "id": "origin_a6b864d3cbd233fa5af7d8767923cfc4",
+        "node": "node_f077606a1c4cc78227aec49435cb1d8f",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 43,
+          "end": 50
+        }
+      },
+      {
+        "id": "origin_b16b9fc020b919d6922a0c1d1b908ec7",
+        "node": "node_2aa4a1a162474f5dafee1c749f045cde",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 132
+        }
+      },
+      {
+        "id": "origin_bd77f7ced224d8b9d239f9dcf34e2b52",
+        "node": "node_5eb8919ebc4141ff7d291f47be065d39",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 88,
+          "end": 94
+        }
+      },
+      {
+        "id": "origin_c22b07ba9ab46b68d98d907266e25df2",
+        "node": "node_1abcaa300a31382e58eb67d3614bb1a5",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 137,
+          "end": 160
+        }
+      },
+      {
+        "id": "origin_d18755b5ab6211cd372e05e1cda61818",
+        "node": "node_490ba325ee55f501c81195b9a5fc481d",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 6
+        }
+      },
+      {
+        "id": "origin_d6ef1051ee9f75d19d30dda22156bf5a",
+        "node": "node_7d9c53255166251cf923a8ac95627163",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 80,
+          "end": 104
+        }
+      },
+      {
+        "id": "origin_d7c79201ef174f525fe35bbc3a41de8c",
+        "node": "node_03c3ff7f8917c2db5d9b160919c44f93",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 60,
+          "end": 79
+        }
+      },
+      {
+        "id": "origin_dd867b15cb5dcb20b521f42ff14e36bb",
+        "node": "node_6153164ad321ebf65a44ea9d17151b22",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 136
+        }
+      },
+      {
+        "id": "origin_dd9c7ebc02a9c84bb862c8fcdf3b1f5d",
+        "node": "node_3463b3b021a9d45016a2e1d620706b81",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 162,
+          "end": 163
+        }
+      },
+      {
+        "id": "origin_e88515c0b31e9956be51b10d3c63376d",
+        "node": "node_e76ffcb0ce55fc884687e091b6f1e807",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 146,
+          "end": 153
+        }
+      },
+      {
+        "id": "origin_fb3efabfa15fe555ef7759ec67c4c565",
+        "node": "node_478976854c4b882d51e7b07beaafd4c2",
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 127,
+          "end": 132
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "node_03c3ff7f8917c2db5d9b160919c44f93",
+        "origin": "origin_d7c79201ef174f525fe35bbc3a41de8c",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableDeclaration",
+        "kindValue": 261,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 60,
+          "end": 79
+        },
+        "parent": "node_50ae544454d824b21026a16b470f2467",
+        "children": [
+          "node_ae25addb767f8f91ae8ef82fc1648d7c",
+          "node_49b2a726f4a38e95a4b05d179fc3aa30"
+        ],
+        "namedChildren": [
+          {
+            "role": "name",
+            "node": "node_ae25addb767f8f91ae8ef82fc1648d7c"
+          },
+          {
+            "role": "initializer",
+            "node": "node_49b2a726f4a38e95a4b05d179fc3aa30"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableDeclaration"
+        },
+        "narrowedType": 3,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_0a41b4e322ba80d8a89bb21e2f866a29",
+        "origin": "origin_38d0dbb78c1c7a07580f665b34bfb923",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 71,
+          "end": 77
+        },
+        "parent": "node_46d026bdab42709b30ada36ada69b96c",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "value"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_476da29f44e4e86516d0a603c10817e3",
+        "resolvedSymbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_1abcaa300a31382e58eb67d3614bb1a5",
+        "origin": "origin_c22b07ba9ab46b68d98d907266e25df2",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindReturnStatement",
+        "kindValue": 254,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 137,
+          "end": 160
+        },
+        "parent": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "children": [
+          "node_78acc163847b9daf58aff9af016641ce"
+        ],
+        "namedChildren": [
+          {
+            "role": "expression",
+            "node": "node_78acc163847b9daf58aff9af016641ce"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindReturnStatement"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_2aa4a1a162474f5dafee1c749f045cde",
+        "origin": "origin_b16b9fc020b919d6922a0c1d1b908ec7",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindPropertyAccessExpression",
+        "kindValue": 212,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 132
+        },
+        "parent": "node_6153164ad321ebf65a44ea9d17151b22",
+        "children": [
+          "node_714ab81510cc1f32768befea98e88333",
+          "node_478976854c4b882d51e7b07beaafd4c2"
+        ],
+        "namedChildren": [
+          {
+            "role": "child[0]",
+            "node": "node_714ab81510cc1f32768befea98e88333"
+          },
+          {
+            "role": "child[1]",
+            "node": "node_478976854c4b882d51e7b07beaafd4c2"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindPropertyAccessExpression"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_3463b3b021a9d45016a2e1d620706b81",
+        "origin": "origin_dd9c7ebc02a9c84bb862c8fcdf3b1f5d",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindEndOfFile",
+        "kindValue": 1,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 162,
+          "end": 163
+        },
+        "parent": "node_37f7c2d84f1de647df806f3cbfa94797",
+        "syntaxPayload": {
+          "tag": "KindEndOfFile"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_37f7c2d84f1de647df806f3cbfa94797",
+        "origin": "origin_a08cdf9327d334ed3de54819f477f103",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindSourceFile",
+        "kindValue": 307,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 163
+        },
+        "children": [
+          "node_be51348b461a450b6e4592fec613c530",
+          "node_3463b3b021a9d45016a2e1d620706b81"
+        ],
+        "namedChildren": [
+          {
+            "role": "statement[0]",
+            "node": "node_be51348b461a450b6e4592fec613c530"
+          },
+          {
+            "role": "child[1]",
+            "node": "node_3463b3b021a9d45016a2e1d620706b81"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindSourceFile"
+        },
+        "declaredType": 5,
+        "narrowedType": 5,
+        "symbol": "symbol_d3e3705b807e6cc51e3cf3cdb2d0a8a3",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "afdbdf680ec8bb60602bd7dfdf3409446bd555dbdc4e07d5c723710fefa31b22",
+          "narrowedTypeHash": "afdbdf680ec8bb60602bd7dfdf3409446bd555dbdc4e07d5c723710fefa31b22"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_3f6d0b7477045341d8db313fcd755db7",
+        "origin": "origin_7951439a9e3ec368f067c85d74354a6f",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindBinaryExpression",
+        "kindValue": 227,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 136
+        },
+        "parent": "node_b451524cd1719a44a9525d539fcc8d70",
+        "children": [
+          "node_dee8de3ebab97d71ba1de01e572301f3",
+          "node_78e4e22df4aed9331813b0a2aa524b88",
+          "node_6153164ad321ebf65a44ea9d17151b22"
+        ],
+        "namedChildren": [
+          {
+            "role": "left",
+            "node": "node_dee8de3ebab97d71ba1de01e572301f3"
+          },
+          {
+            "role": "operator",
+            "node": "node_78e4e22df4aed9331813b0a2aa524b88"
+          },
+          {
+            "role": "right",
+            "node": "node_6153164ad321ebf65a44ea9d17151b22"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindBinaryExpression",
+          "operator": "KindEqualsToken"
+        },
+        "narrowedType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "origin": "origin_7b524e55a3582e6c573d6804e752cf25",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindBlock",
+        "kindValue": 242,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 50,
+          "end": 162
+        },
+        "parent": "node_be51348b461a450b6e4592fec613c530",
+        "children": [
+          "node_dcf4326da9cc3d6f477a3d45bb557d27",
+          "node_7d9c53255166251cf923a8ac95627163",
+          "node_b451524cd1719a44a9525d539fcc8d70",
+          "node_1abcaa300a31382e58eb67d3614bb1a5"
+        ],
+        "namedChildren": [
+          {
+            "role": "statement[0]",
+            "node": "node_dcf4326da9cc3d6f477a3d45bb557d27"
+          },
+          {
+            "role": "statement[1]",
+            "node": "node_7d9c53255166251cf923a8ac95627163"
+          },
+          {
+            "role": "statement[2]",
+            "node": "node_b451524cd1719a44a9525d539fcc8d70"
+          },
+          {
+            "role": "statement[3]",
+            "node": "node_1abcaa300a31382e58eb67d3614bb1a5"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindBlock"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_46d026bdab42709b30ada36ada69b96c",
+        "origin": "origin_43e66e4d2cb315d9b7b04a85dba17da3",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindShorthandPropertyAssignment",
+        "kindValue": 304,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 71,
+          "end": 77
+        },
+        "parent": "node_49b2a726f4a38e95a4b05d179fc3aa30",
+        "children": [
+          "node_0a41b4e322ba80d8a89bb21e2f866a29"
+        ],
+        "namedChildren": [
+          {
+            "role": "name",
+            "node": "node_0a41b4e322ba80d8a89bb21e2f866a29"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindShorthandPropertyAssignment"
+        },
+        "narrowedType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_46d9db7fc3e64221858b3fdc7559e6f1",
+        "origin": "origin_7d3b4c51c1aaff0a911faf67c70e8ea3",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 96,
+          "end": 103
+        },
+        "parent": "node_4b42bc75bd77c3e642b6c99e46ad0955",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "object"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "resolvedSymbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_478976854c4b882d51e7b07beaafd4c2",
+        "origin": "origin_fb3efabfa15fe555ef7759ec67c4c565",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 127,
+          "end": 132
+        },
+        "parent": "node_2aa4a1a162474f5dafee1c749f045cde",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "value"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "resolvedSymbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_490ba325ee55f501c81195b9a5fc481d",
+        "origin": "origin_d18755b5ab6211cd372e05e1cda61818",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindExportKeyword",
+        "kindValue": 94,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 6
+        },
+        "parent": "node_be51348b461a450b6e4592fec613c530",
+        "syntaxPayload": {
+          "tag": "KindExportKeyword"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_49b2a726f4a38e95a4b05d179fc3aa30",
+        "origin": "origin_7dadfafb227e27db080bb6ce4115120f",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindObjectLiteralExpression",
+        "kindValue": 211,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 69,
+          "end": 79
+        },
+        "parent": "node_03c3ff7f8917c2db5d9b160919c44f93",
+        "children": [
+          "node_46d026bdab42709b30ada36ada69b96c"
+        ],
+        "namedChildren": [
+          {
+            "role": "child[0]",
+            "node": "node_46d026bdab42709b30ada36ada69b96c"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindObjectLiteralExpression"
+        },
+        "narrowedType": 4,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "acafb0a0d2355da0560d6bd63d00ff966766c8dbf42c087e2bacf539b14f4338"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_4b42bc75bd77c3e642b6c99e46ad0955",
+        "origin": "origin_1018c5aedc135113e194e4eafa58cb2b",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableDeclaration",
+        "kindValue": 261,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 88,
+          "end": 103
+        },
+        "parent": "node_f2990cddd1398dd5533e8a39fa2d7ae0",
+        "children": [
+          "node_5eb8919ebc4141ff7d291f47be065d39",
+          "node_46d9db7fc3e64221858b3fdc7559e6f1"
+        ],
+        "namedChildren": [
+          {
+            "role": "name",
+            "node": "node_5eb8919ebc4141ff7d291f47be065d39"
+          },
+          {
+            "role": "initializer",
+            "node": "node_46d9db7fc3e64221858b3fdc7559e6f1"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableDeclaration"
+        },
+        "narrowedType": 3,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_4d8678ff8b869167c680b56e700492a4",
+        "origin": "origin_10d5bee73291b8bd2370c92426d4dbfc",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 113,
+          "end": 118
+        },
+        "parent": "node_dee8de3ebab97d71ba1de01e572301f3",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "value"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "resolvedSymbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_504f5564e4d557adfdcd41d45a11b2c1",
+        "origin": "origin_45b5529a6ea9331bced91bfdbdf037e9",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 112
+        },
+        "parent": "node_dee8de3ebab97d71ba1de01e572301f3",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "alias"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "resolvedSymbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_50ae544454d824b21026a16b470f2467",
+        "origin": "origin_3045d559d5e66af900b70bb499bb7a15",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableDeclarationList",
+        "kindValue": 262,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 52,
+          "end": 79
+        },
+        "parent": "node_dcf4326da9cc3d6f477a3d45bb557d27",
+        "children": [
+          "node_03c3ff7f8917c2db5d9b160919c44f93"
+        ],
+        "namedChildren": [
+          {
+            "role": "declaration[0]",
+            "node": "node_03c3ff7f8917c2db5d9b160919c44f93"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableDeclarationList"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "nodeFlags": 2,
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_5eb8919ebc4141ff7d291f47be065d39",
+        "origin": "origin_bd77f7ced224d8b9d239f9dcf34e2b52",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 88,
+          "end": 94
+        },
+        "parent": "node_4b42bc75bd77c3e642b6c99e46ad0955",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "alias"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "resolvedSymbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_6153164ad321ebf65a44ea9d17151b22",
+        "origin": "origin_dd867b15cb5dcb20b521f42ff14e36bb",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindBinaryExpression",
+        "kindValue": 227,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 136
+        },
+        "parent": "node_3f6d0b7477045341d8db313fcd755db7",
+        "children": [
+          "node_2aa4a1a162474f5dafee1c749f045cde",
+          "node_e39ac47cca05588acbf4f7ac7f3342c1",
+          "node_8218b0abfc13847b24e560318b3622df"
+        ],
+        "namedChildren": [
+          {
+            "role": "left",
+            "node": "node_2aa4a1a162474f5dafee1c749f045cde"
+          },
+          {
+            "role": "operator",
+            "node": "node_e39ac47cca05588acbf4f7ac7f3342c1"
+          },
+          {
+            "role": "right",
+            "node": "node_8218b0abfc13847b24e560318b3622df"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindBinaryExpression",
+          "operator": "KindPlusToken"
+        },
+        "narrowedType": 2,
+        "contextualType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "contextualTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_714ab81510cc1f32768befea98e88333",
+        "origin": "origin_45e2473c1aa5b8da93eae0051b2804c3",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 120,
+          "end": 126
+        },
+        "parent": "node_2aa4a1a162474f5dafee1c749f045cde",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "alias"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "resolvedSymbol": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_73e2c2609b57b38aff1b5b6eaa9e52e0",
+        "origin": "origin_17f444961e9ef9d7ae7d5ea4fb913a0d",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 154,
+          "end": 159
+        },
+        "parent": "node_78acc163847b9daf58aff9af016641ce",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "value"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "resolvedSymbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_75fdd5c8a3fc1888dcc232dc1b5fd046",
+        "origin": "origin_35b068bee020f32540290e857d8751df",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 28,
+          "end": 33
+        },
+        "parent": "node_b3bb42b0dff907717e568f256a93b0eb",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "value"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "resolvedSymbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_78acc163847b9daf58aff9af016641ce",
+        "origin": "origin_0a3ee6f6a22e7f833feb62a6b3f29e6b",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindPropertyAccessExpression",
+        "kindValue": 212,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 146,
+          "end": 159
+        },
+        "parent": "node_1abcaa300a31382e58eb67d3614bb1a5",
+        "children": [
+          "node_e76ffcb0ce55fc884687e091b6f1e807",
+          "node_73e2c2609b57b38aff1b5b6eaa9e52e0"
+        ],
+        "namedChildren": [
+          {
+            "role": "child[0]",
+            "node": "node_e76ffcb0ce55fc884687e091b6f1e807"
+          },
+          {
+            "role": "child[1]",
+            "node": "node_73e2c2609b57b38aff1b5b6eaa9e52e0"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindPropertyAccessExpression"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "contextualType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "contextualTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_78e4e22df4aed9331813b0a2aa524b88",
+        "origin": "origin_75b018d1e24c3a105ccbb2201bf259aa",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindEqualsToken",
+        "kindValue": 63,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 118,
+          "end": 120
+        },
+        "parent": "node_3f6d0b7477045341d8db313fcd755db7",
+        "syntaxPayload": {
+          "tag": "KindEqualsToken"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_7d9c53255166251cf923a8ac95627163",
+        "origin": "origin_d6ef1051ee9f75d19d30dda22156bf5a",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableStatement",
+        "kindValue": 244,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 80,
+          "end": 104
+        },
+        "parent": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "children": [
+          "node_f2990cddd1398dd5533e8a39fa2d7ae0"
+        ],
+        "namedChildren": [
+          {
+            "role": "declarationList",
+            "node": "node_f2990cddd1398dd5533e8a39fa2d7ae0"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableStatement"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_8218b0abfc13847b24e560318b3622df",
+        "origin": "origin_86dad6756bcd048954de123a66d369ef",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindNumericLiteral",
+        "kindValue": 8,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 134,
+          "end": 136
+        },
+        "parent": "node_6153164ad321ebf65a44ea9d17151b22",
+        "syntaxPayload": {
+          "tag": "KindNumericLiteral",
+          "text": "1"
+        },
+        "narrowedType": 7,
+        "constant": {
+          "kind": "number",
+          "text": "1",
+          "number": 1
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "eeda61fddc3ad52652186dfd3d5da151d8267fd9c7c48dd9db6194bde1149b07"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_ae25addb767f8f91ae8ef82fc1648d7c",
+        "origin": "origin_4434ed18bf671d41d6146643e9cc7812",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 60,
+          "end": 67
+        },
+        "parent": "node_03c3ff7f8917c2db5d9b160919c44f93",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "object"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "resolvedSymbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_b2bd1dc762b6a6223344c3772a5274d4",
+        "origin": "origin_168f22ee70d4e5e3d64d09bfc085f17d",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 15,
+          "end": 27
+        },
+        "parent": "node_be51348b461a450b6e4592fec613c530",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "objectAlias"
+        },
+        "declaredType": 1,
+        "narrowedType": 1,
+        "symbol": "symbol_666f0e59f30139d9a105b00e4a2ceb42",
+        "resolvedSymbol": "symbol_8df0eed5e7ccf83de8347081aa16f819",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "0abb917df4ca8a3475dfcc7ed4f3ec5392a2d583a7b3e6c5f5babea29d924870",
+          "narrowedTypeHash": "0abb917df4ca8a3475dfcc7ed4f3ec5392a2d583a7b3e6c5f5babea29d924870"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_b3bb42b0dff907717e568f256a93b0eb",
+        "origin": "origin_68734b02789350b009fbaee2a9d3074b",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindParameter",
+        "kindValue": 170,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 28,
+          "end": 41
+        },
+        "parent": "node_be51348b461a450b6e4592fec613c530",
+        "children": [
+          "node_75fdd5c8a3fc1888dcc232dc1b5fd046",
+          "node_fa8cf5c23d5ed4acdb47a788b2e511eb"
+        ],
+        "namedChildren": [
+          {
+            "role": "name",
+            "node": "node_75fdd5c8a3fc1888dcc232dc1b5fd046"
+          },
+          {
+            "role": "type",
+            "node": "node_fa8cf5c23d5ed4acdb47a788b2e511eb"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindParameter"
+        },
+        "narrowedType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_b451524cd1719a44a9525d539fcc8d70",
+        "origin": "origin_1fba31c6bb61d53e65c97cc4bffd54f5",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindExpressionStatement",
+        "kindValue": 245,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 137
+        },
+        "parent": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "children": [
+          "node_3f6d0b7477045341d8db313fcd755db7"
+        ],
+        "namedChildren": [
+          {
+            "role": "expression",
+            "node": "node_3f6d0b7477045341d8db313fcd755db7"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindExpressionStatement"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_be51348b461a450b6e4592fec613c530",
+        "origin": "origin_873e1f3b5728ed625627898c2a932ac7",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindFunctionDeclaration",
+        "kindValue": 263,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 0,
+          "end": 162
+        },
+        "parent": "node_37f7c2d84f1de647df806f3cbfa94797",
+        "children": [
+          "node_490ba325ee55f501c81195b9a5fc481d",
+          "node_b2bd1dc762b6a6223344c3772a5274d4",
+          "node_b3bb42b0dff907717e568f256a93b0eb",
+          "node_f077606a1c4cc78227aec49435cb1d8f",
+          "node_433b0c1ecf6be27337c032ad84626c3a"
+        ],
+        "namedChildren": [
+          {
+            "role": "modifier[0]",
+            "node": "node_490ba325ee55f501c81195b9a5fc481d"
+          },
+          {
+            "role": "name",
+            "node": "node_b2bd1dc762b6a6223344c3772a5274d4"
+          },
+          {
+            "role": "parameter[0]",
+            "node": "node_b3bb42b0dff907717e568f256a93b0eb"
+          },
+          {
+            "role": "returnType",
+            "node": "node_f077606a1c4cc78227aec49435cb1d8f"
+          },
+          {
+            "role": "body",
+            "node": "node_433b0c1ecf6be27337c032ad84626c3a"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindFunctionDeclaration"
+        },
+        "narrowedType": 1,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "modifierBits": 32,
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "0abb917df4ca8a3475dfcc7ed4f3ec5392a2d583a7b3e6c5f5babea29d924870"
+        },
+        "captureComplete": true,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_dcf4326da9cc3d6f477a3d45bb557d27",
+        "origin": "origin_9484a49bbf891e42fd6e970d7df07b95",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableStatement",
+        "kindValue": 244,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 52,
+          "end": 80
+        },
+        "parent": "node_433b0c1ecf6be27337c032ad84626c3a",
+        "children": [
+          "node_50ae544454d824b21026a16b470f2467"
+        ],
+        "namedChildren": [
+          {
+            "role": "declarationList",
+            "node": "node_50ae544454d824b21026a16b470f2467"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableStatement"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_dee8de3ebab97d71ba1de01e572301f3",
+        "origin": "origin_6933ef3ca296e3da215187a6dfd18f45",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindPropertyAccessExpression",
+        "kindValue": 212,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 104,
+          "end": 118
+        },
+        "parent": "node_3f6d0b7477045341d8db313fcd755db7",
+        "children": [
+          "node_504f5564e4d557adfdcd41d45a11b2c1",
+          "node_4d8678ff8b869167c680b56e700492a4"
+        ],
+        "namedChildren": [
+          {
+            "role": "child[0]",
+            "node": "node_504f5564e4d557adfdcd41d45a11b2c1"
+          },
+          {
+            "role": "child[1]",
+            "node": "node_4d8678ff8b869167c680b56e700492a4"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindPropertyAccessExpression"
+        },
+        "declaredType": 2,
+        "narrowedType": 2,
+        "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_e39ac47cca05588acbf4f7ac7f3342c1",
+        "origin": "origin_61e529a2770c3dd4a743ce8239c477bf",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindPlusToken",
+        "kindValue": 39,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 132,
+          "end": 134
+        },
+        "parent": "node_6153164ad321ebf65a44ea9d17151b22",
+        "syntaxPayload": {
+          "tag": "KindPlusToken"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_e76ffcb0ce55fc884687e091b6f1e807",
+        "origin": "origin_e88515c0b31e9956be51b10d3c63376d",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindIdentifier",
+        "kindValue": 79,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 146,
+          "end": 153
+        },
+        "parent": "node_78acc163847b9daf58aff9af016641ce",
+        "syntaxPayload": {
+          "tag": "KindIdentifier",
+          "text": "object"
+        },
+        "declaredType": 3,
+        "narrowedType": 3,
+        "symbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "resolvedSymbol": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "flow": {
+          "narrowed": false,
+          "declaredTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+          "narrowedTypeHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_f077606a1c4cc78227aec49435cb1d8f",
+        "origin": "origin_a6b864d3cbd233fa5af7d8767923cfc4",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindNumberKeyword",
+        "kindValue": 150,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 43,
+          "end": 50
+        },
+        "parent": "node_be51348b461a450b6e4592fec613c530",
+        "syntaxPayload": {
+          "tag": "KindNumberKeyword"
+        },
+        "narrowedType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "evaluationFlags": 1,
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_f2990cddd1398dd5533e8a39fa2d7ae0",
+        "origin": "origin_8eef91edfc1bbf7903f6c00de4645a8b",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindVariableDeclarationList",
+        "kindValue": 262,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 80,
+          "end": 103
+        },
+        "parent": "node_7d9c53255166251cf923a8ac95627163",
+        "children": [
+          "node_4b42bc75bd77c3e642b6c99e46ad0955"
+        ],
+        "namedChildren": [
+          {
+            "role": "declaration[0]",
+            "node": "node_4b42bc75bd77c3e642b6c99e46ad0955"
+          }
+        ],
+        "syntaxPayload": {
+          "tag": "KindVariableDeclarationList"
+        },
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "nodeFlags": 2,
+        "flow": {
+          "narrowed": false
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      },
+      {
+        "id": "node_fa8cf5c23d5ed4acdb47a788b2e511eb",
+        "origin": "origin_30c8c9f91d8d6ffb267595672e586ad0",
+        "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+        "kind": "KindNumberKeyword",
+        "kindValue": 150,
+        "span": {
+          "file": "file_72afbcb6e068ae31968ebd7649dc71c6",
+          "start": 34,
+          "end": 41
+        },
+        "parent": "node_b3bb42b0dff907717e568f256a93b0eb",
+        "syntaxPayload": {
+          "tag": "KindNumberKeyword"
+        },
+        "narrowedType": 2,
+        "constant": {
+          "kind": "none"
+        },
+        "nonNullProof": {
+          "present": false
+        },
+        "evaluationFlags": 1,
+        "flow": {
+          "narrowed": false,
+          "narrowedTypeHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b"
+        },
+        "captureComplete": false,
+        "module": "module_d816ca5162d50ac28b56bf76d25402c5"
+      }
+    ],
+    "types": [
+      {
+        "id": 1,
+        "canonicalHash": "0abb917df4ca8a3475dfcc7ed4f3ec5392a2d583a7b3e6c5f5babea29d924870",
+        "kind": "object",
+        "flags": 1048576,
+        "objectFlags": 16,
+        "symbol": "symbol_666f0e59f30139d9a105b00e4a2ceb42",
+        "callSignatures": [
+          1
+        ],
+        "debugText": "(value: number) =\u003e number",
+        "typePayload": {
+          "tag": "object",
+          "scalar": "object|1048576|16|symbol_666f0e59f30139d9a105b00e4a2ceb42|"
+        }
+      },
+      {
+        "id": 2,
+        "canonicalHash": "609efd54b7ff05c13bab68762cb490109eda18f2d80d3559f680c9877e01da2b",
+        "kind": "intrinsic",
+        "flags": 64,
+        "debugText": "number",
+        "typePayload": {
+          "tag": "intrinsic",
+          "scalar": "intrinsic|64|0|||intrinsic:number"
+        }
+      },
+      {
+        "id": 3,
+        "canonicalHash": "6d5c2db26de65e3c52cdd9aae4a5f6edabc919bf6e488b54fa79b1afd8c81f34",
+        "kind": "object",
+        "flags": 1048576,
+        "objectFlags": 2097168,
+        "symbol": "symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e",
+        "properties": [
+          "symbol_60bcd677b33c82dfaecdf83dc5b87a14"
+        ],
+        "propertyFacts": [
+          {
+            "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+            "readType": 2,
+            "writeType": 2,
+            "optional": false,
+            "readonly": false,
+            "hasGetter": true,
+            "hasSetter": true,
+            "visibility": "public"
+          }
+        ],
+        "debugText": "{ value: number; }",
+        "typePayload": {
+          "tag": "object",
+          "scalar": "object|1048576|2097168|symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e|"
+        }
+      },
+      {
+        "id": 4,
+        "canonicalHash": "acafb0a0d2355da0560d6bd63d00ff966766c8dbf42c087e2bacf539b14f4338",
+        "kind": "object",
+        "flags": 1048576,
+        "objectFlags": 2236560,
+        "symbol": "symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e",
+        "properties": [
+          "symbol_60bcd677b33c82dfaecdf83dc5b87a14"
+        ],
+        "propertyFacts": [
+          {
+            "symbol": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+            "readType": 2,
+            "writeType": 2,
+            "optional": false,
+            "readonly": false,
+            "hasGetter": true,
+            "hasSetter": true,
+            "visibility": "public"
+          }
+        ],
+        "debugText": "{ value: number; }",
+        "typePayload": {
+          "tag": "object",
+          "scalar": "object|1048576|2236560|symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e|"
+        }
+      },
+      {
+        "id": 5,
+        "canonicalHash": "afdbdf680ec8bb60602bd7dfdf3409446bd555dbdc4e07d5c723710fefa31b22",
+        "kind": "object",
+        "flags": 1048576,
+        "objectFlags": 16,
+        "symbol": "symbol_d3e3705b807e6cc51e3cf3cdb2d0a8a3",
+        "properties": [
+          "symbol_666f0e59f30139d9a105b00e4a2ceb42"
+        ],
+        "propertyFacts": [
+          {
+            "symbol": "symbol_666f0e59f30139d9a105b00e4a2ceb42",
+            "readType": 1,
+            "writeType": 1,
+            "optional": false,
+            "readonly": false,
+            "hasGetter": true,
+            "hasSetter": true,
+            "visibility": "public"
+          }
+        ],
+        "debugText": "typeof import(\"./objectalias\")",
+        "typePayload": {
+          "tag": "object",
+          "scalar": "object|1048576|16|symbol_d3e3705b807e6cc51e3cf3cdb2d0a8a3|"
+        }
+      },
+      {
+        "id": 6,
+        "canonicalHash": "be72b228af007dd946ad3056f663bc01f23bf914c465203e1a8701ca5c13ec4e",
+        "kind": "error",
+        "flags": 1,
+        "notLowerableReason": "checker-error-type",
+        "debugText": "any",
+        "typePayload": {
+          "tag": "error",
+          "scalar": "error|1|0|||intrinsic:error"
+        }
+      },
+      {
+        "id": 7,
+        "canonicalHash": "eeda61fddc3ad52652186dfd3d5da151d8267fd9c7c48dd9db6194bde1149b07",
+        "kind": "literal",
+        "flags": 2048,
+        "debugText": "1",
+        "typePayload": {
+          "tag": "literal",
+          "scalar": "literal|2048|0|||literal:jsnum.Number:1"
+        }
+      }
+    ],
+    "symbols": [
+      {
+        "id": "symbol_476da29f44e4e86516d0a603c10817e3",
+        "name": "value",
+        "flags": 4,
+        "parent": "symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e",
+        "declarations": [
+          "node_46d026bdab42709b30ada36ada69b96c"
+        ],
+        "valueDeclaration": "node_46d026bdab42709b30ada36ada69b96c",
+        "type": 2
+      },
+      {
+        "id": "symbol_60bcd677b33c82dfaecdf83dc5b87a14",
+        "name": "value",
+        "flags": 33554436,
+        "parent": "symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e",
+        "declarations": [
+          "node_46d026bdab42709b30ada36ada69b96c"
+        ],
+        "valueDeclaration": "node_46d026bdab42709b30ada36ada69b96c",
+        "type": 2
+      },
+      {
+        "id": "symbol_666f0e59f30139d9a105b00e4a2ceb42",
+        "name": "objectAlias",
+        "flags": 16,
+        "parent": "symbol_d3e3705b807e6cc51e3cf3cdb2d0a8a3",
+        "declarations": [
+          "node_be51348b461a450b6e4592fec613c530"
+        ],
+        "valueDeclaration": "node_be51348b461a450b6e4592fec613c530",
+        "type": 1
+      },
+      {
+        "id": "symbol_8df0eed5e7ccf83de8347081aa16f819",
+        "name": "objectAlias",
+        "flags": 1048576,
+        "exportSymbol": "symbol_666f0e59f30139d9a105b00e4a2ceb42",
+        "declarations": [
+          "node_be51348b461a450b6e4592fec613c530"
+        ],
+        "type": 6
+      },
+      {
+        "id": "symbol_a572c17a3ce31ac8425429c0db6c61bb",
+        "name": "object",
+        "flags": 2,
+        "declarations": [
+          "node_03c3ff7f8917c2db5d9b160919c44f93"
+        ],
+        "valueDeclaration": "node_03c3ff7f8917c2db5d9b160919c44f93",
+        "type": 3
+      },
+      {
+        "id": "symbol_ad3aa183fcba8d72595f6a2adce5bf47",
+        "name": "alias",
+        "flags": 2,
+        "declarations": [
+          "node_4b42bc75bd77c3e642b6c99e46ad0955"
+        ],
+        "valueDeclaration": "node_4b42bc75bd77c3e642b6c99e46ad0955",
+        "type": 3
+      },
+      {
+        "id": "symbol_b87c7c353e8f18014435946236ae46d8",
+        "name": "value",
+        "flags": 1,
+        "declarations": [
+          "node_b3bb42b0dff907717e568f256a93b0eb"
+        ],
+        "valueDeclaration": "node_b3bb42b0dff907717e568f256a93b0eb",
+        "type": 2
+      },
+      {
+        "id": "symbol_d3a41aa8fcb45e3d478edcb8e7d00d7e",
+        "name": "�object",
+        "flags": 4096,
+        "declarations": [
+          "node_49b2a726f4a38e95a4b05d179fc3aa30"
+        ],
+        "valueDeclaration": "node_49b2a726f4a38e95a4b05d179fc3aa30",
+        "type": 6
+      },
+      {
+        "id": "symbol_d3e3705b807e6cc51e3cf3cdb2d0a8a3",
+        "name": "\"objectalias\"",
+        "flags": 512,
+        "declarations": [
+          "node_37f7c2d84f1de647df806f3cbfa94797"
+        ],
+        "valueDeclaration": "node_37f7c2d84f1de647df806f3cbfa94797",
+        "type": 5
+      }
+    ],
+    "signatures": [
+      {
+        "id": 1,
+        "canonicalHash": "9d2b6b70a004861467af7c13f9bdf41547c979e76b7877903b9fc755ccb25ca3",
+        "declaration": "node_be51348b461a450b6e4592fec613c530",
+        "flags": 0,
+        "parameters": [
+          "symbol_b87c7c353e8f18014435946236ae46d8"
+        ],
+        "parameterFacts": [
+          {
+            "symbol": "symbol_b87c7c353e8f18014435946236ae46d8",
+            "type": 2,
+            "optional": false,
+            "rest": false
+          }
+        ],
+        "minArgumentCount": 1,
+        "hasRest": false,
+        "returnType": 2,
+        "predicate": {
+          "present": false
+        },
+        "callingConventionClass": "call",
+        "effects": [
+          "alloc",
+          "read",
+          "write"
+        ],
+        "effectProof": {
+          "kind": "body-resolved",
+          "implementation": "node_be51348b461a450b6e4592fec613c530",
+          "complete": true,
+          "directEffects": [
+            "alloc",
+            "read",
+            "write"
+          ]
+        }
+      }
+    ],
+    "contentHash": "c1a94b96bbeb98cc506fbad9249bede70d91f2037810b67e590b5bccbb574e4b"
+  },
+  "contentHash": "c1a94b96bbeb98cc506fbad9249bede70d91f2037810b67e590b5bccbb574e4b"
+}

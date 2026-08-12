@@ -3,6 +3,7 @@
 package firstslicerunner
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -62,6 +63,11 @@ func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
 		{name: "coalesce", directory: "coalesce", entryPoint: "coalesce", executions: 5, rejectsByte: true},
 		{name: "coalesceassign", directory: "coalesceassign", entryPoint: "coalesceAssign", executions: 3, rejectsByte: true},
 		{name: "stringlength", directory: "stringlength", entryPoint: "stringLength", executions: 5, rejectsByte: true},
+		{name: "objectalias", directory: "objectalias", entryPoint: "objectAlias", executions: 5},
+		{name: "propertynullishassign", directory: "propertynullishassign", entryPoint: "propertyNullishAssign", executions: 7, rejectsByte: true},
+		{name: "closurecounter", directory: "closurecounter", entryPoint: "closureCounter", executions: 5},
+		{name: "classcounter", directory: "classcounter", entryPoint: "classCounter", executions: 5},
+		{name: "derivedcounter", directory: "derivedcounter", entryPoint: "derivedCounter", executions: 5},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			caseDirectory := filepath.Join("..", "..", "testdata", "ts2bin", test.directory)
@@ -85,6 +91,26 @@ func TestLLVM20StaticCoreRunsManifestCase(t *testing.T) {
 			}
 			if _, err := report.CanonicalBytes(); err != nil {
 				t.Fatal(err)
+			}
+			if test.name == "objectalias" || test.name == "propertynullishassign" || test.name == "closurecounter" || test.name == "classcounter" || test.name == "derivedcounter" {
+				second, err := RunCase(context.Background(), caseDirectory, identity, machine, Options{
+					RuntimeDirectory: runtimeDirectory, RuntimeArchivePath: runtimeArchive,
+					OutputDirectory: t.TempDir(), Clang: clang, LLD: lld, Node: node,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				firstBytes, err := report.CanonicalBytes()
+				if err != nil {
+					t.Fatal(err)
+				}
+				secondBytes, err := second.CanonicalBytes()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(firstBytes, secondBytes) {
+					t.Fatalf("%s repeated source-to-ELF report was not deterministic", test.name)
+				}
 			}
 		})
 	}

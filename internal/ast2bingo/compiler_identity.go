@@ -23,7 +23,7 @@ var (
 	injectedForkCommit     string
 )
 
-//go:embed compiler_identity.go pass_binding.go replay.go
+//go:embed checked_object_cast_replay.go class_access_lowerer.go class_access_replay.go class_lowerer.go class_replay.go derived_class_lowerer.go derived_class_replay.go closure_lowerer.go compiler_identity.go function_thunk_replay.go object_accessor_view_replay.go object_layout_copy_replay.go object_lowerer.go object_view_replay.go pass_binding.go place_lowerer.go place_lowerers.go primitive_lowerers.go property_access_admission_replay.go replay.go variance_replay.go
 var primitiveLoweringSources embed.FS
 
 var (
@@ -40,7 +40,9 @@ func PrimitiveLoweringHash() string {
 		_, _ = digest.Write([]byte{0})
 		_, _ = digest.Write([]byte(fmt.Sprintf("hir-schema:%d", bingo.HIRSchemaVersion)))
 		_, _ = digest.Write([]byte{0})
-		for _, path := range []string{"compiler_identity.go", "pass_binding.go", "replay.go"} {
+		_, _ = digest.Write([]byte(fmt.Sprintf("class-access-hir-schema:%d", bingo.ClassAccessHIRSchemaVersion)))
+		_, _ = digest.Write([]byte{0})
+		for _, path := range []string{"checked_object_cast_replay.go", "class_access_lowerer.go", "class_access_replay.go", "class_lowerer.go", "class_replay.go", "derived_class_lowerer.go", "derived_class_replay.go", "closure_lowerer.go", "compiler_identity.go", "function_thunk_replay.go", "object_accessor_view_replay.go", "object_layout_copy_replay.go", "object_lowerer.go", "object_view_replay.go", "pass_binding.go", "place_lowerer.go", "place_lowerers.go", "property_access_admission_replay.go", "replay.go", "variance_replay.go"} {
 			content, err := primitiveLoweringSources.ReadFile(path)
 			if err != nil {
 				panic(fmt.Sprintf("read embedded lowering source %q: %v", path, err))

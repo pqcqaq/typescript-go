@@ -41,6 +41,12 @@ const (
 	TypeNumber  TypeKind = "number"
 	TypeBoolean TypeKind = "boolean"
 	TypeString  TypeKind = "string"
+	// TypeObject is an identity-bearing owned reference. Its semantic and
+	// physical contracts are carried separately and must be verified before use.
+	TypeObject      TypeKind = "object-ref"
+	TypeEnvironment TypeKind = "environment-ref"
+	TypeCell        TypeKind = "cell-ref"
+	TypeFunction    TypeKind = "function-ref"
 	// TypeNullableNumber is the canonical three-state static union used by the
 	// Phase 2B nullish slice. The target ABI preserves null and undefined tags.
 	TypeNullableNumber TypeKind = "number|null|undefined"
@@ -76,7 +82,29 @@ const (
 	EffectRead  Effect = "read"
 	EffectWrite Effect = "write"
 	EffectCall  Effect = "call"
+	// EffectThrow marks an operation whose normal result is not guaranteed.
+	EffectThrow Effect = "throw"
+	// EffectAllocate identifies an identity-creating allocation and safepoint.
+	EffectAllocate Effect = "allocate"
 )
+
+// HIRObjectProperty binds one source property to its stable snapshot symbol.
+// Physical offsets are deliberately absent from target-independent HIR.
+type HIRObjectProperty struct {
+	Key           string   `json:"key"`
+	SymbolKey     string   `json:"symbolKey"`
+	SourceTypeKey string   `json:"sourceTypeKey"`
+	Type          TypeKind `json:"type"`
+	Mutable       bool     `json:"mutable"`
+	Required      bool     `json:"required"`
+}
+
+// HIRObjectType binds object operations to a verified semantic contract.
+type HIRObjectType struct {
+	TypeKey              string              `json:"typeKey"`
+	SemanticContractHash string              `json:"semanticContractHash"`
+	Properties           []HIRObjectProperty `json:"properties"`
+}
 
 // Origin identifies the source span that produced an IR value or operation.
 type Origin struct {
@@ -87,11 +115,19 @@ type Origin struct {
 
 // HIRModule is the canonical typed-HIR artifact.
 type HIRModule struct {
-	SchemaVersion                 uint32                `json:"schemaVersion"`
-	Provenance                    HIRProvenance         `json:"provenance"`
-	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
-	Functions                     []HIRFunction         `json:"functions"`
-	ContentHash                   string                `json:"contentHash"`
+	SchemaVersion                 uint32                        `json:"schemaVersion"`
+	Provenance                    HIRProvenance                 `json:"provenance"`
+	LogicalCapabilityRequirements []RuntimeCapabilityID         `json:"logicalCapabilityRequirements"`
+	ObjectTypes                   []HIRObjectType               `json:"objectTypes,omitempty"`
+	PlaceRefs                     *PlaceRefContract             `json:"placeRefs,omitempty"`
+	Closures                      *ClosureContract              `json:"closures,omitempty"`
+	Classes                       *ClassContract                `json:"classes,omitempty"`
+	DerivedClasses                *VERT013bClassContract        `json:"derivedClasses,omitempty"`
+	ClassAccess                   *ClassAccessContract          `json:"classAccess,omitempty"`
+	ClassAccessProofs             []HIRClassAccessProof         `json:"classAccessProofs,omitempty"`
+	ClassAccessExecution          *ClassAccessExecutionContract `json:"classAccessExecution,omitempty"`
+	Functions                     []HIRFunction                 `json:"functions"`
+	ContentHash                   string                        `json:"contentHash"`
 }
 
 type HIRFunction struct {
@@ -102,6 +138,16 @@ type HIRFunction struct {
 	Blocks     []HIRBlock     `json:"blocks"`
 	ReturnType TypeKind       `json:"returnType"`
 	Origin     Origin         `json:"origin"`
+}
+
+// HIRClassAccessProof carries a source-authorized member operation before any
+// target layout, adapter, or field-offset selection exists.
+type HIRClassAccessProof struct {
+	ID              uint32              `json:"id"`
+	MemberSymbolKey string              `json:"memberSymbolKey"`
+	Request         ClassAccessRequest  `json:"request"`
+	Decision        ClassAccessDecision `json:"decision"`
+	Origin          Origin              `json:"origin"`
 }
 
 type HIRParameter struct {
@@ -127,7 +173,11 @@ type HIROp struct {
 	NumberBits                    string                `json:"numberBits,omitempty"`
 	UTF16CodeUnits                string                `json:"utf16CodeUnits,omitempty"`
 	Callee                        FunctionID            `json:"callee,omitempty"`
+	ObjectTypeKey                 string                `json:"objectTypeKey,omitempty"`
+	PropertySymbolKey             string                `json:"propertySymbolKey,omitempty"`
+	PlaceID                       PlaceID               `json:"placeId,omitempty"`
 	Effect                        Effect                `json:"effect"`
+	Effects                       []Effect              `json:"effects,omitempty"`
 	LogicalCapabilityRequirements []RuntimeCapabilityID `json:"logicalCapabilityRequirements"`
 	Origin                        Origin                `json:"origin"`
 }
@@ -193,6 +243,9 @@ type MIRTerminator struct {
 func VerifyHIR(module HIRModule) error {
 	if module.SchemaVersion != HIRSchemaVersion {
 		return fmt.Errorf("unsupported HIR schema %d", module.SchemaVersion)
+	}
+	if module.PlaceRefs != nil {
+		return fmt.Errorf("first-slice HIR must not carry PlaceRefs")
 	}
 	if err := validateHIRProvenance(module.Provenance); err != nil {
 		return fmt.Errorf("invalid HIR provenance: %w", err)
@@ -396,6 +449,9 @@ func verifyHIRFunction(function HIRFunction) error {
 }
 
 func validateHIROperationShape(op HIROp) error {
+	if op.PlaceID != 0 || len(op.Effects) != 0 {
+		return fmt.Errorf("operation %d carries unsupported PlaceRef metadata", op.ID)
+	}
 	if op.ID == 0 || op.Kind == "" || !validType(op.Type) || !validEffect(op.Effect) || !validOrigin(op.Origin) {
 		return fmt.Errorf("invalid operation %d", op.ID)
 	}

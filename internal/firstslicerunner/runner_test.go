@@ -90,6 +90,23 @@ func TestRunnerReportAcceptsCoalesceAssignOracleIdentityAndRejectsSubstitution(t
 	}
 }
 
+func TestRunnerReportAcceptsZeroArgumentClassAccess(t *testing.T) {
+	report := validReport(t)
+	report.CaseName = "class-access"
+	report.EntryPoint = "classAccess"
+	report.OracleProgram = "classaccess"
+	report.NodeScriptHash = firstsliceoracle.ClassAccessScriptHash()
+	report.Executions = []ExecutionReport{{
+		Name: "authorized-private-protected", Arguments: []string{}, ExpectedBits: "4008000000000000", ActualBits: "4008000000000000", OutputHash: hashBytes([]byte("4008000000000000\n")), NodeBits: "4008000000000000", NodeOutputHash: hashBytes([]byte("4008000000000000\n")), OK: true,
+	}}
+	if err := finalizeReport(&report); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := report.CanonicalBytes(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOracleProgramIsDerivedFromVerifiedHIRShape(t *testing.T) {
 	loop := bingo.HIRModule{Functions: []bingo.HIRFunction{{Name: "compute", Blocks: make([]bingo.HIRBlock, 4)}}}
 	if got, err := oracleProgramForHIR("compute", loop); err != nil || got != "loop" {

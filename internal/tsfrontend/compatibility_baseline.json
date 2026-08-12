@@ -21474,11 +21474,11 @@
     },
     {
       "key": "coverage/accepted-syntax",
-      "value": "aed3b1908bd92ee50e24199d301572c0e41dfaacea1e446e6a18d7885e2b3f66"
+      "value": "317bc75236bfa1fb13f26735d49c9aa0fdcc26e3232d323aa6a188435fc2afde"
     },
     {
       "key": "coverage/ambient-module",
-      "value": "ca4b8105facbe612ff330557ff0baa9d431a4ad6112be9360542bb7b49342244"
+      "value": "86de85394ec810880bdfc00f10f6f73e15c95a0150d37522f1bb182db1d46dc7"
     },
     {
       "key": "coverage/cjs",
@@ -21586,7 +21586,7 @@
     },
     {
       "key": "generics/default-parameter",
-      "value": "f9fed20eda3a90f3736a7c9203d38d91b75174e17f01784b9d5f4a2c6d4064f6"
+      "value": "6b7dcf02e00e52f1055c35acc534970ba9fb83229f0a605fbe0c103e7c9a539d"
     },
     {
       "key": "generics/function",
@@ -21594,7 +21594,7 @@
     },
     {
       "key": "generics/generic-interface",
-      "value": "2b1e14702777a1d3cb8d2a3db3d864dfa41fd4c4e66c9335c1eff14676d1111e"
+      "value": "29f4aef266a5cf5f9688f8e35fc063902a26c45f431a3f7468158440b832620f"
     },
     {
       "key": "generics/identity",
@@ -21602,7 +21602,7 @@
     },
     {
       "key": "generics/interface",
-      "value": "be61191f6f47be72e8aaa13d6a51c3155e0ffc1481197220fbacd6a6a8d31ded"
+      "value": "98625314467627db0d25db4f84851c4aaa85cd923097ead171ab9ca503e082a7"
     },
     {
       "key": "generics/keyof",
@@ -21622,7 +21622,7 @@
     },
     {
       "key": "generics/tuple",
-      "value": "9d6c542adeaaf491dd395eb219b8a4f29e95774dff480a1de0bceffa20879adc"
+      "value": "e7570d54bbcc156fda2dc05f3611ed10ebb48fc217aa51cd72ed5560456d22ba"
     },
     {
       "key": "generics/type-alias",

@@ -129,7 +129,7 @@ func resolveTargetContext(plan buildplan.Plan, toolchain llvmbackend.ToolchainMa
 
 func validateRequestedImplementation(plan buildplan.Plan, toolchain llvmbackend.ToolchainManifest, runtime RuntimeManifest) error {
 	request := plan.Backend
-	if plan.Profile != frontendwire.ProfileStatic || request.Target != llvmbackend.FirstSliceTriple || request.CPU != llvmbackend.FirstSliceCPU ||
+	if (plan.Profile != frontendwire.ProfileStatic && plan.Profile != frontendwire.ProfileInterop) || request.Target != llvmbackend.FirstSliceTriple || request.CPU != llvmbackend.FirstSliceCPU ||
 		len(request.Features) != 0 || request.Runtime != LockedRuntimeName ||
 		request.GC != frontendwire.GCTracing || request.Exceptions != frontendwire.ExceptionsNone ||
 		request.Overflow != frontendwire.OverflowJSNumber || request.BoundsCheck != frontendwire.BoundsCheckOn ||
@@ -252,20 +252,27 @@ func (catalog AvailableCapabilityCatalog) CanonicalBytes() ([]byte, error) {
 
 // ValidateAvailableCapabilityCatalog checks catalog structure and provenance.
 func ValidateAvailableCapabilityCatalog(catalog AvailableCapabilityCatalog) error {
+	profile, ok := lockedRuntimeProfileForManifestHash(catalog.RuntimeManifestHash)
+	if !ok {
+		return fmt.Errorf("available capability catalog does not bind a published runtime profile")
+	}
 	if catalog.SchemaVersion != AvailableCapabilityCatalogSchemaVersion || !isLowerDigest(catalog.RequestHash) ||
 		catalog.Runtime != LockedRuntimeName || catalog.RuntimeABIVersion != LockedRuntimeABIVersion ||
-		!isLowerDigest(catalog.ToolchainManifestHash) || catalog.RuntimeManifestHash != LockedRuntimeManifestHash {
+		!isLowerDigest(catalog.ToolchainManifestHash) {
 		return fmt.Errorf("invalid available capability catalog provenance")
 	}
-	if len(catalog.Capabilities) != 1 {
-		return fmt.Errorf("available capability count is %d, want 1", len(catalog.Capabilities))
+	wantedCapabilities, _ := runtimeCapabilitiesForProfile(profile)
+	if len(catalog.Capabilities) != len(wantedCapabilities) {
+		return fmt.Errorf("available capability count is %d, want %d", len(catalog.Capabilities), len(wantedCapabilities))
 	}
-	capability := catalog.Capabilities[0]
-	if capability.LogicalName != "rt.abi.version" || capability.SymbolName != "bingo_rt_abi_version_v1" || capability.ABIVersion != "1.0.0" ||
-		capability.Signature != "() -> u32" || capability.Effects == nil || len(capability.Effects) != 0 ||
-		capability.RequiredFeatures == nil || len(capability.RequiredFeatures) != 0 ||
-		!isLowerDigest(capability.SignatureHash) || !isLowerDigest(capability.ImplementationHash) {
-		return fmt.Errorf("invalid available capability: %#v", capability)
+	for index, capability := range catalog.Capabilities {
+		want := wantedCapabilities[index]
+		if capability.LogicalName != want.logicalName || capability.SymbolName != want.symbolName || capability.ABIVersion != "1.0.0" ||
+			capability.Signature != want.signature || !slices.Equal(capability.Effects, want.effects) ||
+			capability.RequiredFeatures == nil || len(capability.RequiredFeatures) != 0 ||
+			!isLowerDigest(capability.SignatureHash) || !isLowerDigest(capability.ImplementationHash) {
+			return fmt.Errorf("invalid available capability %d: %#v", index, capability)
+		}
 	}
 	want, err := availableCapabilityCatalogContentHash(catalog)
 	if err != nil {
@@ -313,11 +320,15 @@ func ValidateTargetContext(context TargetContext) error {
 		context.Sanitizers == nil || len(context.Sanitizers) != 0 {
 		return fmt.Errorf("unsupported target context codegen identity")
 	}
-	if context.Profile != "static" || context.Runtime != LockedRuntimeName || context.RuntimeABIVersion != LockedRuntimeABIVersion ||
+	if !isSupportedRuntimeProfile(context.Profile) || context.Runtime != LockedRuntimeName || context.RuntimeABIVersion != LockedRuntimeABIVersion ||
 		context.GC != "tracing" || context.Overflow != "js-number" || context.BoundsCheck != "on" {
 		return fmt.Errorf("unsupported target context runtime profile")
 	}
-	if !isLowerDigest(context.ToolchainManifestHash) || context.RuntimeManifestHash != LockedRuntimeManifestHash ||
+	lockedProfile, published := lockedRuntimeProfileForManifestHash(context.RuntimeManifestHash)
+	if !published || context.Profile != lockedProfile {
+		return fmt.Errorf("target context does not bind a published runtime profile identity")
+	}
+	if !isLowerDigest(context.ToolchainManifestHash) ||
 		context.RuntimeSourceHash != LockedRuntimeSourceHash || context.ABISchemaHash != LockedABISchemaHash || context.TargetManifestHash != LockedTargetManifestHash ||
 		!isLowerDigest(context.AvailableCapabilityCatalogHash) {
 		return fmt.Errorf("invalid target context manifest provenance")
@@ -330,6 +341,13 @@ func ValidateTargetContext(context TargetContext) error {
 		return fmt.Errorf("target context hash mismatch: got %s want %s", context.ContentHash, want)
 	}
 	return nil
+}
+
+func lockedRuntimeProfileForManifestHash(hash string) (string, bool) {
+	if hash == LockedRuntimeManifestHash {
+		return string(frontendwire.ProfileStatic), true
+	}
+	return "", false
 }
 
 func availableCapabilityCatalogContentHash(catalog AvailableCapabilityCatalog) (string, error) {

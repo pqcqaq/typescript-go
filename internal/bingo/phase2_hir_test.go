@@ -1,6 +1,8 @@
 package bingo
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -24,6 +26,59 @@ func validPhase2ChooseHIR() HIRModule {
 				{ID: 3, Operations: []HIROp{}, Terminator: HIRTerminator{Kind: "return", Value: 3, Origin: testOrigin(94, 108)}},
 			},
 		}},
+	}
+}
+
+func TestDecodePhase2HIRRejectsNonCanonicalContracts(t *testing.T) {
+	module := validPhase2ChooseHIR()
+	_, hash, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	module.ContentHash = hash
+	canonical, _, err := CanonicalPhase2HIR(module)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodePhase2HIR(canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.ContentHash != module.ContentHash {
+		t.Fatalf("decoded content hash = %q, want %q", decoded.ContentHash, module.ContentHash)
+	}
+
+	unknown := append([]byte(nil), canonical[:len(canonical)-1]...)
+	unknown = append(unknown, []byte(`,"unknown":true}`)...)
+	oldSchema := []byte(strings.Replace(
+		string(canonical),
+		fmt.Sprintf(`"schemaVersion":%d`, HIRSchemaVersion),
+		fmt.Sprintf(`"schemaVersion":%d`, HIRSchemaVersion-1),
+		1,
+	))
+	tampered := module
+	tampered.ContentHash = strings.Repeat("0", 64)
+	tamperedBytes, err := json.Marshal(tampered)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		data    []byte
+		message string
+	}{
+		{name: "unknown field", data: unknown, message: "unknown"},
+		{name: "old schema", data: oldSchema, message: "unsupported HIR schema"},
+		{name: "tampered content hash", data: tamperedBytes, message: "content hash mismatch"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := DecodePhase2HIR(test.data)
+			if err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("DecodePhase2HIR error = %v, want message containing %q", err, test.message)
+			}
+		})
 	}
 }
 

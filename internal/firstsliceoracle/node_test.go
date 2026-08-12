@@ -58,3 +58,44 @@ func TestNodeCoalesceAssignScriptUsesLogicalAssignment(t *testing.T) {
 		t.Fatalf("coalesce assignment Node script does not bind ??=: %s", CoalesceAssignScriptHash())
 	}
 }
+
+func TestNodeClassAccessScriptBindsPrivateProtectedFixtureSemantics(t *testing.T) {
+	if ClassAccessScriptHash() == DerivedCounterScriptHash() || !strings.Contains(nodeClassAccessScript, "secret=1") || !strings.Contains(nodeClassAccessScript, "value=2") || !strings.Contains(nodeClassAccessScript, "vault.readSecret(vault)+vault.readValue(vault)") {
+		t.Fatalf("classaccess Node script does not bind source semantics: %s", ClassAccessScriptHash())
+	}
+}
+
+func TestNodeObjectViewScriptPreservesIdentityRead(t *testing.T) {
+	if ObjectViewScriptHash() == ObjectAliasScriptHash() || !strings.Contains(nodeObjectViewScript, "const view=source") || !strings.Contains(nodeObjectViewScript, "view.value") {
+		t.Fatalf("object-view Node script does not preserve identity-read semantics: %s", ObjectViewScriptHash())
+	}
+}
+
+func TestNodeObjectAccessorViewScriptPreservesReceiverAndTag(t *testing.T) {
+	if ObjectAccessorViewScriptHash() == ObjectViewScriptHash() || !strings.Contains(nodeObjectAccessorViewScript, "const view=source") || !strings.Contains(nodeObjectAccessorViewScript, "get result(){return this.backing}") || !strings.Contains(nodeObjectAccessorViewScript, `result===undefined?"2"`) {
+		t.Fatalf("accessor-view Node script does not bind receiver/tag semantics: %s", ObjectAccessorViewScriptHash())
+	}
+}
+
+func TestNodeCheckedObjectCastScriptBindsExactShapeAndIdentity(t *testing.T) {
+	if CheckedObjectCastScriptHash() == ObjectViewScriptHash() || !strings.Contains(nodeCheckedObjectCastScript, `hasOwnProperty.call(d,"value")`) || !strings.Contains(nodeCheckedObjectCastScript, `source.value`) {
+		t.Fatalf("checked-cast Node script does not bind exact shape and identity: %s", CheckedObjectCastScriptHash())
+	}
+	oracle := &NodeOracle{path: "must-not-run", version: LockedNodeVersion, scriptHash: ScriptHash()}
+	if _, err := oracle.CheckedObjectCast(t.Context(), "assertion", "0000000000000000"); err == nil {
+		t.Fatal("invalid checked-cast shape was accepted")
+	}
+	if _, err := oracle.CheckedObjectCast(t.Context(), "matching", "0"); err == nil {
+		t.Fatal("invalid checked-cast bits were accepted")
+	}
+}
+
+func TestNodeObjectLayoutCopyScriptBindsNewIdentity(t *testing.T) {
+	if ObjectLayoutCopyScriptHash() == ObjectViewScriptHash() || !strings.Contains(nodeObjectLayoutCopyScript, "copy!==source") || !strings.Contains(nodeObjectLayoutCopyScript, "source.value=1") {
+		t.Fatalf("object-layout-copy Node script does not bind new-identity semantics: %s", ObjectLayoutCopyScriptHash())
+	}
+	oracle := &NodeOracle{path: "must-not-run", version: LockedNodeVersion, scriptHash: ScriptHash()}
+	if _, err := oracle.ObjectLayoutCopy(t.Context(), "0"); err == nil {
+		t.Fatal("invalid object-layout-copy bits were accepted")
+	}
+}

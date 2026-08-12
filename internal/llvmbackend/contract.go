@@ -215,11 +215,57 @@ func hashManifest(value any) (string, error) {
 // TargetMachine is the only backend handle capable of emitting a first-slice
 // object. It is intentionally opaque to the rest of the compiler.
 type TargetMachine struct {
-	manifest       ToolchainManifest
-	emit           func() ([]byte, error)
-	emitFirstSlice func(bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error)
-	dispose        func()
+	manifest             ToolchainManifest
+	emit                 func() ([]byte, error)
+	emitFirstSlice       func(bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error)
+	emitVERT010          func(bingo.VERT010BoundMIR) (VERT010Emission, error)
+	emitVERT011          func(bingo.VERT011BoundMIR) (VERT011Emission, error)
+	emitVERT012          func(bingo.VERT012BoundMIR) (VERT012Emission, error)
+	emitVERT013a         func(bingo.VERT013aBoundMIR) (VERT013aEmission, error)
+	emitVERT013b         func(bingo.VERT013bBoundMIR) (VERT013bEmission, error)
+	emitClassAccess      func(bingo.ClassAccessBoundMIR) (ClassAccessEmission, error)
+	emitObjectView       func(ObjectViewBackendPlan) (ObjectViewEmission, error)
+	emitCheckedCast      func(CheckedObjectCastBackendPlan) (CheckedObjectCastEmission, error)
+	emitFunctionThunk    func(FunctionThunkBackendPlan) (FunctionThunkEmission, error)
+	emitPropertyAccess   func(PropertyAccessBackendPlan) (PropertyAccessEmission, error)
+	emitObjectLayoutCopy func(ObjectLayoutCopyBackendPlan) (ObjectLayoutCopyEmission, error)
+	dispose              func()
 }
+
+// VERT010Emission is the immutable LLVM/object identity for the first owned
+// object slice. Its MIR hash names the complete target-bound MIR envelope.
+type VERT010Emission = FirstSliceEmission
+
+// VERT011Emission binds the independent MIR v8 envelope to LLVM/object bytes.
+type VERT011Emission = FirstSliceEmission
+
+// VERT012Emission binds closure MIR v9 to LLVM/object bytes.
+type VERT012Emission = FirstSliceEmission
+
+// VERT013aEmission binds base-class MIR v10 to LLVM/object bytes.
+type VERT013aEmission = FirstSliceEmission
+
+// VERT013bEmission binds derived-class MIR v11 to LLVM/object bytes.
+type VERT013bEmission = FirstSliceEmission
+
+// ClassAccessEmission binds the private/protected classaccess bound MIR to
+// the exact LLVM IR and object bytes emitted from it.
+type ClassAccessEmission = FirstSliceEmission
+
+// ObjectViewEmission binds the verified OBJ-005 backend plan to LLVM/object bytes.
+type ObjectViewEmission = FirstSliceEmission
+
+// CheckedObjectCastEmission binds the verified OBJ-005 checked-cast backend plan.
+type CheckedObjectCastEmission = FirstSliceEmission
+
+// FunctionThunkEmission binds a verified OBJ-005 thunk backend plan.
+type FunctionThunkEmission = FirstSliceEmission
+
+// PropertyAccessEmission binds a verified OBJ-006 DynamicBoundary plan.
+type PropertyAccessEmission = FirstSliceEmission
+
+// ObjectLayoutCopyEmission binds the explicit-copy backend plan to LLVM/object bytes.
+type ObjectLayoutCopyEmission = FirstSliceEmission
 
 // FirstSliceEmission binds verified MIR and the observed target machine to
 // the exact LLVM text and object bytes produced by BE-002a.
@@ -252,6 +298,123 @@ func (m *TargetMachine) EmitProbeObject() ([]byte, error) {
 	return m.emit()
 }
 
+func (m *TargetMachine) EmitObjectViewObject(plan ObjectViewBackendPlan) (ObjectViewEmission, error) {
+	if m == nil || m.emitObjectView == nil {
+		return ObjectViewEmission{}, ErrLLVMUnavailable
+	}
+	if err := VerifyCanonicalObjectViewBackendPlan(plan); err != nil {
+		return ObjectViewEmission{}, fmt.Errorf("verify ObjectView backend plan before LLVM lowering: %w", err)
+	}
+	target := plan.MIR.HIR.Operation.View.SourceLayout.Target
+	if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+		return ObjectViewEmission{}, fmt.Errorf("ObjectView target does not match observed TargetMachine")
+	}
+	emission, err := m.emitObjectView(plan)
+	if err != nil {
+		return ObjectViewEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return ObjectViewEmission{}, err
+	}
+	if emission.MIRContentHash != plan.ContentHash {
+		return ObjectViewEmission{}, fmt.Errorf("ObjectView emission does not bind backend plan")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitFunctionThunkObject(plan FunctionThunkBackendPlan) (FunctionThunkEmission, error) {
+	if m == nil || m.emitFunctionThunk == nil {
+		return FunctionThunkEmission{}, ErrLLVMUnavailable
+	}
+	if err := VerifyCanonicalFunctionThunkBackendPlan(plan); err != nil {
+		return FunctionThunkEmission{}, fmt.Errorf("verify function thunk backend plan before LLVM lowering: %w", err)
+	}
+	if plan.MIR.TargetTriple != m.manifest.TargetTriple || plan.MIR.DataLayoutHash != m.manifest.DataLayout.ContentHash {
+		return FunctionThunkEmission{}, fmt.Errorf("function thunk target does not match observed TargetMachine")
+	}
+	emission, err := m.emitFunctionThunk(plan)
+	if err != nil {
+		return FunctionThunkEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return FunctionThunkEmission{}, err
+	}
+	if emission.MIRContentHash != plan.ContentHash {
+		return FunctionThunkEmission{}, fmt.Errorf("function thunk emission does not bind backend plan")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitPropertyAccessObject(plan PropertyAccessBackendPlan) (PropertyAccessEmission, error) {
+	if m == nil || m.emitPropertyAccess == nil {
+		return PropertyAccessEmission{}, ErrLLVMUnavailable
+	}
+	if err := VerifyCanonicalPropertyAccessBackendPlan(plan); err != nil {
+		return PropertyAccessEmission{}, fmt.Errorf("verify property access backend plan before LLVM lowering: %w", err)
+	}
+	if plan.BoundMIR.MIR.TargetTriple != m.manifest.TargetTriple || plan.BoundMIR.MIR.DataLayoutHash != m.manifest.DataLayout.ContentHash {
+		return PropertyAccessEmission{}, fmt.Errorf("property access target does not match observed TargetMachine")
+	}
+	emission, err := m.emitPropertyAccess(plan)
+	if err != nil {
+		return PropertyAccessEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return PropertyAccessEmission{}, err
+	}
+	if emission.MIRContentHash != plan.ContentHash {
+		return PropertyAccessEmission{}, fmt.Errorf("property access emission does not bind backend plan")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitObjectLayoutCopyObject(plan ObjectLayoutCopyBackendPlan) (ObjectLayoutCopyEmission, error) {
+	if m == nil || m.emitObjectLayoutCopy == nil {
+		return ObjectLayoutCopyEmission{}, ErrLLVMUnavailable
+	}
+	if err := VerifyCanonicalObjectLayoutCopyBackendPlan(plan); err != nil {
+		return ObjectLayoutCopyEmission{}, fmt.Errorf("verify object layout copy backend plan before LLVM lowering: %w", err)
+	}
+	if plan.Bound.MIR.TargetTriple != m.manifest.TargetTriple || plan.Bound.MIR.DataLayoutHash != m.manifest.DataLayout.ContentHash {
+		return ObjectLayoutCopyEmission{}, fmt.Errorf("object layout copy target does not match observed TargetMachine")
+	}
+	emission, err := m.emitObjectLayoutCopy(plan)
+	if err != nil {
+		return ObjectLayoutCopyEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return ObjectLayoutCopyEmission{}, err
+	}
+	if emission.MIRContentHash != plan.ContentHash {
+		return ObjectLayoutCopyEmission{}, fmt.Errorf("object layout copy emission does not bind backend plan")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitCheckedObjectCastObject(plan CheckedObjectCastBackendPlan) (CheckedObjectCastEmission, error) {
+	if m == nil || m.emitCheckedCast == nil {
+		return CheckedObjectCastEmission{}, ErrLLVMUnavailable
+	}
+	if err := VerifyCanonicalCheckedObjectCastBackendPlan(plan); err != nil {
+		return CheckedObjectCastEmission{}, fmt.Errorf("verify checked object cast backend plan before LLVM lowering: %w", err)
+	}
+	target := plan.Bound.Cast.TargetLayout.Target
+	if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+		return CheckedObjectCastEmission{}, fmt.Errorf("checked object cast target does not match observed TargetMachine")
+	}
+	emission, err := m.emitCheckedCast(plan)
+	if err != nil {
+		return CheckedObjectCastEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return CheckedObjectCastEmission{}, err
+	}
+	if emission.MIRContentHash != plan.ContentHash {
+		return CheckedObjectCastEmission{}, fmt.Errorf("checked object cast emission does not bind backend plan")
+	}
+	return emission, nil
+}
+
 // EmitFirstSliceObject accepts only final verified, capability-bound MIR and
 // rejects any target/toolchain provenance that does not match this machine.
 func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact) (FirstSliceEmission, error) {
@@ -265,9 +428,6 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 		module.Provenance.DataLayoutHash != m.manifest.DataLayout.ContentHash {
 		return FirstSliceEmission{}, fmt.Errorf("MIR target provenance does not match observed TargetMachine")
 	}
-	if !supportedPrimitiveFunctionSet(module.Functions) {
-		return FirstSliceEmission{}, fmt.Errorf("primitive C ABI requires a supported verified function set")
-	}
 	emission, err := m.emitFirstSlice(module)
 	if err != nil {
 		return FirstSliceEmission{}, err
@@ -278,11 +438,156 @@ func (m *TargetMachine) EmitFirstSliceObject(module bingo.FirstSliceMIRArtifact)
 	return emission, nil
 }
 
-func supportedPrimitiveFunctionSet(functions []bingo.FirstSliceMIRFunction) bool {
-	if len(functions) == 1 {
-		return functions[0].Name == "add" || functions[0].Name == "choose" || functions[0].Name == "classify" || functions[0].Name == "compute" || functions[0].Name == "coalesce" || functions[0].Name == "coalesceAssign" || functions[0].Name == "stringLength" || functions[0].Name == "main"
+// EmitVERT010Object accepts only canonical target-bound object MIR. The v7
+// reader remains isolated from the primitive MIR reader major.
+func (m *TargetMachine) EmitVERT010Object(bound bingo.VERT010BoundMIR) (VERT010Emission, error) {
+	if m == nil || m.emitVERT010 == nil {
+		return VERT010Emission{}, ErrLLVMUnavailable
 	}
-	return len(functions) == 2 && functions[0].Name == "add" && functions[1].Name == "compute" && !functions[0].Exported && functions[1].Exported
+	if err := bingo.VerifyVERT010BoundMIR(bound); err != nil {
+		return VERT010Emission{}, fmt.Errorf("verify VERT-010 bound MIR before LLVM lowering: %w", err)
+	}
+	target := bound.MIR.Layout.Target
+	if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+		return VERT010Emission{}, fmt.Errorf("VERT-010 MIR target does not match observed TargetMachine")
+	}
+	emission, err := m.emitVERT010(bound)
+	if err != nil {
+		return VERT010Emission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return VERT010Emission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return VERT010Emission{}, fmt.Errorf("VERT-010 emission does not bind input MIR")
+	}
+	return emission, nil
+}
+
+// EmitVERT011Object accepts only canonical target-bound PlaceRef MIR v8.
+func (m *TargetMachine) EmitVERT011Object(bound bingo.VERT011BoundMIR) (VERT011Emission, error) {
+	if m == nil || m.emitVERT011 == nil {
+		return VERT011Emission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyVERT011BoundMIR(bound); err != nil {
+		return VERT011Emission{}, fmt.Errorf("verify VERT-011 bound MIR before LLVM lowering: %w", err)
+	}
+	target := bound.MIR.Layout.Target
+	if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+		return VERT011Emission{}, fmt.Errorf("VERT-011 MIR target does not match observed TargetMachine")
+	}
+	emission, err := m.emitVERT011(bound)
+	if err != nil {
+		return VERT011Emission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return VERT011Emission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return VERT011Emission{}, fmt.Errorf("VERT-011 emission does not bind input MIR")
+	}
+	return emission, nil
+}
+
+// EmitVERT012Object accepts only canonical target-bound closure MIR v9.
+func (m *TargetMachine) EmitVERT012Object(bound bingo.VERT012BoundMIR) (VERT012Emission, error) {
+	if m == nil || m.emitVERT012 == nil {
+		return VERT012Emission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyVERT012BoundMIR(bound); err != nil {
+		return VERT012Emission{}, fmt.Errorf("verify VERT-012 bound MIR before LLVM lowering: %w", err)
+	}
+	for _, layout := range bound.MIR.Layouts {
+		target := layout.Contract.Target
+		if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+			return VERT012Emission{}, fmt.Errorf("VERT-012 MIR target does not match observed TargetMachine")
+		}
+	}
+	emission, err := m.emitVERT012(bound)
+	if err != nil {
+		return VERT012Emission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return VERT012Emission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return VERT012Emission{}, fmt.Errorf("VERT-012 emission does not bind input MIR")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitVERT013aObject(bound bingo.VERT013aBoundMIR) (VERT013aEmission, error) {
+	if m == nil || m.emitVERT013a == nil {
+		return VERT013aEmission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyVERT013aBoundMIR(bound); err != nil {
+		return VERT013aEmission{}, fmt.Errorf("verify VERT-013a bound MIR before LLVM lowering: %w", err)
+	}
+	target := bound.MIR.Layout.Target
+	if target.Triple != m.manifest.TargetTriple || target.DataLayout != m.manifest.DataLayout.LayoutString {
+		return VERT013aEmission{}, fmt.Errorf("VERT-013a MIR target does not match observed TargetMachine")
+	}
+	emission, err := m.emitVERT013a(bound)
+	if err != nil {
+		return VERT013aEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return VERT013aEmission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return VERT013aEmission{}, fmt.Errorf("VERT-013a emission does not bind input MIR")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitVERT013bObject(bound bingo.VERT013bBoundMIR) (VERT013bEmission, error) {
+	if m == nil || m.emitVERT013b == nil {
+		return VERT013bEmission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyVERT013bBoundMIR(bound); err != nil {
+		return VERT013bEmission{}, fmt.Errorf("verify VERT-013b bound MIR before LLVM lowering: %w", err)
+	}
+	for _, layout := range []bingo.ObjectLayoutContract{bound.MIR.Layout.Base, bound.MIR.Layout.Derived} {
+		if layout.Target.Triple != m.manifest.TargetTriple || layout.Target.DataLayout != m.manifest.DataLayout.LayoutString {
+			return VERT013bEmission{}, fmt.Errorf("VERT-013b MIR target does not match observed TargetMachine")
+		}
+	}
+	emission, err := m.emitVERT013b(bound)
+	if err != nil {
+		return VERT013bEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return VERT013bEmission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return VERT013bEmission{}, fmt.Errorf("VERT-013b emission does not bind input MIR")
+	}
+	return emission, nil
+}
+
+func (m *TargetMachine) EmitClassAccessObject(bound bingo.ClassAccessBoundMIR) (ClassAccessEmission, error) {
+	if m == nil || m.emitClassAccess == nil {
+		return ClassAccessEmission{}, ErrLLVMUnavailable
+	}
+	if err := bingo.VerifyCanonicalClassAccessBoundMIR(bound); err != nil {
+		return ClassAccessEmission{}, fmt.Errorf("verify OBJ-003b bound MIR before LLVM lowering: %w", err)
+	}
+	for _, layout := range []bingo.ObjectLayoutContract{bound.Layout.Base, bound.Layout.Derived} {
+		if layout.Target.Triple != m.manifest.TargetTriple || layout.Target.DataLayout != m.manifest.DataLayout.LayoutString {
+			return ClassAccessEmission{}, fmt.Errorf("OBJ-003b bound MIR target does not match observed TargetMachine")
+		}
+	}
+	emission, err := m.emitClassAccess(bound)
+	if err != nil {
+		return ClassAccessEmission{}, err
+	}
+	if err := VerifyFirstSliceEmission(emission); err != nil {
+		return ClassAccessEmission{}, err
+	}
+	if emission.MIRContentHash != bound.ContentHash {
+		return ClassAccessEmission{}, fmt.Errorf("OBJ-003b emission does not bind input MIR")
+	}
+	return emission, nil
 }
 
 func (emission FirstSliceEmission) CanonicalBytes() ([]byte, error) {
@@ -337,9 +642,33 @@ func VerifyFirstSliceEmission(emission FirstSliceEmission) error {
 }
 
 func newFirstSliceEmission(module bingo.FirstSliceMIRArtifact, manifest ToolchainManifest, llvmIR, object []byte) (FirstSliceEmission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newVERT010Emission(module bingo.VERT010BoundMIR, manifest ToolchainManifest, llvmIR, object []byte) (VERT010Emission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newVERT011Emission(module bingo.VERT011BoundMIR, manifest ToolchainManifest, llvmIR, object []byte) (VERT011Emission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newVERT012Emission(module bingo.VERT012BoundMIR, manifest ToolchainManifest, llvmIR, object []byte) (VERT012Emission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newVERT013aEmission(module bingo.VERT013aBoundMIR, manifest ToolchainManifest, llvmIR, object []byte) (VERT013aEmission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newVERT013bEmission(module bingo.VERT013bBoundMIR, manifest ToolchainManifest, llvmIR, object []byte) (VERT013bEmission, error) {
+	return newEmission(module.ContentHash, manifest, llvmIR, object)
+}
+
+func newEmission(mirContentHash string, manifest ToolchainManifest, llvmIR, object []byte) (FirstSliceEmission, error) {
 	emission := FirstSliceEmission{
 		SchemaVersion:         FirstSliceEmissionSchemaVersion,
-		MIRContentHash:        module.ContentHash,
+		MIRContentHash:        mirContentHash,
 		ToolchainManifestHash: manifest.ContentHash,
 		TargetTriple:          manifest.TargetTriple,
 		DataLayoutHash:        manifest.DataLayout.ContentHash,
@@ -394,6 +723,7 @@ func (m *TargetMachine) Close() {
 		m.dispose = nil
 		m.emit = nil
 		m.emitFirstSlice = nil
+		m.emitVERT010 = nil
 	}
 }
 

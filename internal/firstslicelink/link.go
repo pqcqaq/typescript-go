@@ -18,11 +18,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/microsoft/typescript-go/internal/artifactio"
 	"github.com/microsoft/typescript-go/internal/llvmbackend"
 	"github.com/microsoft/typescript-go/internal/targetcontext"
 )
 
 const LinkArtifactSchemaVersion uint32 = 1
+
+const checkedObjectCastEntryPoint = "bingo_checked_object_cast_v1"
 
 var ErrLinkUnavailable = errors.New("first-slice linker requires Linux x86-64 LLVM 20 tools")
 
@@ -140,8 +143,8 @@ func LinkFirstSlice(ctx context.Context, request LinkRequest) (LinkArtifact, err
 	if err != nil {
 		return LinkArtifact{}, err
 	}
-	if err := publishNewFile(request.OutputPath, executable, 0o755); err != nil {
-		return LinkArtifact{}, err
+	if err := artifactio.PublishNewFile(request.OutputPath, executable, 0o755); err != nil {
+		return LinkArtifact{}, fmt.Errorf("publish executable: %w", err)
 	}
 	return artifact, nil
 }
@@ -209,6 +212,15 @@ func RunCoalesceAssign(ctx context.Context, executable, tag, value, fallback str
 	return runHarness(ctx, executable, "coalesceAssign", tagByte, value, fallback)
 }
 
+// RunPropertyNullishAssign executes the VERT-011 nullable-number ABI harness.
+func RunPropertyNullishAssign(ctx context.Context, executable, tag, value string) (RunResult, error) {
+	tagByte, err := nullableTagByte(tag)
+	if err != nil {
+		return RunResult{}, err
+	}
+	return runHarness(ctx, executable, "propertyNullishAssign", tagByte, value, "")
+}
+
 // RunStringLength executes the UTF-16 code-unit view ABI harness. The empty
 // string is represented by an empty argument and maps to {NULL, 0}.
 func RunStringLength(ctx context.Context, executable, codeUnits string) (RunResult, error) {
@@ -234,6 +246,123 @@ func RunStringLength(ctx context.Context, executable, codeUnits string) (RunResu
 	return RunResult{Arguments: []string{codeUnits}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
 }
 
+// RunObjectAlias executes the owned-object aliasing ABI harness.
+func RunObjectAlias(ctx context.Context, executable, value string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if err := validateBits(value); err != nil {
+		return RunResult{}, fmt.Errorf("value argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run object alias executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || validateBits(trimmed) != nil {
+		return RunResult{}, fmt.Errorf("object alias output is not one binary64 hex line: %q", string(output))
+	}
+	return RunResult{Arguments: []string{value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+// RunCheckedObjectCast executes the checked dynamic-object boundary harness.
+func RunCheckedObjectCast(ctx context.Context, executable, shape, value string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if shape != "matching" && shape != "extra" && shape != "missing" && shape != "accessor" {
+		return RunResult{}, fmt.Errorf("unsupported checked object cast shape %q", shape)
+	}
+	if strings.ToLower(value) != value {
+		return RunResult{}, fmt.Errorf("value argument must use lowercase hexadecimal")
+	}
+	if err := validateBits(value); err != nil {
+		return RunResult{}, fmt.Errorf("value argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, shape, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run checked object cast executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	if err := validateCheckedObjectCastOutput(output); err != nil {
+		return RunResult{}, err
+	}
+	return RunResult{Arguments: []string{shape, value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+func validateCheckedObjectCastOutput(output []byte) error {
+	text := string(output)
+	if len(text) != 19 || text[1] != ':' || text[18] != '\n' || (text[0] != '0' && text[0] != '1') || strings.ToLower(text[2:18]) != text[2:18] || validateBits(text[2:18]) != nil {
+		return fmt.Errorf("checked object cast output is not one canonical match-and-binary64 line: %q", text)
+	}
+	return nil
+}
+
+// RunClosureCounter executes the VERT-012 single-number closure harness.
+func RunClosureCounter(ctx context.Context, executable, value string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if err := validateBits(value); err != nil {
+		return RunResult{}, fmt.Errorf("value argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run closure counter executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || validateBits(trimmed) != nil {
+		return RunResult{}, fmt.Errorf("closure counter output is not one binary64 hex line: %q", string(output))
+	}
+	return RunResult{Arguments: []string{value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+// RunClassCounter executes the VERT-013a single-number class harness.
+func RunClassCounter(ctx context.Context, executable, value string) (RunResult, error) {
+	if ctx == nil {
+		return RunResult{}, fmt.Errorf("run context is nil")
+	}
+	if err := validateBits(value); err != nil {
+		return RunResult{}, fmt.Errorf("value argument: %w", err)
+	}
+	if strings.TrimSpace(executable) == "" {
+		return RunResult{}, fmt.Errorf("executable path is empty")
+	}
+	command := exec.CommandContext(ctx, executable, value)
+	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return RunResult{}, fmt.Errorf("run class counter executable: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	trimmed := strings.TrimSuffix(string(output), "\n")
+	if strings.Contains(trimmed, "\n") || validateBits(trimmed) != nil {
+		return RunResult{}, fmt.Errorf("class counter output is not one binary64 hex line: %q", string(output))
+	}
+	return RunResult{Arguments: []string{value}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+}
+
+func RunDerivedCounter(ctx context.Context, executable, start, step string) (RunResult, error) {
+	return runHarness(ctx, executable, "derivedCounter", "", start, step)
+}
+
+func RunClassAccess(ctx context.Context, executable string) (RunResult, error) {
+	return runHarness(ctx, executable, "classAccess", "", "", "")
+}
+
 // RejectNonCanonicalChoose executes choose with an invalid ABI byte and
 // requires the strict entry-point trap to reject the process.
 func RejectNonCanonicalChoose(ctx context.Context, executable, left, right string) (RunResult, error) {
@@ -250,6 +379,10 @@ func RejectNonCanonicalCoalesce(ctx context.Context, executable, value, fallback
 // logical-assignment entry point.
 func RejectNonCanonicalCoalesceAssign(ctx context.Context, executable, value, fallback string) (RunResult, error) {
 	return runHarnessExpectFailure(ctx, executable, "coalesceAssign", "03", value, fallback)
+}
+
+func RejectNonCanonicalPropertyNullishAssign(ctx context.Context, executable, value string) (RunResult, error) {
+	return runHarnessExpectFailure(ctx, executable, "propertyNullishAssign", "03", value, "")
 }
 
 // RejectNonCanonicalStringLength proves that a malformed {NULL, nonzero}
@@ -277,19 +410,26 @@ func runHarness(ctx context.Context, executable, entryPoint, flag, left, right s
 	if ctx == nil {
 		return RunResult{}, fmt.Errorf("run context is nil")
 	}
-	if err := validateBits(left); err != nil {
-		return RunResult{}, fmt.Errorf("left argument: %w", err)
-	}
-	if err := validateBits(right); err != nil {
-		return RunResult{}, fmt.Errorf("right argument: %w", err)
+	if entryPoint != "classAccess" {
+		if err := validateBits(left); err != nil {
+			return RunResult{}, fmt.Errorf("left argument: %w", err)
+		}
+		if entryPoint != "propertyNullishAssign" {
+			if err := validateBits(right); err != nil {
+				return RunResult{}, fmt.Errorf("right argument: %w", err)
+			}
+		}
 	}
 	if strings.TrimSpace(executable) == "" {
 		return RunResult{}, fmt.Errorf("executable path is empty")
 	}
-	if entryPoint != "add" && entryPoint != "compute" && entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" {
+	if entryPoint != "add" && entryPoint != "compute" && entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "propertyNullishAssign" && entryPoint != "derivedCounter" && entryPoint != "classAccess" {
 		return RunResult{}, fmt.Errorf("unsupported harness entry point %q", entryPoint)
 	}
 	arguments := []string{left, right}
+	if entryPoint == "classAccess" {
+		arguments = []string{}
+	}
 	if entryPoint == "choose" || entryPoint == "coalesce" || entryPoint == "coalesceAssign" {
 		if entryPoint == "choose" && flag != "00" && flag != "01" {
 			return RunResult{}, fmt.Errorf("choose flag must be canonical 00 or 01")
@@ -298,6 +438,11 @@ func runHarness(ctx context.Context, executable, entryPoint, flag, left, right s
 			return RunResult{}, fmt.Errorf("coalesce tag must be canonical 00, 01, or 02")
 		}
 		arguments = []string{flag, left, right}
+	} else if entryPoint == "propertyNullishAssign" {
+		if flag != "00" && flag != "01" && flag != "02" {
+			return RunResult{}, fmt.Errorf("property nullish assignment tag must be canonical 00, 01, or 02")
+		}
+		arguments = []string{flag, left}
 	}
 	command := exec.CommandContext(ctx, executable, arguments...)
 	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
@@ -316,16 +461,22 @@ func runHarnessExpectFailure(ctx context.Context, executable, entryPoint, flag, 
 	if ctx == nil {
 		return RunResult{}, fmt.Errorf("run context is nil")
 	}
-	if (entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign") || entryPoint == "choose" && (flag == "00" || flag == "01") || (entryPoint == "coalesce" || entryPoint == "coalesceAssign") && (flag == "00" || flag == "01" || flag == "02") {
+	if (entryPoint != "choose" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "propertyNullishAssign") || entryPoint == "choose" && (flag == "00" || flag == "01") || (entryPoint == "coalesce" || entryPoint == "coalesceAssign" || entryPoint == "propertyNullishAssign") && (flag == "00" || flag == "01" || flag == "02") {
 		return RunResult{}, fmt.Errorf("invalid noncanonical choose invocation")
 	}
 	if err := validateBits(left); err != nil {
 		return RunResult{}, fmt.Errorf("left argument: %w", err)
 	}
-	if err := validateBits(right); err != nil {
-		return RunResult{}, fmt.Errorf("right argument: %w", err)
+	if entryPoint != "propertyNullishAssign" {
+		if err := validateBits(right); err != nil {
+			return RunResult{}, fmt.Errorf("right argument: %w", err)
+		}
 	}
-	command := exec.CommandContext(ctx, executable, flag, left, right)
+	arguments := []string{flag, left, right}
+	if entryPoint == "propertyNullishAssign" {
+		arguments = []string{flag, left}
+	}
+	command := exec.CommandContext(ctx, executable, arguments...)
 	command.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
 	output, err := command.CombinedOutput()
 	if err == nil {
@@ -334,7 +485,7 @@ func runHarnessExpectFailure(ctx context.Context, executable, entryPoint, flag, 
 	if len(output) != 0 {
 		return RunResult{}, fmt.Errorf("noncanonical choose emitted output: %q", output)
 	}
-	return RunResult{Arguments: []string{flag, left, right}, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
+	return RunResult{Arguments: arguments, Output: slices.Clone(output), OutputHash: hashBytes(output)}, nil
 }
 
 func nullableTagByte(tag string) (string, error) {
@@ -367,14 +518,18 @@ func validateRequest(request LinkRequest) error {
 		return fmt.Errorf("unsupported first-slice runtime target: %#v", request.Runtime.Target)
 	}
 	entryPoint := normalizedEntryPoint(request.EntryPoint)
-	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "main" {
+	if entryPoint != "add" && entryPoint != "choose" && entryPoint != "classify" && entryPoint != "compute" && entryPoint != "coalesce" && entryPoint != "coalesceAssign" && entryPoint != "stringLength" && entryPoint != "objectAlias" && entryPoint != "propertyNullishAssign" && entryPoint != "closureCounter" && entryPoint != "classCounter" && entryPoint != "derivedCounter" && entryPoint != "classAccess" && entryPoint != checkedObjectCastEntryPoint && entryPoint != "main" {
 		return fmt.Errorf("unsupported first-slice entry point %q", request.EntryPoint)
 	}
 	llvmEntryPoint := entryPoint
 	if entryPoint == "main" {
 		llvmEntryPoint = "bingo_program_main_v1"
 	}
-	if !strings.Contains(string(request.Emission.LLVMIR), "define double @"+llvmEntryPoint+"(") {
+	returnType := "double"
+	if entryPoint == checkedObjectCastEntryPoint {
+		returnType = "i32"
+	}
+	if !strings.Contains(string(request.Emission.LLVMIR), "define "+returnType+" @"+llvmEntryPoint+"(") {
 		return fmt.Errorf("LLVM emission does not contain entry point %q", entryPoint)
 	}
 	return nil
@@ -409,6 +564,41 @@ func materializeLinkInputs(workspace string, request LinkRequest, entryPoint str
 			return fmt.Errorf("runtime manifest has no string length harness object")
 		}
 		harness = *request.Runtime.Artifacts.StringLengthHarnessObject
+	} else if entryPoint == "objectAlias" {
+		if request.Runtime.Artifacts.ObjectAliasHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no object alias harness object")
+		}
+		harness = *request.Runtime.Artifacts.ObjectAliasHarnessObject
+	} else if entryPoint == "propertyNullishAssign" {
+		if request.Runtime.Artifacts.PropertyNullishAssignHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no property nullish assignment harness object")
+		}
+		harness = *request.Runtime.Artifacts.PropertyNullishAssignHarnessObject
+	} else if entryPoint == "closureCounter" {
+		if request.Runtime.Artifacts.ClosureCounterHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no closure counter harness object")
+		}
+		harness = *request.Runtime.Artifacts.ClosureCounterHarnessObject
+	} else if entryPoint == "classCounter" {
+		if request.Runtime.Artifacts.ClassCounterHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no class counter harness object")
+		}
+		harness = *request.Runtime.Artifacts.ClassCounterHarnessObject
+	} else if entryPoint == "derivedCounter" {
+		if request.Runtime.Artifacts.DerivedCounterHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no derived counter harness object")
+		}
+		harness = *request.Runtime.Artifacts.DerivedCounterHarnessObject
+	} else if entryPoint == "classAccess" {
+		if request.Runtime.Artifacts.ClassAccessHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no class access harness object")
+		}
+		harness = *request.Runtime.Artifacts.ClassAccessHarnessObject
+	} else if entryPoint == checkedObjectCastEntryPoint {
+		if request.Runtime.Artifacts.CheckedObjectCastHarnessObject == nil {
+			return fmt.Errorf("runtime manifest has no checked object cast harness object")
+		}
+		harness = *request.Runtime.Artifacts.CheckedObjectCastHarnessObject
 	}
 	if entryPoint == "classify" {
 		if request.Runtime.Artifacts.ClassifyHarnessObject == nil {
@@ -464,6 +654,20 @@ func responseFileBytes(entryPoints ...string) []byte {
 		harness = "bingo_classify_harness.o"
 	} else if entryPoint == "stringLength" {
 		harness = "bingo_string_length_harness.o"
+	} else if entryPoint == "objectAlias" {
+		harness = "bingo_object_alias_harness.o"
+	} else if entryPoint == "propertyNullishAssign" {
+		harness = "bingo_property_nullish_assign_harness.o"
+	} else if entryPoint == "closureCounter" {
+		harness = "bingo_closure_counter_harness.o"
+	} else if entryPoint == "classCounter" {
+		harness = "bingo_class_counter_harness.o"
+	} else if entryPoint == "derivedCounter" {
+		harness = "bingo_derived_counter_harness.o"
+	} else if entryPoint == "classAccess" {
+		harness = "bingo_class_access_harness.o"
+	} else if entryPoint == checkedObjectCastEntryPoint {
+		harness = "bingo_checked_object_cast_harness.o"
 	} else if entryPoint == "main" {
 		harness = "bingo_application_startup.o"
 	}
@@ -678,30 +882,6 @@ func requireNewOutput(path string) error {
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create output directory: %w", err)
-	}
-	return nil
-}
-
-func publishNewFile(path string, data []byte, mode os.FileMode) error {
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".ts2bin-output-*")
-	if err != nil {
-		return fmt.Errorf("create output staging file: %w", err)
-	}
-	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
-	if err := temporary.Chmod(mode); err != nil {
-		temporary.Close()
-		return fmt.Errorf("chmod staged output: %w", err)
-	}
-	if _, err := temporary.Write(data); err != nil {
-		temporary.Close()
-		return fmt.Errorf("write staged output: %w", err)
-	}
-	if err := temporary.Close(); err != nil {
-		return fmt.Errorf("close staged output: %w", err)
-	}
-	if err := os.Rename(temporaryPath, path); err != nil {
-		return fmt.Errorf("publish executable: %w", err)
 	}
 	return nil
 }

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "base-class-counter",
+  "entryPoint": "classCounter",
+  "frontendSnapshot": "frontend-snapshot.json",
+  "buildPlan": "build-plan.json",
+  "runtimeManifest": "runtime-manifest.json",
+  "timeoutMs": 10000,
+  "oracle": "node",
+  "executions": [
+    {"name": "infinity", "leftBits": "7ff0000000000000", "expectedBits": "7ff0000000000000"},
+    {"name": "negative-zero", "leftBits": "8000000000000000", "expectedBits": "4008000000000000"},
+    {"name": "one", "leftBits": "3ff0000000000000", "expectedBits": "4014000000000000"},
+    {"name": "payload-qnan", "leftBits": "7ff8000000000042", "expectedBits": "7ff8000000000042"},
+    {"name": "positive-zero", "leftBits": "0000000000000000", "expectedBits": "4008000000000000"}
+  ]
+}

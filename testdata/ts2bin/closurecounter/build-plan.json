@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "frontendHash": "0be3ba65165f46a8a6dcba9207712e8069e444446436f12af6e2abd9da715394",
+  "profile": "static",
+  "backend": {
+    "target": "x86_64-unknown-linux-gnu",
+    "cpu": "generic",
+    "runtime": "core-es2020",
+    "gc": "tracing",
+    "exceptions": "none",
+    "overflow": "js-number",
+    "boundsCheck": "on",
+    "emit": [
+      "hir",
+      "mir",
+      "llvm",
+      "obj"
+    ],
+    "llvmMajor": 20
+  },
+  "contentHash": "9b603eb457692bb5e80b6b985979c63160035751b1a74f4ebd3fc2361f4a5bf3"
+}

@@ -123,15 +123,18 @@ var snapshotSemanticFactRegistry = map[string]snapshotSemanticFactValidator{
 }
 
 const (
+	snapshotKindAsExpression                = "KindAsExpression"
 	snapshotKindBinaryExpression            = "KindBinaryExpression"
 	snapshotKindBlock                       = "KindBlock"
 	snapshotKindBooleanKeyword              = "KindBooleanKeyword"
 	snapshotKindCallExpression              = "KindCallExpression"
 	snapshotKindEndOfFile                   = "KindEndOfFile"
+	snapshotKindElementAccessExpression     = "KindElementAccessExpression"
 	snapshotKindEqualsToken                 = "KindEqualsToken"
 	snapshotKindExportKeyword               = "KindExportKeyword"
 	snapshotKindExpressionStatement         = "KindExpressionStatement"
 	snapshotKindFunctionDeclaration         = "KindFunctionDeclaration"
+	snapshotKindGetAccessor                 = "KindGetAccessor"
 	snapshotKindIdentifier                  = "KindIdentifier"
 	snapshotKindIfStatement                 = "KindIfStatement"
 	snapshotKindLessThanToken               = "KindLessThanToken"
@@ -139,17 +142,25 @@ const (
 	snapshotKindNullKeyword                 = "KindNullKeyword"
 	snapshotKindNumberKeyword               = "KindNumberKeyword"
 	snapshotKindNumericLiteral              = "KindNumericLiteral"
+	snapshotKindObjectLiteralExpression     = "KindObjectLiteralExpression"
 	snapshotKindParameter                   = "KindParameter"
+	snapshotKindParenthesizedExpression     = "KindParenthesizedExpression"
 	snapshotKindPlusToken                   = "KindPlusToken"
 	snapshotKindPrefixUnaryExpression       = "KindPrefixUnaryExpression"
 	snapshotKindPropertyAccessExpression    = "KindPropertyAccessExpression"
+	snapshotKindPropertyAssignment          = "KindPropertyAssignment"
 	snapshotKindQuestionQuestionEqualsToken = "KindQuestionQuestionEqualsToken"
 	snapshotKindQuestionQuestionToken       = "KindQuestionQuestionToken"
 	snapshotKindReturnStatement             = "KindReturnStatement"
+	snapshotKindShorthandPropertyAssignment = "KindShorthandPropertyAssignment"
 	snapshotKindSourceFile                  = "KindSourceFile"
+	snapshotKindSetAccessor                 = "KindSetAccessor"
+	snapshotKindStringLiteral               = "KindStringLiteral"
 	snapshotKindStringKeyword               = "KindStringKeyword"
 	snapshotKindUndefinedKeyword            = "KindUndefinedKeyword"
 	snapshotKindUnionType                   = "KindUnionType"
+	snapshotKindThisKeyword                 = "KindThisKeyword"
+	snapshotKindTypeReference               = "KindTypeReference"
 	snapshotKindVariableDeclaration         = "KindVariableDeclaration"
 	snapshotKindVariableList                = "KindVariableDeclarationList"
 	snapshotKindVariableStatement           = "KindVariableStatement"
@@ -160,21 +171,25 @@ const (
 	snapshotNodeFlagUsing     uint32 = 1 << 2
 	snapshotKnownNodeFlagMask uint32 = 1<<29 - 1
 	snapshotModifierExport    uint32 = 1 << 5
+	snapshotModifierDeclare   uint32 = 1 << 7
 )
 
 // snapshotLowererReadinessRegistry is the executable support boundary for the
 // first replay slice. Keep this list sorted by Kind; validation below makes an
 // accidental duplicate or nil handler fail closed at package use sites.
 var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
+	{Kind: snapshotKindAsExpression, PayloadTag: snapshotKindAsExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011AsExpressionLowerer},
 	{Kind: snapshotKindBinaryExpression, PayloadTag: snapshotKindBinaryExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateBinaryExpressionLowerer},
 	{Kind: snapshotKindBlock, PayloadTag: snapshotKindBlock, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindBooleanKeyword, PayloadTag: snapshotKindBooleanKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindCallExpression, PayloadTag: snapshotKindCallExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateCallExpressionLowerer},
+	{Kind: snapshotKindElementAccessExpression, PayloadTag: snapshotKindElementAccessExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011ElementAccessLowerer},
 	{Kind: snapshotKindEndOfFile, PayloadTag: snapshotKindEndOfFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindEqualsToken, PayloadTag: snapshotKindEqualsToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindExportKeyword, PayloadTag: snapshotKindExportKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindExpressionStatement, PayloadTag: snapshotKindExpressionStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateExpressionStatementLowerer},
 	{Kind: snapshotKindFunctionDeclaration, PayloadTag: snapshotKindFunctionDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactFunctionContract, snapshotFactModule, snapshotFactSymbol}, Handle: validateFunctionLowerer},
+	{Kind: snapshotKindGetAccessor, PayloadTag: snapshotKindGetAccessor, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011GetAccessorLowerer},
 	{Kind: snapshotKindIdentifier, PayloadTag: snapshotKindIdentifier, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateIdentifierLowerer},
 	{Kind: snapshotKindIfStatement, PayloadTag: snapshotKindIfStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateIfLowerer},
 	{Kind: snapshotKindLessThanToken, PayloadTag: snapshotKindLessThanToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
@@ -182,15 +197,23 @@ var snapshotLowererReadinessRegistry = []snapshotLowererReadinessDefinition{
 	{Kind: snapshotKindNullKeyword, PayloadTag: snapshotKindNullKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindNumberKeyword, PayloadTag: snapshotKindNumberKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindNumericLiteral, PayloadTag: snapshotKindNumericLiteral, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateNumericLiteralLowerer},
+	{Kind: snapshotKindObjectLiteralExpression, PayloadTag: snapshotKindObjectLiteralExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateObjectLiteralLowerer},
 	{Kind: snapshotKindParameter, PayloadTag: snapshotKindParameter, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateParameterLowerer},
+	{Kind: snapshotKindParenthesizedExpression, PayloadTag: snapshotKindParenthesizedExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011ParenthesizedLowerer},
 	{Kind: snapshotKindPlusToken, PayloadTag: snapshotKindPlusToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindPrefixUnaryExpression, PayloadTag: snapshotKindPrefixUnaryExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validatePrefixUnaryLowerer},
 	{Kind: snapshotKindPropertyAccessExpression, PayloadTag: snapshotKindPropertyAccessExpression, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validatePropertyAccessLowerer},
+	{Kind: snapshotKindPropertyAssignment, PayloadTag: snapshotKindPropertyAssignment, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011PropertyAssignmentLowerer},
 	{Kind: snapshotKindQuestionQuestionEqualsToken, PayloadTag: snapshotKindQuestionQuestionEqualsToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindQuestionQuestionToken, PayloadTag: snapshotKindQuestionQuestionToken, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindReturnStatement, PayloadTag: snapshotKindReturnStatement, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateReturnLowerer},
+	{Kind: snapshotKindSetAccessor, PayloadTag: snapshotKindSetAccessor, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011SetAccessorLowerer},
+	{Kind: snapshotKindShorthandPropertyAssignment, PayloadTag: snapshotKindShorthandPropertyAssignment, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateShorthandPropertyLowerer},
 	{Kind: snapshotKindSourceFile, PayloadTag: snapshotKindSourceFile, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindStringKeyword, PayloadTag: snapshotKindStringKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule}, Handle: validateContainerLowerer},
+	{Kind: snapshotKindStringLiteral, PayloadTag: snapshotKindStringLiteral, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011StringLiteralLowerer},
+	{Kind: snapshotKindThisKeyword, PayloadTag: snapshotKindThisKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateVERT011ThisLowerer},
+	{Kind: snapshotKindTypeReference, PayloadTag: snapshotKindTypeReference, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateVERT011TypeReferenceLowerer},
 	{Kind: snapshotKindUndefinedKeyword, PayloadTag: snapshotKindUndefinedKeyword, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateContainerLowerer},
 	{Kind: snapshotKindUnionType, PayloadTag: snapshotKindUnionType, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactType}, Handle: validateUnionTypeLowerer},
 	{Kind: snapshotKindVariableDeclaration, PayloadTag: snapshotKindVariableDeclaration, SnapshotSchemaVersion: frontendwire.SnapshotSchemaVersion, RequiredFacts: []string{snapshotFactModule, snapshotFactSymbol, snapshotFactType}, Handle: validateVariableDeclarationLowerer},
@@ -292,8 +315,12 @@ func validatePrimitiveSubsetContract(snapshot ProgramSnapshot, indexes snapshotS
 			)
 		}
 
+		roots, err := primitiveNodeTypeRoots(node, indexes)
+		if err != nil {
+			return fmt.Errorf("primitive subset contract rejects node %q (%s): %w", node.ID, node.Kind, err)
+		}
 		seenRoots := make(map[TypeID]struct{}, 3)
-		for _, root := range []TypeID{node.NarrowedType, node.DeclaredType, node.ContextualType} {
+		for _, root := range roots {
 			if root == 0 {
 				continue
 			}
@@ -307,6 +334,26 @@ func validatePrimitiveSubsetContract(snapshot ProgramSnapshot, indexes snapshotS
 		}
 	}
 	return nil
+}
+
+func primitiveNodeTypeRoots(node NodeSnapshot, indexes snapshotSemanticFactIndexes) ([]TypeID, error) {
+	if node.Kind == snapshotKindIdentifier && node.SyntaxPayload.Text == "const" {
+		parent, parentOK := indexes.Nodes[node.Parent]
+		typ, typeOK := indexes.Types[node.NarrowedType]
+		if !parentOK || parent.Kind != snapshotKindTypeReference || node.EvaluationFlags != 1 || node.DeclaredType == 0 || node.DeclaredType != node.NarrowedType || !typeOK || typ.NotLowerableReason != "checker-error-type" {
+			return nil, fmt.Errorf("VERT-011 const assertion marker lacks the exact type-context proof")
+		}
+		return nil, nil
+	}
+	if node.Kind != snapshotKindThisKeyword {
+		return []TypeID{node.NarrowedType, node.DeclaredType, node.ContextualType}, nil
+	}
+	declared, declaredOK := indexes.Types[node.DeclaredType]
+	narrowed, narrowedOK := indexes.Types[node.NarrowedType]
+	if node.DeclaredType == 0 || node.NarrowedType == 0 || node.ContextualType != 0 || !declaredOK || !narrowedOK || declared.NotLowerableReason != "checker-error-type" || strings.ToLower(strings.TrimSpace(narrowed.Kind)) != "object" || node.Flow.NarrowedTypeHash != narrowed.CanonicalHash {
+		return nil, fmt.Errorf("VERT-011 this receiver lacks the exact object-literal location-type proof")
+	}
+	return []TypeID{node.NarrowedType}, nil
 }
 
 func validatePrimitiveTypeClosure(id TypeID, indexes snapshotSemanticFactIndexes, visited map[TypeID]struct{}) error {
@@ -330,6 +377,11 @@ func validatePrimitiveTypeClosure(id TypeID, indexes snapshotSemanticFactIndexes
 	}
 	if reason := strings.TrimSpace(record.NotLowerableReason); reason != "" {
 		return fmt.Errorf("type is not lowerable: %s", reason)
+	}
+	if kind == "object" {
+		if matched, err := validateVERT010ObjectTypeClosure(record, indexes); matched || err != nil {
+			return err
+		}
 	}
 
 	children := make([]TypeID, 0, len(record.ElementTypes)+len(record.TypeArguments)+len(record.BaseTypes)+len(record.IndexInfos)*2)
@@ -364,6 +416,46 @@ func validatePrimitiveTypeClosure(id TypeID, indexes snapshotSemanticFactIndexes
 		}
 	}
 	return nil
+}
+
+func validateVERT010ObjectTypeClosure(record TypeSnapshot, indexes snapshotSemanticFactIndexes) (bool, error) {
+	containsShorthand := false
+	for _, propertyID := range record.Properties {
+		property, ok := indexes.Symbols[propertyID]
+		if !ok {
+			return false, fmt.Errorf("object type references missing property symbol %q", propertyID)
+		}
+		for _, declarationID := range property.Declarations {
+			declaration, ok := indexes.Nodes[declarationID]
+			if ok && declaration.Kind == snapshotKindShorthandPropertyAssignment {
+				containsShorthand = true
+			}
+		}
+	}
+	if !containsShorthand {
+		return false, nil
+	}
+	if len(record.Properties) != 1 || len(record.PropertyFacts) != 1 || len(record.IndexInfos) != 0 || len(record.CallSignatures) != 0 || len(record.ConstructSignatures) != 0 || len(record.BaseTypes) != 0 {
+		return true, fmt.Errorf("VERT-010 object type must be one closed data property")
+	}
+	propertyID := record.Properties[0]
+	property := indexes.Symbols[propertyID]
+	fact := record.PropertyFacts[0]
+	if property.Name != "value" || fact.Symbol != propertyID || fact.ReadType == 0 || fact.ReadType != fact.WriteType || fact.Optional || fact.Readonly || !fact.HasGetter || !fact.HasSetter || fact.Visibility != "public" || fact.PrivateIdentity != "" {
+		return true, fmt.Errorf("VERT-010 value property contract is invalid")
+	}
+	valueType, ok := indexes.Types[fact.ReadType]
+	if !ok || strings.ToLower(strings.TrimSpace(valueType.Kind)) != "intrinsic" || valueType.DebugText != "number" {
+		return true, fmt.Errorf("VERT-010 value property is not canonical number")
+	}
+	if len(property.Declarations) != 1 || property.ValueDeclaration != property.Declarations[0] {
+		return true, fmt.Errorf("VERT-010 value property declaration is ambiguous")
+	}
+	declaration, ok := indexes.Nodes[property.ValueDeclaration]
+	if !ok || declaration.Kind != snapshotKindShorthandPropertyAssignment {
+		return true, fmt.Errorf("VERT-010 value property is not shorthand data storage")
+	}
+	return true, nil
 }
 
 func validateModuleFact(node NodeSnapshot, indexes snapshotSemanticFactIndexes) error {
@@ -432,12 +524,20 @@ func validateFunctionContractFact(node NodeSnapshot, indexes snapshotSemanticFac
 		signature = candidate
 	}
 	wantEffects := []string{"pure"}
-	if childText(node, "name", indexes.Nodes) == "stringLength" {
+	functionName := childText(node, "name", indexes.Nodes)
+	switch functionName {
+	case "stringLength":
 		// The frontend conservatively classifies .length as a read. The
 		// string contract makes this immutable observation a pure HIR op.
 		wantEffects = []string{"read"}
+	case "objectAlias":
+		wantEffects = []string{"alloc", "read", "write"}
+	case "propertyNullishAssign":
+		if signature.EffectProof.Kind != "body-resolved" || signature.EffectProof.Complete || !slices.Equal(signature.EffectProof.DirectEffects, []string{"alloc", "read", "write"}) || len(signature.EffectProof.Calls) != 0 || !slices.Equal(signature.Effects, []string{"unknown"}) {
+			return fmt.Errorf("VERT-011 function signature %d has unexpected accessor effect proof", signature.ID)
+		}
 	}
-	if signature.EffectProof.Kind != "body-resolved" || !signature.EffectProof.Complete || !slices.Equal(signature.Effects, wantEffects) {
+	if functionName != "propertyNullishAssign" && (signature.EffectProof.Kind != "body-resolved" || !signature.EffectProof.Complete || !slices.Equal(signature.Effects, wantEffects)) {
 		return fmt.Errorf("primitive function signature %d has incomplete or impure effect proof %v", signature.ID, signature.Effects)
 	}
 
@@ -464,8 +564,8 @@ func validateContainerLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) 
 	switch node.Kind {
 	case snapshotKindBlock:
 		statements := namedChildren(node, "statement[")
-		if len(statements) == 0 || len(statements) > 3 || len(node.NamedChildren) != len(statements) || len(node.Children) != len(statements) {
-			return fmt.Errorf("primitive block requires one to three statements")
+		if len(statements) == 0 || len(statements) > 4 || len(node.NamedChildren) != len(statements) || len(node.Children) != len(statements) {
+			return fmt.Errorf("lowerable block requires one to four statements")
 		}
 		for _, statement := range statements {
 			child, ok := nodes[statement]
@@ -574,7 +674,7 @@ func validateReturnLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) err
 	}
 	expressionID := childByRole(node, "expression")
 	expression, ok := nodes[expressionID]
-	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier && expression.Kind != snapshotKindNumericLiteral && expression.Kind != snapshotKindPrefixUnaryExpression && expression.Kind != snapshotKindPropertyAccessExpression) {
+	if !ok || expression.Parent != node.ID || (expression.Kind != snapshotKindBinaryExpression && expression.Kind != snapshotKindIdentifier && expression.Kind != snapshotKindNumericLiteral && expression.Kind != snapshotKindParenthesizedExpression && expression.Kind != snapshotKindPrefixUnaryExpression && expression.Kind != snapshotKindPropertyAccessExpression) {
 		return fmt.Errorf("primitive return expression must be an identifier, literal, prefix unary, binary, or supported property expression")
 	}
 	return nil
@@ -614,23 +714,34 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 	if len(node.NamedChildren) != 3 || len(node.Children) != 3 {
 		return fmt.Errorf("primitive binary expression requires exactly left, operator, and right children")
 	}
-	if _, err := requireRoleKind(node, "left", snapshotKindIdentifier, nodes); err != nil {
-		return err
+	leftID := childByRole(node, "left")
+	left, ok := nodes[leftID]
+	if !ok || left.Parent != node.ID || (left.Kind != snapshotKindElementAccessExpression && left.Kind != snapshotKindIdentifier && left.Kind != snapshotKindPropertyAccessExpression) {
+		return fmt.Errorf("primitive binary left operand must be an identifier or static property access")
 	}
 	switch node.SyntaxPayload.Operator {
 	case snapshotKindPlusToken:
 		if _, err := requireRoleKind(node, "operator", snapshotKindPlusToken, nodes); err != nil {
 			return err
 		}
-		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
-			return err
+		rightID := childByRole(node, "right")
+		right, ok := nodes[rightID]
+		if !ok || right.Parent != node.ID || (right.Kind != snapshotKindIdentifier && right.Kind != snapshotKindNumericLiteral) {
+			return fmt.Errorf("primitive addition right operand must be an identifier or numeric literal")
 		}
 	case snapshotKindEqualsToken:
 		if _, err := requireRoleKind(node, "operator", snapshotKindEqualsToken, nodes); err != nil {
 			return err
 		}
-		if _, err := requireRoleKind(node, "right", snapshotKindBinaryExpression, nodes); err != nil {
-			return err
+		rightID := childByRole(node, "right")
+		right, ok := nodes[rightID]
+		if !ok || right.Parent != node.ID {
+			return fmt.Errorf("assignment right operand is missing")
+		}
+		if right.Kind != snapshotKindBinaryExpression {
+			if left.Kind != snapshotKindPropertyAccessExpression || !vert011BackingAccess(left, nodes) || right.Kind != snapshotKindIdentifier || right.SyntaxPayload.Text != "next" {
+				return fmt.Errorf("direct assignment is outside the VERT-011 setter subset")
+			}
 		}
 	case snapshotKindLessThanToken:
 		if _, err := requireRoleKind(node, "operator", snapshotKindLessThanToken, nodes); err != nil {
@@ -652,7 +763,11 @@ func validateBinaryExpressionLowerer(node NodeSnapshot, nodes map[NodeID]NodeSna
 		if _, err := requireRoleKind(node, "operator", snapshotKindQuestionQuestionEqualsToken, nodes); err != nil {
 			return err
 		}
-		if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
+		if left.Kind == snapshotKindElementAccessExpression {
+			if _, err := requireRoleKind(node, "right", snapshotKindNumericLiteral, nodes); err != nil {
+				return err
+			}
+		} else if _, err := requireRoleKind(node, "right", snapshotKindIdentifier, nodes); err != nil {
 			return err
 		}
 	default:
@@ -683,16 +798,50 @@ func validatePropertyAccessLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnaps
 	if len(node.NamedChildren) != 2 || len(node.Children) != 2 {
 		return fmt.Errorf("primitive property access requires receiver and name")
 	}
-	receiver, err := requireRoleKind(node, "child[0]", snapshotKindIdentifier, nodes)
-	if err != nil {
-		return err
+	receiverID := childByRole(node, "child[0]")
+	receiver, ok := nodes[receiverID]
+	if !ok || receiver.Parent != node.ID || (receiver.Kind != snapshotKindIdentifier && receiver.Kind != snapshotKindThisKeyword) {
+		return fmt.Errorf("property access receiver is unsupported")
 	}
 	name, err := requireRoleKind(node, "child[1]", snapshotKindIdentifier, nodes)
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(receiver.SyntaxPayload.Text) == "" || name.SyntaxPayload.Text != "length" {
-		return fmt.Errorf("primitive property access only supports string.length")
+	if receiver.Kind == snapshotKindThisKeyword && name.SyntaxPayload.Text == "backing" {
+		return nil
+	}
+	if strings.TrimSpace(receiver.SyntaxPayload.Text) == "" || (name.SyntaxPayload.Text != "length" && name.SyntaxPayload.Text != "value") {
+		return fmt.Errorf("property access is outside the static length/value subset")
+	}
+	return nil
+}
+
+func validateObjectLiteralLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) == 1 && len(node.Children) == 1 {
+		_, err := requireRoleKind(node, "child[0]", snapshotKindShorthandPropertyAssignment, nodes)
+		return err
+	}
+	if len(node.NamedChildren) != 3 || len(node.Children) != 3 {
+		return fmt.Errorf("object literal is outside VERT-010/011 closed shapes")
+	}
+	for index, kind := range []string{snapshotKindPropertyAssignment, snapshotKindGetAccessor, snapshotKindSetAccessor} {
+		if _, err := requireRoleKind(node, fmt.Sprintf("child[%d]", index), kind, nodes); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateShorthandPropertyLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
+	if len(node.NamedChildren) != 1 || len(node.Children) != 1 {
+		return fmt.Errorf("VERT-010 shorthand property requires exactly one name")
+	}
+	name, err := requireRoleKind(node, "name", snapshotKindIdentifier, nodes)
+	if err != nil {
+		return err
+	}
+	if name.SyntaxPayload.Text != "value" {
+		return fmt.Errorf("VERT-010 shorthand property %q is unsupported", name.SyntaxPayload.Text)
 	}
 	return nil
 }
@@ -757,8 +906,8 @@ func validateVariableStatementLowerer(node NodeSnapshot, nodes map[NodeID]NodeSn
 }
 
 func validateVariableListLowerer(node NodeSnapshot, nodes map[NodeID]NodeSnapshot) error {
-	if node.NodeFlags != 1 || len(node.NamedChildren) != 1 || len(node.Children) != 1 {
-		return fmt.Errorf("primitive variable list requires exactly one let declaration")
+	if (node.NodeFlags != 1 && node.NodeFlags != 2) || len(node.NamedChildren) != 1 || len(node.Children) != 1 {
+		return fmt.Errorf("variable list requires exactly one let or const declaration")
 	}
 	_, err := requireRoleKind(node, "declaration[0]", snapshotKindVariableDeclaration, nodes)
 	return err
@@ -773,10 +922,19 @@ func validateVariableDeclarationLowerer(node NodeSnapshot, nodes map[NodeID]Node
 	}
 	initializerID := childByRole(node, "initializer")
 	initializer, ok := nodes[initializerID]
-	if !ok || initializer.Parent != node.ID || (initializer.Kind != snapshotKindCallExpression && initializer.Kind != snapshotKindIdentifier) {
+	if !ok || initializer.Parent != node.ID || (initializer.Kind != snapshotKindAsExpression && initializer.Kind != snapshotKindCallExpression && initializer.Kind != snapshotKindIdentifier && initializer.Kind != snapshotKindObjectLiteralExpression) {
 		return fmt.Errorf("primitive variable initializer must be a direct call or identifier")
 	}
 	return nil
+}
+
+func vert011BackingAccess(access NodeSnapshot, nodes map[NodeID]NodeSnapshot) bool {
+	receiver, err := requireRoleKind(access, "child[0]", snapshotKindThisKeyword, nodes)
+	if err != nil || receiver.Kind != snapshotKindThisKeyword {
+		return false
+	}
+	name, err := requireRoleKind(access, "child[1]", snapshotKindIdentifier, nodes)
+	return err == nil && name.SyntaxPayload.Text == "backing"
 }
 
 func requireRoleKind(parent NodeSnapshot, role, kind string, nodes map[NodeID]NodeSnapshot) (NodeSnapshot, error) {
@@ -883,50 +1041,17 @@ func replayFunction(id int, functionNode NodeSnapshot, nodes map[NodeID]NodeSnap
 	if bodyID == "" {
 		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s has no body", functionNode.ID)
 	}
-	stringLength, isStringLength, err := findPrimitiveStringLength(bodyID, nodes)
+	loweringInput := primitiveFunctionLoweringInput{
+		bodyID: bodyID, function: function, events: events,
+		parameterValues: parameterValues, parameterTypes: parameterTypes,
+		functionNode: functionNode, nodes: nodes, types: types, symbols: symbols, signatures: signatures, functionIDs: functionIDs,
+	}
+	lowered, loweredEvents, matched, err := lowerPrimitiveFunction(loweringInput, primitiveFunctionLowerers[:])
 	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
+		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s primitive lowering: %w", functionNode.ID, err)
 	}
-	if isStringLength {
-		return replayStringLengthFunction(function, events, stringLength, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
-	}
-	if localCall, ok := findPrimitiveLocalCall(bodyID, nodes); ok {
-		return replayLocalCallFunction(function, events, localCall, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures, functionIDs)
-	}
-	classify, isClassify, err := findPrimitiveClassify(bodyID, nodes)
-	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
-	}
-	if isClassify {
-		return replayClassifyFunction(function, events, classify, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
-	}
-	loop, isLoop, err := findPrimitiveLoop(bodyID, nodes)
-	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
-	}
-	if isLoop {
-		return replayLoopFunction(function, events, loop, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
-	}
-	coalesceAssign, isCoalesceAssign, err := findPrimitiveCoalesceAssign(bodyID, nodes)
-	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
-	}
-	if isCoalesceAssign {
-		return replayCoalesceAssignFunction(function, events, coalesceAssign, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
-	}
-	coalesce, isCoalesce, err := findPrimitiveCoalesce(bodyID, nodes)
-	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
-	}
-	if isCoalesce {
-		return replayCoalesceFunction(function, events, coalesce, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
-	}
-	choose, isChoose, err := findPrimitiveChoose(bodyID, nodes)
-	if err != nil {
-		return bingo.HIRFunction{}, nil, fmt.Errorf("function %s: %w", functionNode.ID, err)
-	}
-	if isChoose {
-		return replayChooseFunction(function, events, choose, parameterValues, parameterTypes, functionNode, nodes, types, symbols, signatures)
+	if matched {
+		return lowered, loweredEvents, nil
 	}
 	returnNode, binaryNode, err := findPrimitiveReturn(bodyID, nodes)
 	if err != nil {

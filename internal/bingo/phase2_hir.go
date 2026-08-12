@@ -8,6 +8,8 @@ import (
 	"math"
 	"slices"
 	"strconv"
+
+	jsonx "github.com/microsoft/typescript-go/internal/json"
 )
 
 // VerifyPhase2HIR validates the Phase 2B primitive CFG subset. The Phase 2A
@@ -15,6 +17,9 @@ import (
 func VerifyPhase2HIR(module HIRModule) error {
 	if module.SchemaVersion != HIRSchemaVersion {
 		return fmt.Errorf("unsupported HIR schema %d", module.SchemaVersion)
+	}
+	if module.PlaceRefs != nil {
+		return fmt.Errorf("Phase 2B primitive HIR must not carry PlaceRefs")
 	}
 	if err := validateHIRProvenance(module.Provenance); err != nil {
 		return fmt.Errorf("invalid HIR provenance: %w", err)
@@ -66,6 +71,18 @@ func VerifyPhase2HIR(module HIRModule) error {
 		}
 	}
 	return nil
+}
+
+// DecodePhase2HIR strictly decodes and verifies the canonical Phase 2B HIR wire.
+func DecodePhase2HIR(data []byte) (*HIRModule, error) {
+	var module HIRModule
+	if err := jsonx.Unmarshal(data, &module, jsonx.RejectUnknownMembers(true)); err != nil {
+		return nil, fmt.Errorf("decode Phase 2B HIR: %w", err)
+	}
+	if err := VerifyCanonicalPhase2HIR(module); err != nil {
+		return nil, err
+	}
+	return &module, nil
 }
 
 func verifyApplicationMainHIRFunction(function HIRFunction) error {
@@ -316,6 +333,9 @@ func verifyPhase2HIRFunction(function HIRFunction, functions map[FunctionID]HIRF
 }
 
 func validatePhase2HIROperationShape(operation HIROp) error {
+	if operation.PlaceID != 0 || len(operation.Effects) != 0 {
+		return fmt.Errorf("operation %d carries unsupported PlaceRef metadata", operation.ID)
+	}
 	if operation.ID == 0 || operation.Kind == "" || !validPhase2HIRValueType(operation.Type) || !validEffect(operation.Effect) || !validOrigin(operation.Origin) {
 		return fmt.Errorf("invalid operation %d", operation.ID)
 	}
@@ -415,7 +435,7 @@ func verifyNullableUnwrapGuard(function HIRFunction, blockIndex int, block HIRBl
 		if operation.Kind != "unwrap_nullable" {
 			continue
 		}
-		if (function.Name != "coalesce" && function.Name != "coalesceAssign") || len(function.Blocks) != 4 || blockIndex != 2 {
+		if len(function.Blocks) != 4 || blockIndex != 2 {
 			return fmt.Errorf("unwrap_nullable operation %d is outside the canonical coalesce CFG", operation.ID)
 		}
 		entry := function.Blocks[0]

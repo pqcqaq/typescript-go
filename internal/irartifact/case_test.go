@@ -98,3 +98,16 @@ func TestLoadCaseRejectsUnknownRunFields(t *testing.T) {
 		t.Fatalf("unknown run field error = %v", err)
 	}
 }
+
+func TestRunnableManifestClassAccessHasNoArguments(t *testing.T) {
+	valid := CaseManifest{EntryPoint: "classAccess", TimeoutMS: 2000, Oracle: "node", Executions: []CaseExecution{{Name: "result", ExpectedBits: "4008000000000000"}}}
+	if err := ValidateRunnableManifest(valid); err != nil {
+		t.Fatal(err)
+	}
+	invalid := valid
+	invalid.Executions = append([]CaseExecution(nil), valid.Executions...)
+	invalid.Executions[0].LeftBits = "0000000000000000"
+	if err := ValidateRunnableManifest(invalid); err == nil {
+		t.Fatal("classAccess manifest accepted an argument")
+	}
+}

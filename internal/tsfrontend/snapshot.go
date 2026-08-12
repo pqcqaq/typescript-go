@@ -1645,7 +1645,7 @@ func (c *captureContext) captureType(typ *checker.Type) string {
 		for _, property := range properties {
 			id := c.captureSymbol(property)
 			record.propertyKeys = append(record.propertyKeys, id)
-			record.propertyFacts = append(record.propertyFacts, c.capturePropertyFact(property, id))
+			record.propertyFacts = append(record.propertyFacts, c.capturePropertyFact(typ, property, id))
 		}
 		for _, signature := range safeSignatures(c.checker, typ, checker.SignatureKindCall) {
 			record.callSignatureKeys = append(record.callSignatureKeys, c.captureSignature(signature, "call"))
@@ -1688,7 +1688,7 @@ func (c *captureContext) captureType(typ *checker.Type) string {
 	return key
 }
 
-func (c *captureContext) capturePropertyFact(property *ast.Symbol, id SymbolID) pendingProperty {
+func (c *captureContext) capturePropertyFact(owner *checker.Type, property *ast.Symbol, id SymbolID) pendingProperty {
 	fact := pendingProperty{symbol: id, visibility: "public"}
 	if property == nil {
 		return fact
@@ -1730,6 +1730,15 @@ func (c *captureContext) capturePropertyFact(property *ast.Symbol, id SymbolID) 
 			fact.writeKey = symbol.typeKey
 		}
 	}
+	if contextual := safeTypeOfProperty(c.checker, owner, ast.SymbolName(property)); contextual != nil {
+		key := c.captureType(contextual)
+		if fact.hasGetter {
+			fact.readKey = key
+		}
+		if fact.hasSetter && !fact.readonly {
+			fact.writeKey = key
+		}
+	}
 	// Accessor symbols expose one merged checker type, but their read and
 	// write representations can differ. Capture the concrete getter result and
 	// setter parameter when declarations provide them.
@@ -1749,6 +1758,10 @@ func (c *captureContext) capturePropertyFact(property *ast.Symbol, id SymbolID) 
 		}
 	}
 	return fact
+}
+
+func safeTypeOfProperty(c *checker.Checker, owner *checker.Type, name string) (result *checker.Type) {
+	return checkedCheckerCall("GetTypeOfPropertyOfType", func() *checker.Type { return c.GetTypeOfPropertyOfType(owner, name) })
 }
 
 func safeTypeToString(c *checker.Checker, typ *checker.Type) (result string) {
@@ -1829,7 +1842,7 @@ func safeBaseTypes(c *checker.Checker, typ *checker.Type) (result []*checker.Typ
 
 func safeProperties(c *checker.Checker, typ *checker.Type) (result []*ast.Symbol) {
 	return checkedCheckerCall("GetPropertiesOfType", func() []*ast.Symbol {
-		return c.GetPropertiesOfType(typ)
+		return slices.Clone(c.GetPropertiesOfType(typ))
 	})
 }
 
